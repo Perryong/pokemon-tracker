@@ -33,7 +33,7 @@ const CollectionView: React.FC = () => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showCardDetail, setShowCardDetail] = useState(false);
   
-  const { card: selectedCard } = useCard(selectedCardId);
+  const { card: selectedCard } = useCard(selectedCardId ?? "");
   
   // Get unique rarities, sets, and types for filters
   const uniqueRarities = Array.from(new Set(collectionCards.map(card => card.rarity).filter(Boolean)));
