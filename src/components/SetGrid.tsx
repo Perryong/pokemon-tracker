@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, FilterIcon } from 'lucide-react';
+import { CalendarIcon} from 'lucide-react';
 import {
   Popover,
   PopoverContent,

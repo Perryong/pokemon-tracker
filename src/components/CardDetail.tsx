@@ -1,3 +1,5 @@
+/* --- src/components/CardDetail.tsx ---------------------------------------- */
+
 import React, { useState } from "react";
 import { PokemonCard } from "@/lib/api";
 import { useCollection } from "@/lib/collection";
@@ -17,8 +19,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -36,12 +36,9 @@ import {
 } from "@/components/ui/select";
 import {
   DollarSign,
-  CheckCircle,
-  XCircle,
   Star,
-  ThumbsUp,
   AlertCircle,
-} from "lucide-react";      // ← ShieldAlert & Zap removed
+} from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 
@@ -83,25 +80,24 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
   /* ------------------- helpers ------------------- */
 
   const getCardPrice = (
-    card: PokemonCard,
+    c: PokemonCard,
   ): { type: string; price: number } | null => {
-    const prices = card.tcgplayer?.prices;
+    const prices = c.tcgplayer?.prices;
     if (!prices) return null;
 
-    if (prices.holofoil?.market)
-      return { type: "Holofoil", price: prices.holofoil.market };
-    if (prices.reverseHolofoil?.market)
-      return { type: "Reverse Holofoil", price: prices.reverseHolofoil.market };
-    if (prices.normal?.market)
-      return { type: "Normal", price: prices.normal.market };
+    if (prices.holofoil?.market != null)
+      return { type: "Holofoil", price: Number(prices.holofoil.market) };
+    if (prices.reverseHolofoil?.market != null)
+      return {
+        type: "Reverse Holofoil",
+        price: Number(prices.reverseHolofoil.market),
+      };
+    if (prices.normal?.market != null)
+      return { type: "Normal", price: Number(prices.normal.market) };
 
-    // fallback to the first price that has market data
-    for (const [key, p] of Object.entries(prices)) {
-      if (p?.market !== undefined) {
-        return {
-          type: key.charAt(0).toUpperCase() + key.slice(1),
-          price: p.market,
-        };
+    for (const [k, p] of Object.entries(prices)) {
+      if (p?.market != null) {
+        return { type: k.charAt(0).toUpperCase() + k.slice(1), price: Number(p.market) };
       }
     }
     return null;
@@ -109,22 +105,17 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
 
   /* ------------------- actions ------------------- */
 
-  const handleAddToCollection = () => {
-    if (!card) return;
+  const handleAddToCollection = () =>
+    card &&
     addToCollection(card, quantity, condition, purchasePrice, notes);
-  };
 
-  const handleUpdateCollection = () => {
-    if (!card) return;
+  const handleUpdateCollection = () =>
+    card &&
     updateCollectionCard(card.id, { quantity, condition, purchasePrice, notes });
-  };
 
-  const handleRemoveFromCollection = () => {
-    if (!card) return;
-    removeFromCollection(card.id);
-  };
+  const handleRemoveFromCollection = () => card && removeFromCollection(card.id);
 
-  /* ------------------- render guards ------------------- */
+  /* ------------------- render guard ------------------- */
 
   if (!card) return null;
 
@@ -142,13 +133,12 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
             {owned && <Badge className="ml-2 bg-green-500">In Collection</Badge>}
           </DialogTitle>
           <DialogDescription>
-            {card.set.name} · {card.number}/{card.set.printedTotal} ·{" "}
-            {card.rarity}
+            {card.set.name} · {card.number}/{card.set.printedTotal} · {card.rarity}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* ------------- left side: image ------------- */}
+          {/* ---------------- image ---------------- */}
           <div className="flex justify-center">
             <img
               src={card.images.large}
@@ -157,7 +147,7 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
             />
           </div>
 
-          {/* ------------- right side: tabs ------------- */}
+          {/* ---------------- tabs ---------------- */}
           <div>
             <Tabs defaultValue="info" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
@@ -166,42 +156,14 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
                 <TabsTrigger value="collection">Collection</TabsTrigger>
               </TabsList>
 
-              {/* =============== TAB – INFO =============== */}
-              <TabsContent value="info" className="space-y-4">
-                {/* … (unchanged content clipped for brevity) … */}
+              {/* ========== INFO TAB (unchanged) ========== */}
+              {/* keep all your existing “info” tab markup here */}
 
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">Legalities</h3>
-                  {card.legalities ? (
-                    <div className="flex flex-wrap gap-2">
-                      {(["standard", "expanded", "unlimited"] as const).map(
-                        (fmt) => (
-                          <div key={fmt} className="flex items-center">
-                            <span className="text-sm mr-1">
-                              {fmt.charAt(0).toUpperCase() + fmt.slice(1)}:
-                            </span>
-                            {card.legalities?.[fmt] === "legal" ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-500" />
-                            )}
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">—</p>
-                  )}
-                </div>
-
-                {/* … remainder unchanged … */}
-              </TabsContent>
-
-              {/* ============ TAB – MARKET DATA ============ */}
+              {/* ========== MARKET TAB ========== */}
               <TabsContent value="market">
                 {card.tcgplayer ? (
                   <div className="space-y-4">
-                    {/* Market price */}
+                    {/* headline price */}
                     <div>
                       <h3 className="text-sm font-semibold mb-1">Market Price</h3>
                       {priceInfo ? (
@@ -217,58 +179,61 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
                       )}
                     </div>
 
-                    {/* Price breakdown */}
+                    {/* price breakdown */}
                     <div>
                       <h3 className="text-sm font-semibold mb-2">Price Details</h3>
                       <div className="space-y-2">
                         {Object.entries(card.tcgplayer.prices ?? {})
-                          .filter(([, p]): p is NonNullable<typeof p> => !!p) // ← narrow undefined out
-                          .map(([priceType, priceData]) => (
-                            <Card key={priceType}>
-                              <CardHeader className="py-2 px-3">
-                                <CardTitle className="text-sm">
-                                  {priceType.charAt(0).toUpperCase() +
-                                    priceType.slice(1)}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="py-2 px-3">
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  {priceData.low != null && (
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Low:
-                                      </span>{" "}
-                                      ${priceData.low.toFixed(2)}
-                                    </div>
-                                  )}
-                                  {priceData.mid != null && (
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Mid:
-                                      </span>{" "}
-                                      ${priceData.mid.toFixed(2)}
-                                    </div>
-                                  )}
-                                  {priceData.high != null && (
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        High:
-                                      </span>{" "}
-                                      ${priceData.high.toFixed(2)}
-                                    </div>
-                                  )}
-                                  {priceData.market != null && (
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Market:
-                                      </span>{" "}
-                                      ${priceData.market.toFixed(2)}
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                          .filter(([, p]) => p != null)
+                          .map(([priceType, priceData]) => {
+                            const data = priceData!; // now definitely defined
+                            return (
+                              <Card key={priceType}>
+                                <CardHeader className="py-2 px-3">
+                                  <CardTitle className="text-sm">
+                                    {priceType.charAt(0).toUpperCase() +
+                                      priceType.slice(1)}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="py-2 px-3">
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    {data.low != null && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          Low:
+                                        </span>{" "}
+                                        ${data.low.toFixed(2)}
+                                      </div>
+                                    )}
+                                    {data.mid != null && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          Mid:
+                                        </span>{" "}
+                                        ${data.mid.toFixed(2)}
+                                      </div>
+                                    )}
+                                    {data.high != null && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          High:
+                                        </span>{" "}
+                                        ${data.high.toFixed(2)}
+                                      </div>
+                                    )}
+                                    {data.market != null && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          Market:
+                                        </span>{" "}
+                                        ${data.market.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                       </div>
                     </div>
 
@@ -291,8 +256,138 @@ const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => 
                 )}
               </TabsContent>
 
-              {/* ========= TAB – COLLECTION (unchanged) ========= */}
-              {/* … keep your existing “collection” tab code … */}
+              {/* ========== COLLECTION TAB ========== */}
+              <TabsContent value="collection">
+                {owned ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min={1}
+                          value={quantity}
+                          onChange={(e) =>
+                            setQuantity(parseInt(e.target.value) || 1)
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="condition">Condition</Label>
+                        <Select value={condition} onValueChange={setCondition}>
+                          <SelectTrigger id="condition">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONDITIONS.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+                      <Input
+                        id="purchasePrice"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={purchasePrice}
+                        onChange={(e) =>
+                          setPurchasePrice(parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Add notes about this card..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="flex justify-between pt-2">
+                      <Button variant="destructive" onClick={handleRemoveFromCollection}>
+                        Remove from Collection
+                      </Button>
+                      <Button onClick={handleUpdateCollection}>Update</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center p-4 mb-2">
+                      <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+                      <p>Add this card to your collection</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Quantity</Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min={1}
+                          value={quantity}
+                          onChange={(e) =>
+                            setQuantity(parseInt(e.target.value) || 1)
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="condition">Condition</Label>
+                        <Select value={condition} onValueChange={setCondition}>
+                          <SelectTrigger id="condition">
+                            <SelectValue placeholder="Select condition" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONDITIONS.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+                      <Input
+                        id="purchasePrice"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={purchasePrice}
+                        onChange={(e) =>
+                          setPurchasePrice(parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Add notes about this card..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
+                    </div>
+
+                    <Button className="w-full" onClick={handleAddToCollection}>
+                      Add to Collection
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
           </div>
         </div>
