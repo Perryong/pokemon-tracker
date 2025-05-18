@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, DollarSign } from 'lucide-react';
+import { Search, DollarSign } from 'lucide-react';
 import CardDetail from '@/components/CardDetail';
 import CollectionStats from '@/components/CollectionStats';
 

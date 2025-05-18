@@ -3,7 +3,6 @@ import { format } from 'date-fns';
 import { PokemonSet, useSets } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Select,
   SelectContent,
