@@ -143,36 +143,36 @@ const CollectionView: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <Select value={selectedRarity || "all"} onValueChange={(value) => setSelectedRarity(value === "all" ? null : value)}>
+              <Select value={selectedRarity || "none"} onValueChange={(value) => setSelectedRarity(value === "none" ? null : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by Rarity" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Rarities</SelectItem>
+                  <SelectItem value="none">All Rarities</SelectItem>
                   {uniqueRarities.map(rarity => (
                     <SelectItem key={rarity} value={rarity}>{rarity}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               
-              <Select value={selectedSet || "all"} onValueChange={(value) => setSelectedSet(value === "all" ? null : value)}>
+              <Select value={selectedSet || "none"} onValueChange={(value) => setSelectedSet(value === "none" ? null : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by Set" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Sets</SelectItem>
+                  <SelectItem value="none">All Sets</SelectItem>
                   {uniqueSets.map(set => (
                     <SelectItem key={set} value={set}>{set}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               
-              <Select value={selectedType || "all"} onValueChange={(value) => setSelectedType(value === "all" ? null : value)}>
+              <Select value={selectedType || "none"} onValueChange={(value) => setSelectedType(value === "none" ? null : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="none">All Types</SelectItem>
                   {uniqueTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}

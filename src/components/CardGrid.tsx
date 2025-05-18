@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ChevronDown, DollarSign, Filter } from 'lucide-react';
+import { ArrowLeft, ChevronDown, DollarSign, Filter, Plus, Check, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from '@/components/ui/pagination';
 import {
   Accordion,
@@ -39,14 +41,20 @@ interface CardGridProps {
 
 const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSelect }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [subtypeFilter, setSubtypeFilter] = useState<string>('');
-  const [rarityFilter, setRarityFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [subtypeFilter, setSubtypeFilter] = useState<string | null>(null);
+  const [rarityFilter, setRarityFilter] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [showFilters, setShowFilters] = useState(false);
+  const [processingCards, setProcessingCards] = useState<Set<string>>(new Set());
   const pageSize = 20;
 
-  const { isInCollection } = useCollection();
+  const { toast } = useToast();
+  const { 
+    isInCollection, 
+    addToCollection, 
+    removeFromCollection 
+  } = useCollection();
 
   // Build filters for the API request
   const filters: Record<string, string> = {};
@@ -54,14 +62,12 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   if (subtypeFilter) filters['subtypes'] = subtypeFilter;
   if (rarityFilter) filters['rarity'] = rarityFilter;
 
-  // We can't filter by price range in the API directly, so we'll fetch and filter client-side
   const { cards, totalCards, loading, error } = useCards(selectedSet.id, currentPage, pageSize, filters);
 
   // Filter cards by price range client-side
   const filteredCards = cards.filter(card => {
-    if (!card.tcgplayer?.prices) return true; // Include cards without price data
+    if (!card.tcgplayer?.prices) return true;
 
-    // Check if any price falls within range
     for (const priceType in card.tcgplayer.prices) {
       const price = card.tcgplayer.prices[priceType as keyof typeof card.tcgplayer.prices];
       if (price?.market && price.market >= priceRange[0] && price.market <= priceRange[1]) {
@@ -79,10 +85,62 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   };
 
   const clearFilters = () => {
-    setTypeFilter('');
-    setSubtypeFilter('');
-    setRarityFilter('');
+    setTypeFilter(null);
+    setSubtypeFilter(null);
+    setRarityFilter(null);
     setPriceRange([0, 1000]);
+  };
+
+  const handleAddToCollection = async (card: PokemonCard, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProcessingCards(prev => new Set(prev).add(card.id));
+    
+    try {
+      await addToCollection(card);
+      toast({
+        title: "Card Added",
+        description: `${card.name} has been added to your collection.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add card to collection.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingCards(prev => {
+        const next = new Set(prev);
+        next.delete(card.id);
+        return next;
+      });
+    }
+  };
+
+  const handleRemoveFromCollection = async (card: PokemonCard, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProcessingCards(prev => new Set(prev).add(card.id));
+    
+    try {
+      await removeFromCollection(card.id);
+      toast({
+        title: "Card Removed",
+        description: `${card.name} has been removed from your collection.`,
+        duration: 2000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove card from collection.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingCards(prev => {
+        const next = new Set(prev);
+        next.delete(card.id);
+        return next;
+      });
+    }
   };
 
   // Get unique card types, subtypes, and rarities from current cards
@@ -127,114 +185,116 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={onBackClick}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            {selectedSet.name}
-            <img 
-              src={selectedSet.images.symbol} 
-              alt={`${selectedSet.name} symbol`} 
-              className="h-6 w-6"
-            />
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {selectedSet.total} cards in this set
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowFilters(!showFilters)}
-          className="w-full sm:w-auto flex items-center gap-2"
-        >
-          <Filter className="h-4 w-4" />
-          Filters
-          <ChevronDown className={cn(
-            "h-4 w-4 transition-transform",
-            showFilters && "transform rotate-180"
-          )} />
-        </Button>
-        
-        {showFilters && (
-          <div className="bg-card border rounded-lg mt-2 p-4">
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="card-type">
-                <AccordionTrigger>Card Type</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Types</SelectItem>
-                        {uniqueTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select value={subtypeFilter} onValueChange={setSubtypeFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Subtype" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Subtypes</SelectItem>
-                        {uniqueSubtypes.map(subtype => (
-                          <SelectItem key={subtype} value={subtype}>{subtype}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select value={rarityFilter} onValueChange={setRarityFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Rarity" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Rarities</SelectItem>
-                        {uniqueRarities.map(rarity => (
-                          <SelectItem key={rarity} value={rarity}>{rarity}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="price-range">
-                <AccordionTrigger>Price Range</AccordionTrigger>
-                <AccordionContent>
-                  <div className="mb-2">
-                    <Slider
-                      min={0}
-                      max={1000}
-                      step={1}
-                      value={priceRange}
-                      onValueChange={(value) => setPriceRange(value as [number, number])}
-                      className="mb-6"
-                    />
-                    <div className="flex justify-between text-sm">
-                      <span>${priceRange[0].toFixed(2)}</span>
-                      <span>${priceRange[1].toFixed(2)}</span>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            </div>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="sticky top-14 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" size="icon" onClick={onBackClick}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              {selectedSet.name}
+              <img 
+                src={selectedSet.images.symbol} 
+                alt={`${selectedSet.name} symbol`} 
+                className="h-6 w-6"
+              />
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {selectedSet.total} cards in this set
+            </p>
           </div>
-        )}
+        </div>
+
+        <div className="mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full sm:w-auto flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            <ChevronDown className={cn(
+              "h-4 w-4 transition-transform",
+              showFilters && "transform rotate-180"
+            )} />
+          </Button>
+          
+          {showFilters && (
+            <div className="bg-card border rounded-lg mt-2 p-4">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="card-type">
+                  <AccordionTrigger>Card Type</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <Select value={typeFilter || "none"} onValueChange={(value) => setTypeFilter(value === "none" ? null : value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">All Types</SelectItem>
+                          {uniqueTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={subtypeFilter || "none"} onValueChange={(value) => setSubtypeFilter(value === "none" ? null : value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Subtype" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">All Subtypes</SelectItem>
+                          {uniqueSubtypes.map(subtype => (
+                            <SelectItem key={subtype} value={subtype}>{subtype}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={rarityFilter || "none"} onValueChange={(value) => setRarityFilter(value === "none" ? null : value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Rarity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">All Rarities</SelectItem>
+                          {uniqueRarities.map(rarity => (
+                            <SelectItem key={rarity} value={rarity}>{rarity}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="price-range">
+                  <AccordionTrigger>Price Range</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="mb-2">
+                      <Slider
+                        min={0}
+                        max={1000}
+                        step={1}
+                        value={priceRange}
+                        onValueChange={(value) => setPriceRange(value as [number, number])}
+                        className="mb-6"
+                      />
+                      <div className="flex justify-between text-sm">
+                        <span>${priceRange[0].toFixed(2)}</span>
+                        <span>${priceRange[1].toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+              
+              <div className="flex justify-end mt-4">
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -262,27 +322,50 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
             {filteredCards.map((card) => {
               const price = getCardPrice(card);
               const isOwned = isInCollection(card.id);
+              const isProcessing = processingCards.has(card.id);
               
               return (
                 <Card 
                   key={card.id}
                   className={cn(
-                    "overflow-hidden transition-all hover:shadow-lg cursor-pointer",
+                    "group overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer",
                     "hover:scale-[1.02] relative",
                     isOwned && "ring-2 ring-green-500 ring-offset-2"
                   )}
                   onClick={() => onCardSelect(card)}
                 >
-                  {isOwned && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <Badge className="bg-green-500">Owned</Badge>
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                      <Button
+                        variant={isOwned ? "destructive" : "default"}
+                        size="sm"
+                        className={cn(
+                          "transform translate-y-4 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300",
+                          "font-semibold",
+                          isProcessing && "pointer-events-none"
+                        )}
+                        onClick={(e) => isOwned ? handleRemoveFromCollection(card, e) : handleAddToCollection(card, e)}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isOwned ? (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Remove
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add
+                          </>
+                        )}
+                      </Button>
                     </div>
-                  )}
-                  <div className="relative pt-[139.4%]"> {/* Aspect ratio for Pokémon cards */}
                     <img
                       src={card.images.small}
                       alt={card.name}
-                      className="absolute top-0 left-0 w-full h-full object-contain"
+                      className="w-full aspect-[2.5/3.5] object-contain"
                       loading="lazy"
                     />
                   </div>
@@ -330,7 +413,6 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                 {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
                   let pageNumber;
                   
-                  // Show first page, last page, current page, and pages around current
                   if (totalPages <= 5) {
                     pageNumber = i + 1;
                   } else if (currentPage <= 3) {
@@ -351,6 +433,14 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                         >
                           {pageNumber}
                         </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  if (pageNumber === 2 || pageNumber === totalPages - 1) {
+                    return (
+                      <PaginationItem key={i}>
+                        <PaginationEllipsis />
                       </PaginationItem>
                     );
                   }

@@ -88,17 +88,17 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Pokémon TCG Sets</h1>
         
         <div className="flex flex-wrap gap-2">
-          <Select value={legalityFilter || "all"} onValueChange={(value) => setLegalityFilter(value === "all" ? null : value)}>
+          <Select value={legalityFilter || "none"} onValueChange={(value) => setLegalityFilter(value === "none" ? null : value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Format Legality" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Sets</SelectItem>
+              <SelectItem value="none">All Sets</SelectItem>
               <SelectItem value="standard">Standard Legal</SelectItem>
               <SelectItem value="expanded">Expanded Legal</SelectItem>
             </SelectContent>

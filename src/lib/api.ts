@@ -109,14 +109,21 @@ export interface CollectionCard extends PokemonCard {
 
 const API_KEY = '31138e72-dced-469e-9b59-ae3b155ac955';
 const BASE_URL = 'https://api.pokemontcg.io/v2';
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
-// Helper function to make API requests
-const fetchFromApi = async (endpoint: string, params: Record<string, string> = {}) => {
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to make API requests with retry logic
+const fetchFromApi = async (endpoint: string, params: Record<string, string> = {}, retryCount = 0): Promise<any> => {
   const url = new URL(`${BASE_URL}/${endpoint}`);
   
   // Add query parameters
   Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, value);
+    if (value) {
+      url.searchParams.append(key, value);
+    }
   });
   
   try {
@@ -127,12 +134,48 @@ const fetchFromApi = async (endpoint: string, params: Record<string, string> = {
     });
     
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Log detailed error information
+      console.error('API Error Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: url.toString()
+      });
+
+      // Handle specific HTTP status codes
+      switch (response.status) {
+        case 429: // Rate limit exceeded
+          if (retryCount < MAX_RETRIES) {
+            const retryAfter = parseInt(response.headers.get('Retry-After') || '5');
+            await delay(retryAfter * 1000);
+            return fetchFromApi(endpoint, params, retryCount + 1);
+          }
+          throw new Error('Rate limit exceeded. Please try again later.');
+        case 404:
+          throw new Error('Resource not found');
+        case 401:
+          throw new Error('Invalid API key');
+        default:
+          throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+      }
     }
     
     return await response.json();
   } catch (error) {
-    console.error('Error fetching from API:', error);
+    // Handle network errors with retry logic
+    if (error instanceof TypeError && error.message === 'Failed to fetch' && retryCount < MAX_RETRIES) {
+      const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.log(`Retrying API call after ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      await delay(retryDelay);
+      return fetchFromApi(endpoint, params, retryCount + 1);
+    }
+
+    console.error('Error fetching from API:', {
+      error,
+      endpoint,
+      params,
+      retryCount
+    });
     throw error;
   }
 };
@@ -194,19 +237,23 @@ export const useCards = (setId: string | null, page: number, pageSize: number, f
       
       try {
         // Build query parameters
-        const params: Record<string, string> = {
-          page: page.toString(),
-          pageSize: pageSize.toString(),
-          q: `set.id:${setId}`,
-          orderBy: 'number',
-        };
+        const queryParts = [`set.id:"${setId}"`];
         
         // Add additional filters if any
         Object.entries(filters).forEach(([key, value]) => {
           if (value) {
-            params.q += ` ${key}:${value}`;
+            // Properly format the filter query with quotes around values containing spaces
+            const filterValue = value.includes(' ') ? `"${value}"` : value;
+            queryParts.push(`${key}:${filterValue}`);
           }
         });
+        
+        const params: Record<string, string> = {
+          page: page.toString(),
+          pageSize: pageSize.toString(),
+          q: queryParts.join(' '),
+          orderBy: 'number',
+        };
         
         const response = await fetchFromApi('cards', params);
         setCards(response.data);
