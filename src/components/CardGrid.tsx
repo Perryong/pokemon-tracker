@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ChevronDown, DollarSign, Filter, Plus, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Filter, Plus, Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -29,7 +29,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 interface CardGridProps {
@@ -43,7 +42,6 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [subtypeFilter, setSubtypeFilter] = useState<string | null>(null);
   const [rarityFilter, setRarityFilter] = useState<string | null>(null);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [showFilters, setShowFilters] = useState(false);
   const [processingCards, setProcessingCards] = useState<Set<string>>(new Set());
   const pageSize = 20;
@@ -63,19 +61,6 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
 
   const { cards, totalCards, loading, error } = useCards(selectedSet.id, currentPage, pageSize, filters);
 
-  // Filter cards by price range client-side
-  const filteredCards = cards.filter(card => {
-    if (!card.tcgplayer?.prices) return true;
-
-    for (const priceType in card.tcgplayer.prices) {
-      const price = card.tcgplayer.prices[priceType as keyof typeof card.tcgplayer.prices];
-      if (price?.market && price.market >= priceRange[0] && price.market <= priceRange[1]) {
-        return true;
-      }
-    }
-    return false;
-  });
-
   const totalPages = Math.ceil(totalCards / pageSize);
 
   const handlePageChange = (page: number) => {
@@ -87,7 +72,6 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
     setTypeFilter(null);
     setSubtypeFilter(null);
     setRarityFilter(null);
-    setPriceRange([0, 1000]);
   };
 
   const handleAddToCollection = async (card: PokemonCard, e: React.MouseEvent) => {
@@ -147,24 +131,8 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   const uniqueSubtypes = Array.from(new Set(cards.flatMap(card => card.subtypes || [])));
   const uniqueRarities = Array.from(new Set(cards.map(card => card.rarity).filter(Boolean) as string[]));
 
-  // Function to get the best available price for a card
-  const getCardPrice = (card: PokemonCard): number | null => {
-    if (!card.tcgplayer?.prices) return null;
-    
-    const prices = card.tcgplayer.prices;
-    if (prices.holofoil?.market) return prices.holofoil.market;
-    if (prices.reverseHolofoil?.market) return prices.reverseHolofoil.market;
-    if (prices.normal?.market) return prices.normal.market;
-    
-    // Fallback to any available market price
-    for (const priceType in prices) {
-      if (prices[priceType as keyof typeof prices]?.market) {
-        return prices[priceType as keyof typeof prices]!.market;
-      }
-    }
-    
-    return null;
-  };
+  const fallbackCardImage =
+    'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"260\" height=\"360\" viewBox=\"0 0 260 360\"><rect width=\"260\" height=\"360\" rx=\"16\" fill=\"%23f4f4f5\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"%23a1a1aa\" font-family=\"Inter,Arial\" font-size=\"16\">Image Unavailable</text></svg>';
 
   if (error) {
     return (
@@ -193,11 +161,16 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               {selectedSet.name}
-              <img 
-                src={selectedSet.images.symbol} 
-                alt={`${selectedSet.name} symbol`} 
-                className="h-6 w-6"
-              />
+              {selectedSet.images.symbol ? (
+                <img 
+                  src={selectedSet.images.symbol} 
+                  alt={`${selectedSet.name} symbol`} 
+                  className="h-6 w-6"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
             </h1>
             <p className="text-sm text-muted-foreground">
               {selectedSet.total} cards in this set
@@ -265,26 +238,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                   </AccordionContent>
                 </AccordionItem>
                 
-                <AccordionItem value="price-range">
-                  <AccordionTrigger>Price Range</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="mb-2">
-                      <Slider
-                        min={0}
-                        max={1000}
-                        step={1}
-                        value={priceRange}
-                        onValueChange={(value) => setPriceRange(value as [number, number])}
-                        className="mb-6"
-                      />
-                      <div className="flex justify-between text-sm">
-                        <span>${priceRange[0].toFixed(2)}</span>
-                        <span>${priceRange[1].toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+                </Accordion>
               
               <div className="flex justify-end mt-4">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
@@ -309,7 +263,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
             </Card>
           ))}
         </div>
-      ) : filteredCards.length === 0 ? (
+       ) : cards.length === 0 ? (
         <div className="text-center p-8 bg-muted rounded-lg">
           <h2 className="text-2xl font-semibold mb-2">No Cards Found</h2>
           <p className="mb-4">No cards match your current filters.</p>
@@ -318,9 +272,8 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredCards.map((card) => {
-              const price = getCardPrice(card);
-              const isOwned = isInCollection(card.id);
+           {cards.map((card) => {
+             const isOwned = isInCollection(card.id);
               const isProcessing = processingCards.has(card.id);
               
               return (
@@ -362,25 +315,26 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                       </Button>
                     </div>
                     <img
-                      src={card.images.small}
+                      src={card.images.small || fallbackCardImage}
                       alt={card.name}
                       className="w-full aspect-[2.5/3.5] object-contain"
                       loading="lazy"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== fallbackCardImage) {
+                          e.currentTarget.src = fallbackCardImage;
+                        } else {
+                          e.currentTarget.style.display = 'none';
+                        }
+                      }}
                     />
                   </div>
                   <CardContent className="p-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-sm">{card.name}</h3>
-                        <p className="text-xs text-muted-foreground">{card.number}/{selectedSet.printedTotal}</p>
-                      </div>
-                      {price && (
-                        <div className="flex items-center text-sm font-medium">
-                          <DollarSign className="h-3 w-3 mr-1" />
-                          {price.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
+                     <div className="flex justify-between items-start">
+                       <div>
+                         <h3 className="font-semibold text-sm">{card.name}</h3>
+                         <p className="text-xs text-muted-foreground">{card.number}/{selectedSet.printedTotal}</p>
+                       </div>
+                     </div>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {card.rarity && (
                         <Badge variant="outline" className="text-xs">
