@@ -17,17 +17,24 @@ export type { PokemonSet, PokemonCard, CardImage, Series };
 const applySetFilters = (sets: PokemonSet[], filters: Record<string, string>): PokemonSet[] => {
   return sets.filter(set => {
     // Handle legality filters
-    if (filters['legalities.standard'] === 'legal' && set.legalities.standard !== 'Legal') {
+    if (filters['legalities.standard'] === 'legal' && set.legalities.standard !== 'legal') {
       return false;
     }
-    if (filters['legalities.expanded'] === 'legal' && set.legalities.expanded !== 'Legal') {
+    if (filters['legalities.expanded'] === 'legal' && set.legalities.expanded !== 'legal') {
       return false;
     }
     
     // Handle release date range filters
     if (filters['releaseDate']) {
       const dateFilter = filters['releaseDate'];
+      if (!set.releaseDate) {
+        return false;
+      }
+      
       const setDate = new Date(set.releaseDate);
+      if (Number.isNaN(setDate.getTime())) {
+        return false;
+      }
       
       // Parse gte/lte format: "gte2020/01/01 lte2023/12/31"
       const gteMatch = dateFilter.match(/gte(\d{4}\/\d{2}\/\d{2})/);

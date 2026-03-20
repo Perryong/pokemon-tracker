@@ -110,9 +110,9 @@ export function normalizeTCGSet(tcgSet: SetResume | Set): PokemonSet {
     printedTotal: tcgSet.cardCount.official,
     total: tcgSet.cardCount.total,
     legalities: {
-      standard: isFullSet && tcgSet.legal?.standard ? 'Legal' : undefined,
-      expanded: isFullSet && tcgSet.legal?.expanded ? 'Legal' : undefined,
-      unlimited: 'Legal', // TCGdex doesn't track unlimited, default to legal
+      standard: isFullSet && tcgSet.legal?.standard ? 'legal' : undefined,
+      expanded: isFullSet && tcgSet.legal?.expanded ? 'legal' : undefined,
+      unlimited: 'legal', // TCGdex doesn't track unlimited, default to legal
     },
     ptcgoCode: undefined, // TCGdex doesn't provide PTCGO codes
     releaseDate: isFullSet ? tcgSet.releaseDate : '',
@@ -162,7 +162,7 @@ export function normalizeTCGCard(tcgCard: Card | CardResume, setData?: Set): Pok
     legalities: {
       standard: undefined, // Card-level legalities inherited from set
       expanded: undefined,
-      unlimited: 'Legal',
+      unlimited: 'legal',
     },
     images: {
       small: imageUrl,
