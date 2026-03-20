@@ -29,7 +29,12 @@
   4. App stores only card IDs (not full objects) in localStorage to prevent quota issues with large collections
   5. User sees accurate set-level completion percentages that reflect actual owned cards in their collection
 
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+
+Plans:
+- [ ] 01-01-PLAN.md — TCGdex SDK adapter layer with type normalization
+- [ ] 01-02-PLAN.md — Collection persistence refactor with completion stats
+- [ ] 01-03-PLAN.md — Hook migration and component integration
 
 ---
 
@@ -51,6 +56,16 @@
 **Plans**: TBD
 
 ---
+
+### Phase 02.1: Build a Pokemon TCG Collection Tracker application using React.js, shadcn/ui components, and the TCGdex JavaScript SDK (@tcgdex/sdk). (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 2
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 02.1 to break down)
 
 ### Phase 3: Cards Album & Ownership Tracking
 **Goal**: User can view and track ownership of individual cards within selected sets with real-time feedback
@@ -76,7 +91,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation & Persistence | 0/? | Not started | - |
+| 1. Data Foundation & Persistence | 0/3 | Planned | - |
 | 2. Sets View & Navigation | 0/? | Not started | - |
 | 3. Cards Album & Ownership Tracking | 0/? | Not started | - |
 

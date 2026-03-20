@@ -24,14 +24,14 @@ Roadmap created with 3 phases. Ready to begin Phase 1 (Data Foundation & Persist
 
 ## Current Position
 
-**Phase**: Not Started  
-**Plan**: None yet  
-**Status**: ⏸️ Awaiting `/gsd-plan-phase 1`
+**Phase**: 1 — Data Foundation & Persistence  
+**Plan**: Ready to execute  
+**Status**: ✅ Plans created (3 plans in 2 waves)
 
 **Progress**:
 ```
 Roadmap: ████████████████████████████████████████ 100% (3/3 phases defined)
-Phase 1:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/? plans)
+Phase 1:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/3 plans executed)
 Phase 2:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/? plans)
 Phase 3:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/? plans)
 Overall:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/3 phases)
@@ -61,6 +61,10 @@ Overall:  ░░░░░░░░░░░░░░░░░░░░░░░�
 ---
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 02.1 inserted after Phase 2: Build a Pokemon TCG Collection Tracker application using React.js, shadcn/ui components, and the TCGdex JavaScript SDK (@tcgdex/sdk). (URGENT)
 
 ### Active Decisions
 
@@ -101,12 +105,14 @@ None. Ready to proceed with planning.
 
 ### What's Next
 
-**Immediate**: Run `/gsd-plan-phase 1` to decompose Data Foundation & Persistence into executable plans.
+**Immediate**: Run `/gsd-execute-phase 1` to execute Phase 1 plans.
 
-**Phase 1 Planning Context**:
-- 7 requirements: DATA-01 through DATA-04, PERS-01 through PERS-03
-- Critical pitfalls: Card identity (use card.id), localStorage size (store IDs only), data loss (export functionality)
-- Research context: TCGdex SDK integration patterns, React custom hooks, localStorage best practices
+**Phase 1 Execution Structure**:
+- **Wave 1** (parallel): Plans 01-01 and 01-02 (no dependencies between them)
+  - Plan 01-01: TCGdex adapter + type normalization (~2 tasks)
+  - Plan 01-02: Collection persistence refactor (~2 tasks)
+- **Wave 2** (sequential): Plan 01-03 (depends on both Wave 1 plans)
+  - Plan 01-03: Hook migration + component integration (~3 tasks)
 
 **Success Criteria to Inform Plans**:
 1. User's browser successfully fetches all Pokemon TCG sets, series metadata, and set details with cards from TCGdex SDK
