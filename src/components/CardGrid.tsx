@@ -95,7 +95,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
     setProcessingCards(prev => new Set(prev).add(card.id));
     
     try {
-      await addToCollection(card);
+      await addToCollection(card.id);
       toast({
         title: "Card Added",
         description: `${card.name} has been added to your collection.`,
