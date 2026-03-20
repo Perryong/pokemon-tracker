@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface SetGridProps {
@@ -222,59 +223,83 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
       {!loading && sets.length > 0 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {sets.map((set) => (
-              <Card 
-                key={set.id}
-                className="overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
-                onClick={() => onSetSelect(set)}
-              >
-                <div className="h-52 bg-muted flex items-center justify-center p-4">
-                  <img 
-                    src={set.images.logo || FALLBACK_SET_IMAGE}
-                    alt={`${set.name} logo`}
-                    className="max-h-full max-w-full object-contain"
-                    loading="lazy"
-                    onError={(e) => {
-                      if (e.currentTarget.src !== FALLBACK_SET_IMAGE) {
-                        e.currentTarget.src = FALLBACK_SET_IMAGE;
-                      } else {
-                        e.currentTarget.style.display = 'none';
-                      }
-                    }}
-                  />
-                </div>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold line-clamp-1">{set.name}</h3>
-                    {set.images.symbol && (
-                      <img 
-                        src={set.images.symbol} 
-                        alt={`${set.name} symbol`} 
-                        className="h-6 w-6"
-                        loading="lazy"
-                        onError={(e) => {
+            {sets.map((set) => {
+              const completion = getCompletion(set.id, set.total);
+
+              return (
+                <Card
+                  key={set.id}
+                  className="overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+                  onClick={() => onSetSelect(set)}
+                >
+                  <div className="h-52 bg-muted flex items-center justify-center p-4">
+                    <img
+                      src={set.images.logo || FALLBACK_SET_IMAGE}
+                      alt={`${set.name} logo`}
+                      className="max-h-full max-w-full object-contain"
+                      loading="lazy"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== FALLBACK_SET_IMAGE) {
+                          e.currentTarget.src = FALLBACK_SET_IMAGE;
+                        } else {
                           e.currentTarget.style.display = 'none';
-                        }}
+                        }
+                      }}
+                    />
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-bold line-clamp-1">{set.name}</h3>
+                      {set.images.symbol && (
+                        <img
+                          src={set.images.symbol}
+                          alt={`${set.name} symbol`}
+                          className="h-6 w-6"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Released: {set.releaseDate ? format(new Date(set.releaseDate), 'MMM d, yyyy') : 'Unknown'}
+                    </p>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
+                        <span className="font-medium">
+                          Owned {completion.owned} / {completion.total}
+                        </span>
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {completion.percentage.toFixed(0)}%
+                        </span>
+                      </div>
+                      <Progress
+                        value={completion.percentage}
+                        aria-label={`Owned ${completion.owned} of ${completion.total} cards in ${set.name}`}
                       />
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Released: {set.releaseDate ? format(new Date(set.releaseDate), 'MMM d, yyyy') : 'Unknown'}
-                  </p>
-                  <p className="text-sm mb-3">
-                    {set.total} cards
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {set.legalities?.standard === 'legal' && (
-                      <Badge variant="default" className="bg-green-600">Standard</Badge>
-                    )}
-                    {set.legalities?.expanded === 'legal' && (
-                      <Badge variant="secondary">Expanded</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap gap-1">
+                        {set.legalities?.standard === 'legal' && (
+                          <Badge variant="default" className="bg-green-600">
+                            Standard
+                          </Badge>
+                        )}
+                        {set.legalities?.expanded === 'legal' && (
+                          <Badge variant="secondary">Expanded</Badge>
+                        )}
+                      </div>
+                      {completion.percentage === 100 && (
+                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700" variant="outline">
+                          Complete
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
