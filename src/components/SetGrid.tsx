@@ -34,6 +34,9 @@ interface SetGridProps {
   onSetSelect: (set: PokemonSet) => void;
 }
 
+const FALLBACK_SET_IMAGE =
+  'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"320\" height=\"180\" viewBox=\"0 0 320 180\"><rect width=\"320\" height=\"180\" rx=\"12\" fill=\"%23f4f4f5\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"%23a1a1aa\" font-family=\"Inter,Arial\" font-size=\"16\">No Set Logo</text></svg>';
+
 const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [legalityFilter, setLegalityFilter] = useState<string | null>(null);
@@ -185,21 +188,19 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
                 onClick={() => onSetSelect(set)}
               >
                 <div className="h-52 bg-muted flex items-center justify-center p-4">
-                  {set.images.logo ? (
-                    <img 
-                      src={set.images.logo} 
-                      alt={`${set.name} logo`}
-                      className="max-h-full max-w-full object-contain"
-                      loading="lazy"
-                      onError={(e) => {
+                  <img 
+                    src={set.images.logo || FALLBACK_SET_IMAGE}
+                    alt={`${set.name} logo`}
+                    className="max-h-full max-w-full object-contain"
+                    loading="lazy"
+                    onError={(e) => {
+                      if (e.currentTarget.src !== FALLBACK_SET_IMAGE) {
+                        e.currentTarget.src = FALLBACK_SET_IMAGE;
+                      } else {
                         e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="text-muted-foreground text-sm text-center">
-                      {set.name}
-                    </div>
-                  )}
+                      }
+                    }}
+                  />
                 </div>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -223,10 +224,10 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
                     {set.total} cards
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {set.legalities.standard === 'legal' && (
+                    {set.legalities?.standard === 'legal' && (
                       <Badge variant="default" className="bg-green-600">Standard</Badge>
                     )}
-                    {set.legalities.expanded === 'legal' && (
+                    {set.legalities?.expanded === 'legal' && (
                       <Badge variant="secondary">Expanded</Badge>
                     )}
                   </div>
