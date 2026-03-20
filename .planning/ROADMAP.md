@@ -29,12 +29,13 @@
   4. App stores only card IDs (not full objects) in localStorage to prevent quota issues with large collections
   5. User sees accurate set-level completion percentages that reflect actual owned cards in their collection
 
-**Plans**: 3 plans (2 waves)
+**Plans**: 4 plans (3 waves)
 
 Plans:
 - [x] 01-01-PLAN.md — TCGdex SDK adapter layer with type normalization
 - [x] 01-02-PLAN.md — Collection persistence refactor with completion stats
 - [ ] 01-03-PLAN.md — Hook migration and component integration
+- [ ] 01-04-PLAN.md — Surface persisted set completion percentages in SetGrid
 
 ---
 
