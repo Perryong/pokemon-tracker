@@ -71,32 +71,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase TBD | Pending |
-| DATA-02 | Phase TBD | Pending |
-| DATA-03 | Phase TBD | Pending |
-| DATA-04 | Phase TBD | Pending |
-| SETS-01 | Phase TBD | Pending |
-| SETS-02 | Phase TBD | Pending |
-| SETS-03 | Phase TBD | Pending |
-| SETS-04 | Phase TBD | Pending |
-| SETS-05 | Phase TBD | Pending |
-| ALBM-01 | Phase TBD | Pending |
-| ALBM-02 | Phase TBD | Pending |
-| ALBM-03 | Phase TBD | Pending |
-| ALBM-04 | Phase TBD | Pending |
-| ALBM-05 | Phase TBD | Pending |
-| ALBM-06 | Phase TBD | Pending |
-| ALBM-07 | Phase TBD | Pending |
-| STAT-01 | Phase TBD | Pending |
-| PERS-01 | Phase TBD | Pending |
-| PERS-02 | Phase TBD | Pending |
-| PERS-03 | Phase TBD | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| PERS-01 | Phase 1 | Pending |
+| PERS-02 | Phase 1 | Pending |
+| PERS-03 | Phase 1 | Pending |
+| SETS-01 | Phase 2 | Pending |
+| SETS-02 | Phase 2 | Pending |
+| SETS-03 | Phase 2 | Pending |
+| SETS-04 | Phase 2 | Pending |
+| SETS-05 | Phase 2 | Pending |
+| ALBM-01 | Phase 3 | Pending |
+| ALBM-02 | Phase 3 | Pending |
+| ALBM-03 | Phase 3 | Pending |
+| ALBM-04 | Phase 3 | Pending |
+| ALBM-05 | Phase 3 | Pending |
+| ALBM-06 | Phase 3 | Pending |
+| ALBM-07 | Phase 3 | Pending |
+| STAT-01 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-20*
-*Last updated: 2026-03-20 after initial definition*
+*Last updated: 2026-03-20 after roadmap creation*
