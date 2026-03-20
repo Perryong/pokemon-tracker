@@ -1,183 +1,50 @@
 import { useState, useEffect } from 'react';
+import { fetchAllSets, fetchAllSeries, fetchSetWithCards } from './tcgdex';
+import { 
+  PokemonSet, 
+  PokemonCard, 
+  CardImage, 
+  Series,
+  normalizeTCGSet, 
+  normalizeTCGCard, 
+  normalizeTCGSeries 
+} from './types';
 
-// Types for the Pokémon TCG API responses
-export interface PokemonSet {
-  id: string;
-  name: string;
-  series: string;
-  printedTotal: number;
-  total: number;
-  legalities: {
-    standard?: string;
-    expanded?: string;
-    unlimited?: string;
-  };
-  ptcgoCode?: string;
-  releaseDate: string;
-  updatedAt: string;
-  images: {
-    symbol: string;
-    logo: string;
-  };
-}
+// Re-export types for backward compatibility
+export type { PokemonSet, PokemonCard, CardImage, Series };
 
-export interface CardImage {
-  small: string;
-  large: string;
-}
-
-export interface CardPrice {
-  low: number | null;
-  mid: number | null;
-  high: number | null;
-  market: number | null;
-  directLow: number | null;
-}
-
-export interface CardPrices {
-  holofoil?: CardPrice;
-  reverseHolofoil?: CardPrice;
-  normal?: CardPrice;
-  [key: string]: CardPrice | undefined;
-}
-
-export interface Attack {
-  name: string;
-  cost: string[];
-  convertedEnergyCost: number;
-  damage: string;
-  text: string;
-}
-
-export interface PokemonCard {
-  id: string;
-  name: string;
-  supertype: string;
-  subtypes: string[];
-  hp?: string;
-  types?: string[];
-  evolvesFrom?: string;
-  evolvesTo?: string[];
-  rules?: string[];
-  attacks?: Attack[];
-  weaknesses?: {
-    type: string;
-    value: string;
-  }[];
-  resistances?: {
-    type: string;
-    value: string;
-  }[];
-  retreatCost?: string[];
-  convertedRetreatCost?: number;
-  set: PokemonSet;
-  number: string;
-  artist?: string;
-  rarity?: string;
-  flavorText?: string;
-  nationalPokedexNumbers?: number[];
-  legalities: {
-    standard?: string;
-    expanded?: string;
-    unlimited?: string;
-  };
-  images: CardImage;
-  tcgplayer?: {
-    url: string;
-    updatedAt: string;
-    prices: CardPrices;
-  };
-  cardmarket?: {
-    url: string;
-    updatedAt: string;
-    prices: {
-      averageSellPrice: number | null;
-      lowPrice: number | null;
-      trendPrice: number | null;
-      [key: string]: any;
-    };
-  };
-}
-
-export interface CollectionCard extends PokemonCard {
-  owned: boolean;
-  quantity: number;
-  condition: string;
-  purchasePrice?: number;
-  notes?: string;
-}
-
-const API_KEY = '31138e72-dced-469e-9b59-ae3b155ac955';
-const BASE_URL = 'https://api.pokemontcg.io/v2';
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
-
-// Helper function to delay execution
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper function to make API requests with retry logic
-const fetchFromApi = async (endpoint: string, params: Record<string, string> = {}, retryCount = 0): Promise<any> => {
-  const url = new URL(`${BASE_URL}/${endpoint}`);
-  
-  // Add query parameters
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      url.searchParams.append(key, value);
+// Helper function to apply client-side filters to sets
+const applySetFilters = (sets: PokemonSet[], filters: Record<string, string>): PokemonSet[] => {
+  return sets.filter(set => {
+    // Handle legality filters
+    if (filters['legalities.standard'] === 'legal' && set.legalities.standard !== 'Legal') {
+      return false;
     }
-  });
-  
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        'X-Api-Key': API_KEY,
-      },
-    });
+    if (filters['legalities.expanded'] === 'legal' && set.legalities.expanded !== 'Legal') {
+      return false;
+    }
     
-    if (!response.ok) {
-      // Log detailed error information
-      console.error('API Error Details:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        url: url.toString()
-      });
-
-      // Handle specific HTTP status codes
-      switch (response.status) {
-        case 429: // Rate limit exceeded
-          if (retryCount < MAX_RETRIES) {
-            const retryAfter = parseInt(response.headers.get('Retry-After') || '5');
-            await delay(retryAfter * 1000);
-            return fetchFromApi(endpoint, params, retryCount + 1);
-          }
-          throw new Error('Rate limit exceeded. Please try again later.');
-        case 404:
-          throw new Error('Resource not found');
-        case 401:
-          throw new Error('Invalid API key');
-        default:
-          throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+    // Handle release date range filters
+    if (filters['releaseDate']) {
+      const dateFilter = filters['releaseDate'];
+      const setDate = new Date(set.releaseDate);
+      
+      // Parse gte/lte format: "gte2020/01/01 lte2023/12/31"
+      const gteMatch = dateFilter.match(/gte(\d{4}\/\d{2}\/\d{2})/);
+      const lteMatch = dateFilter.match(/lte(\d{4}\/\d{2}\/\d{2})/);
+      
+      if (gteMatch) {
+        const minDate = new Date(gteMatch[1]);
+        if (setDate < minDate) return false;
+      }
+      if (lteMatch) {
+        const maxDate = new Date(lteMatch[1]);
+        if (setDate > maxDate) return false;
       }
     }
     
-    return await response.json();
-  } catch (error) {
-    // Handle network errors with retry logic
-    if (error instanceof TypeError && error.message === 'Failed to fetch' && retryCount < MAX_RETRIES) {
-      const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
-      console.log(`Retrying API call after ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-      await delay(retryDelay);
-      return fetchFromApi(endpoint, params, retryCount + 1);
-    }
-
-    console.error('Error fetching from API:', {
-      error,
-      endpoint,
-      params,
-      retryCount
-    });
-    throw error;
-  }
+    return true;
+  });
 };
 
 // Hook for fetching sets with pagination and filtering
@@ -188,33 +55,81 @@ export const useSets = (page: number, pageSize: number, filters: Record<string, 
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    
     const fetchSets = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Build query parameters
-        const params: Record<string, string> = {
-          page: page.toString(),
-          pageSize: pageSize.toString(),
-          orderBy: 'releaseDate',
-          ...filters,
-        };
+        // Fetch all sets from TCGdex
+        const allSets = await fetchAllSets();
         
-        const response = await fetchFromApi('sets', params);
-        setSets(response.data);
-        setTotalSets(response.totalCount);
+        if (cancelled) return;
+        
+        // Normalize to app types
+        const normalizedSets = allSets.map(normalizeTCGSet);
+        
+        // Apply filters
+        const filteredSets = applySetFilters(normalizedSets, filters);
+        
+        // Sort by release date (newest first)
+        filteredSets.sort((a, b) => {
+          const dateA = new Date(a.releaseDate || '1900-01-01');
+          const dateB = new Date(b.releaseDate || '1900-01-01');
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        // Apply pagination
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedSets = filteredSets.slice(startIndex, endIndex);
+        
+        if (!cancelled) {
+          setSets(paginatedSets);
+          setTotalSets(filteredSets.length);
+        }
       } catch (error) {
-        setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        if (!cancelled) {
+          setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     
     fetchSets();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [page, pageSize, JSON.stringify(filters)]);
   
   return { sets, totalSets, loading, error };
+};
+
+// Helper function to apply client-side filters to cards
+const applyCardFilters = (cards: PokemonCard[], filters: Record<string, string>): PokemonCard[] => {
+  return cards.filter(card => {
+    // Handle type filter
+    if (filters['types'] && (!card.types || !card.types.includes(filters['types']))) {
+      return false;
+    }
+    
+    // Handle subtype filter
+    if (filters['subtypes'] && (!card.subtypes || !card.subtypes.includes(filters['subtypes']))) {
+      return false;
+    }
+    
+    // Handle rarity filter
+    if (filters['rarity'] && card.rarity !== filters['rarity']) {
+      return false;
+    }
+    
+    return true;
+  });
 };
 
 // Hook for fetching cards from a specific set with filtering
@@ -231,41 +146,58 @@ export const useCards = (setId: string | null, page: number, pageSize: number, f
       return;
     }
     
+    let cancelled = false;
+    
     const fetchCards = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Build query parameters
-        const queryParts = [`set.id:"${setId}"`];
+        // Fetch set with all its cards from TCGdex
+        const setData = await fetchSetWithCards(setId);
         
-        // Add additional filters if any
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value) {
-            // Properly format the filter query with quotes around values containing spaces
-            const filterValue = value.includes(' ') ? `"${value}"` : value;
-            queryParts.push(`${key}:${filterValue}`);
-          }
+        if (cancelled) return;
+        
+        // Normalize cards with set data
+        const normalizedCards = (setData.cards || []).map(card => 
+          normalizeTCGCard(card, setData)
+        );
+        
+        // Apply filters
+        const filteredCards = applyCardFilters(normalizedCards, filters);
+        
+        // Sort by card number
+        filteredCards.sort((a, b) => {
+          const numA = parseInt(a.number) || 0;
+          const numB = parseInt(b.number) || 0;
+          return numA - numB;
         });
         
-        const params: Record<string, string> = {
-          page: page.toString(),
-          pageSize: pageSize.toString(),
-          q: queryParts.join(' '),
-          orderBy: 'number',
-        };
+        // Apply pagination
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedCards = filteredCards.slice(startIndex, endIndex);
         
-        const response = await fetchFromApi('cards', params);
-        setCards(response.data);
-        setTotalCards(response.totalCount);
+        if (!cancelled) {
+          setCards(paginatedCards);
+          setTotalCards(filteredCards.length);
+        }
       } catch (error) {
-        setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        if (!cancelled) {
+          setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     
     fetchCards();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [setId, page, pageSize, JSON.stringify(filters)]);
   
   return { cards, totalCards, loading, error };
@@ -283,22 +215,97 @@ export const useCard = (cardId: string | null) => {
       return;
     }
     
+    let cancelled = false;
+    
     const fetchCard = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        const response = await fetchFromApi(`cards/${cardId}`);
-        setCard(response.data);
+        // Extract set ID from card ID (format: setId-cardNumber)
+        const setId = cardId.split('-')[0];
+        
+        // Fetch the full set with cards
+        const setData = await fetchSetWithCards(setId);
+        
+        if (cancelled) return;
+        
+        // Find the specific card
+        const tcgCard = setData.cards?.find(c => c.id === cardId);
+        
+        if (tcgCard) {
+          const normalizedCard = normalizeTCGCard(tcgCard, setData);
+          if (!cancelled) {
+            setCard(normalizedCard);
+          }
+        } else {
+          if (!cancelled) {
+            setError(new Error('Card not found'));
+          }
+        }
       } catch (error) {
-        setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        if (!cancelled) {
+          setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     
     fetchCard();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [cardId]);
   
   return { card, loading, error };
+};
+
+// Hook for fetching all series
+export const useSeries = () => {
+  const [series, setSeries] = useState<Series[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    
+    const fetchSeries = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch all series from TCGdex
+        const allSeries = await fetchAllSeries();
+        
+        if (cancelled) return;
+        
+        // Normalize to app types
+        const normalizedSeries = allSeries.map(normalizeTCGSeries);
+        
+        if (!cancelled) {
+          setSeries(normalizedSeries);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setError(error instanceof Error ? error : new Error('Unknown error occurred'));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchSeries();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  
+  return { series, loading, error };
 };
