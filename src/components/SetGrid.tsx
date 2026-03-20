@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { PokemonSet, useSets } from '@/lib/api';
+import { useCollection } from '@/lib/collection';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -64,7 +65,47 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   }
 
   const { sets, totalSets, loading, error } = useSets(currentPage, pageSize, filters);
+  const { ownedCards } = useCollection();
   const totalPages = Math.ceil(totalSets / pageSize);
+
+  const completionBySet = useMemo(() => {
+    const completionMap: Record<
+      string,
+      { owned: number; percentage: number; total: number }
+    > = {};
+
+    const ownedCountBySet: Record<string, number> = {};
+    Object.entries(ownedCards).forEach(([cardId, isOwned]) => {
+      if (!isOwned) {
+        return;
+      }
+      const [setId] = cardId.split('-');
+      if (!setId) {
+        return;
+      }
+      ownedCountBySet[setId] = (ownedCountBySet[setId] ?? 0) + 1;
+    });
+
+    sets.forEach((set) => {
+      const total = typeof set.total === 'number' ? set.total : 0;
+      const owned = ownedCountBySet[set.id] ?? 0;
+      const rawPercentage = total > 0 ? (owned / total) * 100 : 0;
+      const percentage = Math.min(Math.max(rawPercentage, 0), 100);
+      completionMap[set.id] = { owned, percentage, total };
+    });
+
+    return completionMap;
+  }, [sets, ownedCards]);
+
+  const getCompletion = (setId: string, total: number | undefined) => {
+    return (
+      completionBySet[setId] ?? {
+        owned: 0,
+        percentage: 0,
+        total: typeof total === 'number' ? total : 0,
+      }
+    );
+  };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
