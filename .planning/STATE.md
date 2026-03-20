@@ -99,8 +99,10 @@ Overall:  ░░░░░░░░░░░░░░░░░░░░░░░�
 
 ### Next Milestones
 
-- [ ] Plan Phase 1: Data Foundation & Persistence
-- [ ] Execute Phase 1 plans
+- [x] Plan Phase 1: Data Foundation & Persistence
+- [x] Execute Phase 1 Plan 01-01 (TCGdex adapter layer)
+- [ ] Execute Phase 1 Plan 01-02 (Collection persistence)
+- [ ] Execute Phase 1 Plan 01-03 (Hook migration)
 - [ ] Validate Phase 1 success criteria
 - [ ] Plan Phase 2: Sets View & Navigation
 
@@ -118,25 +120,25 @@ None. Ready to proceed with planning.
 
 ### What Just Happened
 
-1. ✓ Executed Plan 01-02: Collection Persistence Refactor
-2. ✓ Refactored src/lib/collection.ts to minimal ownership schema
-3. ✓ Added useSetCompletion hook for computed stats
-4. ✓ Changed storage key to 'pokemon-collection-v2'
-5. ✓ Removed quantity/condition/price fields (deferred to v2)
-6. ✓ Created 01-02-SUMMARY.md
-7. ✓ Updated STATE.md with completion status
+1. ✓ Executed Plan 01-01: TCGdex SDK Adapter Layer
+2. ✓ Created src/lib/tcgdex.ts with SDK singleton and fetch wrappers
+3. ✓ Created src/lib/types.ts with normalized types and adapter functions
+4. ✓ Preserved existing component contracts (PokemonSet, PokemonCard interfaces)
+5. ✓ Mapped TCGdex types to app types (single image URL → small/large, cardCount → printedTotal/total)
+6. ✓ Created 01-01-SUMMARY.md
+7. ✓ Updated STATE.md with progress (1/3 plans complete in Phase 1)
 
 ### What's Next
 
-**Immediate**: Execute Plan 01-01 (TCGdex adapter) or Plan 01-03 (Hook migration) depending on dependencies.
+**Immediate**: Execute Plan 01-02 (Collection persistence refactor) and Plan 01-03 (Hook migration).
 
 **Phase 1 Execution Structure**:
 
 - **Wave 1** (parallel): Plans 01-01 and 01-02 (no dependencies between them)
-  - Plan 01-01: TCGdex adapter + type normalization (~2 tasks) — NOT YET EXECUTED
-  - Plan 01-02: Collection persistence refactor (~2 tasks) — ✅ COMPLETE
+  - Plan 01-01: TCGdex adapter + type normalization (~2 tasks) — ✅ COMPLETE
+  - Plan 01-02: Collection persistence refactor (~2 tasks) — READY TO EXECUTE
 - **Wave 2** (sequential): Plan 01-03 (depends on both Wave 1 plans)
-  - Plan 01-03: Hook migration + component integration (~3 tasks) — BLOCKED until 01-01 complete
+  - Plan 01-03: Hook migration + component integration (~3 tasks) — READY AFTER 01-02
 
 **Success Criteria to Inform Plans**:
 
@@ -154,10 +156,10 @@ Read:
 2. `.planning/REQUIREMENTS.md` — Requirement details and traceability
 3. This file (STATE.md) — Current position and context
 
-Then run: `/gsd-execute-plan 01-01` to continue.
+Then run: `/gsd-execute-plan 01-02` to continue.
 
 ---
 
 *State initialized: 2026-03-20*  
-*Last execution: 2026-03-20 16:43*  
+*Last execution: 2026-03-20 00:46*  
 *Status: Phase 1 in progress (1/3 plans complete)*

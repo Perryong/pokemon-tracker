@@ -32,7 +32,7 @@
 **Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 01-01-PLAN.md — TCGdex SDK adapter layer with type normalization
+- [x] 01-01-PLAN.md — TCGdex SDK adapter layer with type normalization
 - [x] 01-02-PLAN.md — Collection persistence refactor with completion stats
 - [ ] 01-03-PLAN.md — Hook migration and component integration
 

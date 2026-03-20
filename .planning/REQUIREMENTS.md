@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Integration
 
-- [ ] **DATA-01**: App fetches all Pokemon TCG sets using TCGdex SDK `tcgdex.fetch('sets')`.
-- [ ] **DATA-02**: App fetches series metadata using TCGdex SDK `tcgdex.fetch('series')`.
-- [ ] **DATA-03**: App fetches selected set details and cards using TCGdex SDK `tcgdex.fetch('sets', setId)`.
-- [ ] **DATA-04**: App uses TCGdex card `image` data for card rendering in album view.
+- [x] **DATA-01**: App fetches all Pokemon TCG sets using TCGdex SDK `tcgdex.fetch('sets')`.
+- [x] **DATA-02**: App fetches series metadata using TCGdex SDK `tcgdex.fetch('series')`.
+- [x] **DATA-03**: App fetches selected set details and cards using TCGdex SDK `tcgdex.fetch('sets', setId)`.
+- [x] **DATA-04**: App uses TCGdex card `image` data for card rendering in album view.
 
 ### Sets View
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
 | PERS-01 | Phase 1 | Complete |
 | PERS-02 | Phase 1 | Complete |
 | PERS-03 | Phase 1 | Complete |
