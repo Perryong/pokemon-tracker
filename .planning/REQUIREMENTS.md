@@ -35,9 +35,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Collection Stats and Persistence
 
 - [ ] **STAT-01**: User sees a fixed bottom footer with real-time owned count, missing count, and completion percentage.
-- [ ] **PERS-01**: Card ownership changes are automatically persisted to localStorage.
-- [ ] **PERS-02**: Persisted collection data reloads correctly on future browser sessions.
-- [ ] **PERS-03**: Set-level and album-level statistics remain consistent after reload.
+- [x] **PERS-01**: Card ownership changes are automatically persisted to localStorage.
+- [x] **PERS-02**: Persisted collection data reloads correctly on future browser sessions.
+- [x] **PERS-03**: Set-level and album-level statistics remain consistent after reload.
 
 ## v2 Requirements
 
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-02 | Phase 1 | Pending |
 | DATA-03 | Phase 1 | Pending |
 | DATA-04 | Phase 1 | Pending |
-| PERS-01 | Phase 1 | Pending |
-| PERS-02 | Phase 1 | Pending |
-| PERS-03 | Phase 1 | Pending |
+| PERS-01 | Phase 1 | Complete |
+| PERS-02 | Phase 1 | Complete |
+| PERS-03 | Phase 1 | Complete |
 | SETS-01 | Phase 2 | Pending |
 | SETS-02 | Phase 2 | Pending |
 | SETS-03 | Phase 2 | Pending |

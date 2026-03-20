@@ -33,7 +33,7 @@
 
 Plans:
 - [ ] 01-01-PLAN.md — TCGdex SDK adapter layer with type normalization
-- [ ] 01-02-PLAN.md — Collection persistence refactor with completion stats
+- [x] 01-02-PLAN.md — Collection persistence refactor with completion stats
 - [ ] 01-03-PLAN.md — Hook migration and component integration
 
 ---
@@ -91,7 +91,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation & Persistence | 0/3 | Planned | - |
+| 1. Data Foundation & Persistence | 1/3 | In Progress | - |
 | 2. Sets View & Navigation | 0/? | Not started | - |
 | 3. Cards Album & Ownership Tracking | 0/? | Not started | - |
 
