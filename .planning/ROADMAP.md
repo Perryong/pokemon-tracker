@@ -20,7 +20,7 @@
 
 **Depends on:** Nothing (first phase of v1.1)
 
-**Requirements:** QTY-01, QTY-02, QTY-03, QTY-04
+**Requirements:** QTY-01, QTY-02, QTY-03, QTY-04, TESTQ-01
 
 **Success Criteria** (what must be TRUE):
 1. User's existing v1.0 boolean ownership data migrates to quantity format without any cards lost
@@ -29,7 +29,11 @@
 4. User has backup/rollback available if migration fails
 5. Developer can verify migration succeeded with automated tests on realistic datasets (5000+ cards)
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Core migration infrastructure (types, Zod schemas, backup/rollback)
+- [ ] 04-02-PLAN.md — Hook integration with compatibility wrappers and tests
 
 ---
 
@@ -76,11 +80,11 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Data Model & Migration | 0/0 | Not started | - |
+| 4. Data Model & Migration | 0/2 | Planned | - |
 | 5. Quantity UI & Statistics | 0/0 | Not started | - |
 | 6. Testing & Validation | 0/0 | Not started | - |
 
-**Next:** Run `/gsd-plan-phase 4` to decompose Phase 4 into executable plans.
+**Next:** Run `/gsd-execute-phase 4` to implement Phase 4 plans.
 
 ---
 
