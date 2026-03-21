@@ -12,6 +12,7 @@
 - [x] **Phase 1: Data Foundation & Persistence** - Integrate TCGdex SDK and build reliable localStorage-backed collection storage
 - [x] **Phase 2: Sets View & Navigation** - Build sets browsing interface with filtering, search, and progress tracking
 - [x] **Phase 3: Cards Album & Ownership Tracking** - Implement card-level ownership tracking with filters and real-time stats
+- [x] **Phase 02.1: Release Hardening** - Validate production readiness with automated tests and comprehensive smoke testing
 
 ## Phase Details
 
@@ -107,16 +108,38 @@ Plans:
 
 ---
 
+### Phase 02.1: Release Hardening
+**Goal**: Validate production readiness with comprehensive testing and quality assurance
+
+**Depends on**: Phases 1, 2, 3 (validates all delivered functionality)
+
+**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06
+
+**Success Criteria** (what must be TRUE):
+  1. Automated test suite covers core persistence and stats calculation logic
+  2. Production build completes without errors or warnings
+  3. All critical user flows validated via smoke testing
+  4. Zero release-blocking defects remain
+  5. Non-critical issues documented for follow-up
+
+**Plans**: 2 plans (2 waves)
+
+Plans:
+- [x] 02.1-01-PLAN.md — Vitest test infrastructure with persistence and stats regression tests
+- [x] 02.1-02-PLAN.md — Production build validation and comprehensive smoke testing
+
+---
+
 ## Progress Tracking
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Persistence | 4/4 | Complete | 2026-03-21 |
 | 2. Sets View & Navigation | 1/1 | Complete | 2026-03-21 |
-| 02.1. Release Hardening | 1/2 | In Progress | - |
 | 3. Cards Album & Ownership Tracking | 2/2 | Complete | 2026-03-21 |
+| 02.1. Release Hardening | 2/2 | Complete | 2026-03-21 |
 
-**Overall Progress**: 8/9 plans complete (89%)
+**Overall Progress**: 9/9 plans complete (100%) ✅
 
 ---
 
@@ -146,8 +169,16 @@ All v1 requirements mapped to phases:
 | ALBM-06 | Phase 3 | Cards Album |
 | ALBM-07 | Phase 3 | Cards Album |
 | STAT-01 | Phase 3 | Stats |
+| HARD-01 | Phase 02.1 | Testing |
+| HARD-02 | Phase 02.1 | Testing |
+| HARD-03 | Phase 02.1 | Testing |
+| HARD-04 | Phase 02.1 | Build |
+| HARD-05 | Phase 02.1 | Quality |
+| HARD-06 | Phase 02.1 | Documentation |
 
-**Coverage**: 20/20 requirements mapped (100%) ✓
+**Coverage**: 26/26 requirements mapped (100%) ✅
+- 20 v1 feature requirements ✅
+- 6 hardening requirements ✅
 
 ---
 

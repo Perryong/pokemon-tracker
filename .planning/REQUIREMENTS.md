@@ -61,9 +61,9 @@ Post-feature stabilization requirements for release confidence. These validate a
 - [x] **HARD-01**: Vitest test infrastructure is operational and `npm test` executes successfully.
 - [x] **HARD-02**: Collection persistence tests verify ownership survives reload/hydration flows.
 - [x] **HARD-03**: Stats calculation tests verify owned/missing/completion percentage accuracy.
-- [ ] **HARD-04**: Production build (`npm run build`) completes without errors.
-- [ ] **HARD-05**: Release smoke checklist passes for critical v1 user journeys on production build.
-- [ ] **HARD-06**: Non-critical findings are documented in a deferred backlog with severity/rationale.
+- [x] **HARD-04**: Production build (`npm run build`) completes without errors.
+- [x] **HARD-05**: Release smoke checklist passes for critical v1 user journeys on production build.
+- [x] **HARD-06**: Non-critical findings are documented in a deferred backlog with severity/rationale.
 
 ## Out of Scope
 
@@ -105,16 +105,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HARD-01 | Phase 02.1 | Complete |
 | HARD-02 | Phase 02.1 | Complete |
 | HARD-03 | Phase 02.1 | Complete |
-| HARD-04 | Phase 02.1 | Pending |
-| HARD-05 | Phase 02.1 | Pending |
-| HARD-06 | Phase 02.1 | Pending |
+| HARD-04 | Phase 02.1 | Complete |
+| HARD-05 | Phase 02.1 | Complete |
+| HARD-06 | Phase 02.1 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 20
+- Hardening requirements: 6 total
+- Total mapped to phases: 26
 - Unmapped: 0 ✓
-- Completed: 23/26 (88%) (20 v1 + 3 hardening complete)
+- Completed: 26/26 (100%) ✅
+
+**v1.0 is COMPLETE** - All feature and hardening requirements met!
 
 ---
 *Requirements defined: 2026-03-20*
-*Last updated: 2026-03-21 - Phase 02.1 Plan 01 complete (test infrastructure)*
+*Last updated: 2026-03-21 - Phase 02.1 COMPLETE (v1.0 production ready)*
