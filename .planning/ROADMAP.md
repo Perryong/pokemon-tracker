@@ -87,7 +87,11 @@ Plans:
   6. User can search for specific cards by name within the current set
   7. User sees a fixed bottom stats footer that updates in real time showing owned count, missing count, and completion percentage
 
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+
+Plans:
+- [ ] 03-01-PLAN.md — Album controls: size toggle, ownership filter, name search (ALBM-05, ALBM-06, ALBM-07)
+- [ ] 03-02-PLAN.md — Fixed stats footer with real-time updates + verification (ALBM-01..04, STAT-01)
 
 ---
 
