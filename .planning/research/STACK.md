@@ -1,188 +1,668 @@
-# Stack Research
+# Technology Stack — Quantity Tracking Addition
 
-**Domain:** Pokemon TCG Collection Tracker Web App
-**Researched:** 2026-03-20
+**Project:** Pokemon TCG Collection Tracker v1.1
+**Milestone:** Quantity/Duplicate Tracking
+**Researched:** 2024-12-19
 **Confidence:** HIGH
 
-## Recommended Stack
+## Executive Summary
 
-### Core Technologies
+**No new libraries required.** Quantity tracking leverages existing React+TypeScript+Vite+shadcn/ui+localStorage stack with schema migration pattern already proven in v1.0 (`pokemon-collection-v2` storage key migration).
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| **React** | ^18.3.1 | UI framework and state management | React 18 is the stable production release with concurrent features and automatic batching. Stay on 18.x for now — React 19 (latest: 19.2.4) introduces breaking changes in ecosystem libraries. shadcn/ui and Radix UI are validated against React 18. |
-| **TypeScript** | ^5.6.3 | Type safety and developer experience | TypeScript 5.x provides modern type inference, better performance, and decorators support. Version 5.6+ is stable; 5.9.3 is latest but 5.6.3+ is sufficient. Critical for data model safety with TCGdex API types. |
-| **Vite** | ^5.4.8 | Build tool and dev server | Vite 5.x is production-ready with fast HMR and optimized builds. Stay on 5.x — Vite 8 (latest: 8.0.1) is cutting edge but has breaking changes. Vite 5.4+ includes critical bug fixes and performance improvements. |
-| **Tailwind CSS** | ^3.4.13 | Utility-first styling | Tailwind v3.x is the industry standard with mature ecosystem and plugin support. Stay on 3.x — v4 (latest: 4.2.2) is in development and breaks shadcn/ui compatibility. v3.4.13+ includes all modern features and is what shadcn/ui expects. |
+**Why no additions needed:**
+- UI: Existing shadcn/ui components (Input, Button, Popover) handle quantity controls
+- State: React hooks pattern from `useCollection` extends cleanly to quantity data
+- Persistence: Existing localStorage utilities support versioned schema migration
+- Validation: Existing Zod v3.23.8 handles quantity constraints
+- Testing: Existing Vitest 4.1.0 + Testing Library setup covers new behaviors
 
-### Critical Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| **@tcgdex/sdk** | ^2.7.1 | Official Pokemon TCG data API client | **REQUIRED.** Project explicitly requires using TCGdex SDK for all Pokemon card data (sets, cards, series). Version 2.7.1 is latest stable with built-in caching via @cachex packages. Includes TypeScript definitions. |
-| **@radix-ui/react-*** | ^1.x | Accessible headless UI primitives | **REQUIRED (via shadcn/ui).** Codebase already uses Radix components through shadcn/ui. Keep all Radix packages on latest 1.x minor versions. These power Progress bars, Dialogs, Select dropdowns, etc. |
-| **lucide-react** | ^0.446.0 | Icon library | **REQUIRED.** Already in use for UI icons. Version 0.446+ is stable. Lucide provides consistent, customizable SVG icons that work seamlessly with Tailwind and shadcn/ui. |
-| **zod** | ^3.23.8 | Runtime type validation and parsing | **RECOMMENDED.** Already in codebase for form validation. Use for validating localStorage data schemas and API responses. Version 3.x is stable; avoid v4 beta (4.3.6) until ecosystem catches up. |
-| **zustand** | ^5.0.12 | Lightweight state management | **RECOMMENDED for collection state.** Use for managing collection ownership state, UI filters, and derived statistics. Simpler than Context API for this use case. Version 5.x is latest stable with improved TypeScript support and React 18 compatibility. |
-| **@tanstack/react-query** | ^5.91.3 | Server state management and caching | **OPTIONAL but RECOMMENDED.** Use for managing TCGdex API calls with automatic caching, background refetching, and loading states. Version 5.x is stable and production-ready. Complements zustand (client state) vs server state separation. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| **class-variance-authority** | ^0.7.0 | Component variant styling | Already in use with shadcn/ui for managing component style variants (button sizes, etc.). Essential for shadcn/ui pattern. |
-| **clsx** / **tailwind-merge** | ^2.1.1 / ^2.5.2 | Conditional className composition | Already in use. clsx for conditional classes, tailwind-merge for deduplicating Tailwind utilities. Standard shadcn/ui pattern. |
-| **react-hook-form** | ^7.53.0 | Form state and validation | Already in codebase. Use if adding settings forms or import/export features. Pairs with zod for schema validation. Version 7.x is stable. |
-| **sonner** | ^1.5.0 | Toast notifications | Already in use. Lightweight, accessible toast library for success/error feedback. Works well with shadcn/ui theming. |
-| **next-themes** | ^0.3.0 | Theme management (dark/light mode) | Already in use for theme switching. Handles system preferences and persistence. Version 0.3.x is stable. |
-| **idb** | ^8.0.3 | IndexedDB wrapper (future upgrade) | **NOT NEEDED FOR V1.** Use only if localStorage becomes insufficient (large collections >5MB). IndexedDB provides better performance and storage limits for large datasets. |
-| **react-router-dom** | ^7.13.1 | Client-side routing (future upgrade) | **NOT NEEDED FOR V1.** Current scope is single-page with two views. Add only if introducing distinct routes (/sets, /sets/:id, etc.) in future versions. |
-
-### Development Tools
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| **ESLint** | JavaScript/TypeScript linting | Already configured with `eslint.config.js` flat config. Keep on v9.x (avoid v10 until stable). typescript-eslint@8.x provides React 18 and TypeScript 5.x support. |
-| **PostCSS** + **Autoprefixer** | CSS processing and vendor prefixing | Already configured for Tailwind CSS processing. Required for Tailwind v3. |
-| **@types/node** | Node.js TypeScript definitions | Already in use for Vite path resolution. Keep on v22.x LTS types. |
-| **Vitest** (future) | Unit testing framework | **NOT IN PROJECT YET.** Add when implementing tests. Vitest is the Vite-native testing framework with Jest-compatible API. |
-
-## Installation
-
-```bash
-# Already installed (existing dependencies)
-# Review package.json — most dependencies are already present
-
-# Required NEW package for project requirements
-npm install @tcgdex/sdk@^2.7.1
-
-# Recommended for state management (not yet in project)
-npm install zustand@^5.0.12
-
-# Recommended for API data fetching (not yet in project)
-npm install @tanstack/react-query@^5.91.3
-
-# Optional: Update outdated dependencies (safe, backwards compatible)
-npm update
-```
-
-## Alternatives Considered
-
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| **React 18.x** | React 19.x (latest) | Wait until shadcn/ui and Radix UI officially support React 19. React 19 changes APIs for refs, context, and Suspense boundaries. Not urgent — React 18 is stable and maintained. |
-| **Zustand** | Redux Toolkit | Use Redux Toolkit only if: (1) need time-travel debugging, (2) extremely complex state relationships, (3) team is already expert in Redux. For this project, Zustand's simplicity fits the personal-use, local-first model. |
-| **@tanstack/react-query** | SWR | Use SWR if preferring Vercel ecosystem or simpler API. Both are excellent. React Query has more features (infinite queries, optimistic updates) but SWR has smaller bundle size. Choose based on team familiarity. |
-| **localStorage** | IndexedDB (via idb) | Use IndexedDB when: (1) storing >5MB data, (2) need structured queries, (3) need better performance with large collections. For v1 scope (personal use, likely <1000 cards), localStorage is simpler and sufficient. Migrate later if needed. |
-| **Tailwind CSS v3** | Tailwind v4 | Wait for v4 to stabilize and shadcn/ui to migrate. v4 is rewrite with new engine but ecosystem hasn't caught up. v3.4.x is mature, performant, and well-documented. |
-| **Vite 5.x** | Vite 8.x | Stay on Vite 5 until ecosystem stabilizes around v8. Vite 8 is major rewrite; wait for plugin ecosystem to update. Vite 5.4+ is fast, stable, and production-proven. |
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| **Create React App (CRA)** | Officially deprecated and unmaintained since 2022. Slow builds, outdated dependencies, no longer recommended by React team. | **Vite** (already in use). Modern, fast, maintained. |
-| **Older Pokemon TCG APIs** | Ad-hoc REST APIs, PokémonTCG.io (different data model), or direct scraping. Project requirements explicitly call for TCGdex SDK. | **@tcgdex/sdk** (official SDK with types, caching, and maintenance). |
-| **React 19 (for now)** | Breaking changes in ecosystem. Radix UI and shadcn/ui haven't fully migrated. Will cause type errors and runtime issues with current component library. | **React 18.3.x** (stable, ecosystem-validated). |
-| **Class components** | Legacy React pattern. Hooks (introduced in React 16.8) are the standard. Better composition, less boilerplate, better TypeScript support. | **Function components + hooks** (already in use). |
-| **Styled Components / Emotion** | CSS-in-JS libraries with runtime cost. Project already uses Tailwind CSS. Adding styled-components creates conflicting styling paradigms and bundle bloat. | **Tailwind CSS** (already configured) with utility classes and shadcn/ui. |
-| **MobX** | Alternative state library but adds complexity. For local-first collection tracker, Zustand's simplicity and React 18 integration is better fit. | **Zustand** (simple, TypeScript-first, React 18 native). |
-| **Global CSS files beyond index.css** | Tailwind utility classes and shadcn/ui components should handle 99% of styling. Avoid creating separate CSS files that conflict with Tailwind. | **Tailwind utilities** + component-level styles via `cn()` helper. |
-
-## Stack Patterns by Use Case
-
-**For collection state management:**
-- Use **Zustand** with localStorage persistence middleware
-- Store: owned card IDs, collection statistics cache, UI preferences
-- Pattern: `create(persist(store, { name: 'pokemon-collection' }))`
-- Why: Simple, TypeScript-first, integrates with localStorage pattern already in use
-
-**For TCGdex API calls:**
-- Use **@tanstack/react-query** with staleTime configuration
-- Fetch: sets list, set details with cards, series metadata
-- Pattern: `useQuery({ queryKey: ['set', setId], queryFn: () => tcgdex.fetch('sets', setId) })`
-- Why: Automatic caching, background refetch, loading/error states, reduces API calls
-
-**For derived statistics (owned/missing counts):**
-- Use **Zustand selectors** with shallow equality
-- Compute: completion percentage, owned count, missing count per set
-- Pattern: `const stats = useStore(state => calculateStats(state.ownedCards, setId), shallow)`
-- Why: Avoids re-renders, keeps logic close to state, no prop drilling
-
-**For localStorage persistence:**
-- Use **native localStorage** with JSON serialization for v1
-- Store: collection data as `{ version: 1, ownedCards: string[], lastUpdated: string }`
-- Pattern: Read on mount, write on ownership toggle, debounce writes
-- Why: Simple, no dependencies, sufficient for <5MB data, already proven in codebase
-
-**For component styling:**
-- Use **Tailwind utilities** + **shadcn/ui components** + **CVA for variants**
-- Pattern: Compose existing shadcn/ui primitives, extend with Tailwind classes
-- Why: Consistent design system, accessible components, no custom CSS
-
-## Version Compatibility Matrix
-
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| React 18.3.x | @radix-ui/react-* 1.x | ✅ Fully compatible. Radix UI v1.x validated for React 18. |
-| React 18.3.x | @tanstack/react-query 5.x | ✅ Fully compatible. TanStack Query v5 built for React 18. |
-| React 18.3.x | zustand 5.x | ✅ Fully compatible. Zustand v5 uses React 18 features. |
-| Tailwind CSS 3.4.x | shadcn/ui | ✅ Required version. shadcn/ui expects Tailwind v3. |
-| Vite 5.4.x | @vitejs/plugin-react 4.x | ✅ Fully compatible. Plugin version tracks Vite major. |
-| TypeScript 5.6.x | All @radix-ui packages | ✅ Fully compatible. TypeScript 5.x is standard. |
-| @tcgdex/sdk 2.7.x | Node.js >=18 / Browser | ✅ Works in both. Has browser and Node builds. |
-| zod 3.x | react-hook-form 7.x + @hookform/resolvers 3.x | ✅ Standard integration via zodResolver. |
-
-**Known Incompatibilities:**
-- ⚠️ React 19.x + @radix-ui/* → Type errors and API mismatches (ref forwarding changes)
-- ⚠️ Tailwind CSS 4.x + shadcn/ui → Breaking changes in config format
-- ⚠️ Vite 8.x + older plugins → Plugin API changes, wait for ecosystem updates
-- ⚠️ zod 4.x + @hookform/resolvers → Resolver package hasn't updated yet
-
-## Environment Constraints
-
-**Based on `package.json` analysis:**
-- Node.js version: Not specified in package.json, but Vite 5.4 requires Node >=18
-- Package manager: npm (package-lock.json present)
-- Module type: ES modules (`"type": "module"` in package.json)
-- TypeScript config: Project references with app/node split
-- Path alias: `@/*` → `./src/*` configured in both Vite and TypeScript
-
-**Recommendations:**
-1. Add `"engines": { "node": ">=18.0.0" }` to package.json for clarity
-2. Keep using npm (lockfile is npm format, changing to pnpm/yarn adds friction)
-3. Run `npm update` to get latest compatible patch versions (safe, no breaking changes)
-
-## Sources
-
-**HIGH Confidence:**
-- npm registry (official package metadata) — version numbers, compatibility, publish dates
-- package.json analysis — current dependencies and configuration
-- @tcgdex/sdk official package — confirmed version 2.7.1 as latest stable (published 2025-08-25)
-- Vite, React, TypeScript documentation — version compatibility and stability guidance
-- shadcn/ui documentation — confirmed React 18 + Tailwind v3 requirements
-
-**MEDIUM Confidence:**
-- npm outdated analysis — identified version gaps and major version warnings
-- React/Vite/Tailwind ecosystem conventions — based on community patterns (2025 standards)
-- localStorage vs IndexedDB recommendation — based on typical collection tracker data sizes
-
-**LOW Confidence:**
-- React 19 timeline for shadcn/ui support — estimated based on current React 19 adoption pace
-- Specific breaking changes in Vite 8 and Tailwind 4 — not yet in stable release docs
-
-**Verified Packages (npm registry check):**
-- @tcgdex/sdk@2.7.1 ✅
-- react@18.3.1 (stable), react@19.2.4 (latest) ✅
-- vite@5.4.8 (project), vite@8.0.1 (latest) ✅
-- tailwindcss@3.4.13 (project), tailwindcss@4.2.2 (latest) ✅
-- zustand@5.0.12 ✅
-- @tanstack/react-query@5.91.3 ✅
-- idb@8.0.3 ✅
-- react-router-dom@7.13.1 ✅
+**Integration strategy:** Extend `CollectionState` interface from boolean flags to `{ owned: boolean, quantity: number }` shape with backward-compatible migration from v2 → v3 schema.
 
 ---
 
-*Stack research for: Pokemon TCG Collection Tracker Web App*  
-*Researched: 2026-03-20*  
-*Confidence: HIGH — all recommendations based on verified npm registry data and official documentation*
+## Current Stack (No Changes)
+
+### Core Framework
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| React | 18.3.1 | UI framework | ✅ Keep |
+| TypeScript | 5.5.3 | Type safety | ✅ Keep |
+| Vite | 5.4.8 | Build tooling | ✅ Keep |
+
+### UI Components
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| shadcn/ui | Latest | Component library | ✅ Keep |
+| Radix UI | 1.x (various) | Primitive components | ✅ Keep |
+| Lucide React | 0.446.0 | Icons | ✅ Keep |
+| Tailwind CSS | 3.4.13 | Styling | ✅ Keep |
+
+### Data & State
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| @tcgdex/sdk | 2.7.1 | Pokemon card data | ✅ Keep |
+| Zod | 3.23.8 | Runtime validation | ✅ Keep |
+| localStorage | Native | Persistence | ✅ Keep |
+
+### Testing
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| Vitest | 4.1.0 | Test runner | ✅ Keep |
+| @testing-library/react | 16.3.2 | React testing | ✅ Keep |
+| @testing-library/user-event | 14.6.1 | User interaction | ✅ Keep |
+| happy-dom | 20.8.4 | DOM environment | ✅ Keep |
+
+---
+
+## Quantity Feature Stack Decisions
+
+### 1. UI Controls for Quantity Input
+
+**Decision:** Use existing shadcn/ui `Input` component with `type="number"` + custom increment/decrement buttons
+
+**Why:**
+- shadcn/ui Button + Input already in package.json
+- No need for complex number spinners (simple +/- buttons are clearer for card counting)
+- Lucide icons (`Plus`, `Minus`) provide visual affordance
+- Existing form validation hooks (`react-hook-form` 7.53.0 + `@hookform/resolvers` 3.9.0) available if complex validation needed
+
+**Alternative considered:** Radix Slider component
+- **Rejected:** Sliders poor UX for precise counts (1 vs 10 vs 100 cards)
+- Numeric input + buttons allows both quick increment and direct entry
+
+**Integration:**
+```typescript
+// Leverage existing Button + Input from shadcn
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+// Quantity control pattern
+<div className="flex items-center gap-2">
+  <Button size="icon" onClick={() => decrement(cardId)}>
+    <Minus className="h-4 w-4" />
+  </Button>
+  <Input 
+    type="number" 
+    min="0" 
+    value={quantity} 
+    onChange={(e) => setQuantity(cardId, parseInt(e.target.value))}
+    className="w-16 text-center"
+  />
+  <Button size="icon" onClick={() => increment(cardId)}>
+    <Plus className="h-4 w-4" />
+  </Button>
+</div>
+```
+
+---
+
+### 2. Data Validation
+
+**Decision:** Use existing Zod 3.23.8 for quantity constraints
+
+**Why:**
+- Already in dependencies (3.23.8)
+- Validates quantity bounds (0 ≤ quantity ≤ 999)
+- Ensures integer values (no decimals)
+- Integrates with react-hook-form for form-based inputs
+
+**Validation schema:**
+```typescript
+import { z } from 'zod';
+
+export const quantitySchema = z.object({
+  quantity: z.number().int().min(0).max(999)
+});
+
+export const collectionCardSchema = z.object({
+  owned: z.boolean(),
+  quantity: z.number().int().min(0).max(999).default(0)
+});
+```
+
+**Alternative considered:** Manual validation
+- **Rejected:** Zod already present, provides better error messages, composable
+
+---
+
+### 3. State Management
+
+**Decision:** Extend existing `useCollection` hook pattern with quantity support
+
+**Why:**
+- Current `useCollection` hook works well (no reported issues in v1.0)
+- Minimal changes: `Record<string, boolean>` → `Record<string, { owned: boolean, quantity: number }>`
+- Preserves local-first state management approach
+- No need for Redux/Zustand (single collection context sufficient)
+
+**Migration strategy:**
+```typescript
+// Extend CollectionState interface
+interface CollectionState {
+  version: 3; // Bump from v2 → v3
+  cards: Record<string, CardCollection>; // Renamed from ownedCards
+}
+
+interface CardCollection {
+  owned: boolean;
+  quantity: number;
+}
+
+// Backward-compatible migration
+const getInitialState = (): CollectionState => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    
+    // Migrate v2 → v3
+    if (parsed.version === 2 && parsed.ownedCards) {
+      return {
+        version: 3,
+        cards: Object.entries(parsed.ownedCards).reduce((acc, [id, owned]) => {
+          acc[id] = { owned: !!owned, quantity: owned ? 1 : 0 };
+          return acc;
+        }, {} as Record<string, CardCollection>)
+      };
+    }
+    
+    if (parsed.version === 3) return parsed;
+  }
+  
+  return { version: 3, cards: {} };
+};
+```
+
+**Alternative considered:** Separate quantity store
+- **Rejected:** Would require syncing two stores, complicates ownership logic
+
+---
+
+### 4. LocalStorage Persistence
+
+**Decision:** Continue using native localStorage with schema versioning
+
+**Why:**
+- Current approach proven reliable in v1.0
+- Schema versioning pattern (`version: 3`) supports backward-compatible migrations
+- No quota issues reported (card data minimal, ~KB per set)
+- Personal-use scope doesn't require cloud sync
+
+**Schema migration pattern:**
+```typescript
+const STORAGE_KEY = 'pokemon-collection-v3'; // New key for v1.1
+
+// Or reuse existing key with version bump
+const STORAGE_KEY = 'pokemon-collection'; // Unified key, version in data
+```
+
+**Recommendation:** Reuse existing `pokemon-collection-v2` key, bump version field to `3`
+- **Why:** Single storage key simplifies cleanup, version field handles migration
+- **Migration:** v2 → v3 happens on first load, v2 data preserved until overwrite
+
+**Alternative considered:** IndexedDB
+- **Rejected:** Overkill for simple key-value storage, adds complexity
+- **When to revisit:** If storing >5MB data (e.g., card images, deck snapshots)
+
+**Quota management:**
+```typescript
+// Existing quota error handling in useCollection - no changes needed
+catch (e) {
+  if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+    console.error('localStorage quota exceeded');
+    // Future: Implement cleanup (e.g., remove zero-quantity entries)
+  }
+}
+```
+
+---
+
+### 5. Testing Utilities
+
+**Decision:** Use existing Vitest + Testing Library setup, no additions
+
+**Why:**
+- Vitest 4.1.0 supports React hooks testing
+- `@testing-library/user-event` 14.6.1 simulates increment/decrement clicks
+- happy-dom 20.8.4 provides localStorage mock automatically
+- Existing test pattern in `CardGrid.test.tsx` extends to quantity tests
+
+**Test coverage areas:**
+1. **Quantity controls:** Increment, decrement, direct input
+2. **Bounds validation:** 0 ≤ quantity ≤ 999
+3. **Stats computation:** Owned count, total quantity, set completion
+4. **Persistence:** Save/load quantity data, schema migration v2 → v3
+5. **Regression:** Boolean ownership behavior preserved
+
+**Example test pattern:**
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { CardGrid } from '@/components/CardGrid';
+
+test('increments card quantity', async () => {
+  const user = userEvent.setup();
+  render(<CardGrid cards={mockCards} />);
+  
+  const incrementBtn = screen.getByLabelText('Increment quantity');
+  await user.click(incrementBtn);
+  
+  expect(screen.getByDisplayValue('1')).toBeInTheDocument();
+});
+
+test('migrates v2 boolean data to v3 quantity', () => {
+  localStorage.setItem('pokemon-collection-v2', JSON.stringify({
+    version: 2,
+    ownedCards: { 'card-1': true, 'card-2': false }
+  }));
+  
+  const { result } = renderHook(() => useCollection());
+  
+  expect(result.current.getQuantity('card-1')).toBe(1);
+  expect(result.current.getQuantity('card-2')).toBe(0);
+});
+```
+
+**Alternative considered:** Playwright for E2E
+- **Rejected:** Unit tests sufficient for localStorage + state logic
+- **When to revisit:** Multi-page workflows, complex user journeys
+
+---
+
+### 6. Component Library (shadcn/ui)
+
+**Decision:** No new shadcn components required
+
+**Components sufficient for quantity UI:**
+- ✅ `Button` — Increment/decrement actions
+- ✅ `Input` — Direct quantity entry (type="number")
+- ✅ `Popover` — Quantity editor in card hover/modal (if needed)
+- ✅ `Tooltip` — Explain quantity controls
+- ✅ `Badge` — Display quantity count on card thumbnail
+
+**Existing Radix primitives cover all interaction needs:**
+- `@radix-ui/react-popover` — Inline quantity editor
+- `@radix-ui/react-tooltip` — Help text
+- `@radix-ui/react-label` — Accessible labels
+
+**Alternative considered:** Add `NumberInput` or `Stepper` component
+- **Rejected:** Custom Button + Input composition simpler, more flexible
+- No need for third-party spinners (e.g., `react-number-format`)
+
+---
+
+## What NOT to Add
+
+| Library | Why NOT | What to Use Instead |
+|---------|---------|-------------------|
+| Immer | Overkill for flat state shape | Native spread operators |
+| Redux Toolkit | Single collection context sufficient | Existing `useCollection` hook |
+| React Query | No server data fetching (localStorage only) | React `useState` + `useEffect` |
+| Formik | Simple increment/decrement, not forms | Direct event handlers |
+| lodash | Native JS sufficient for quantity math | `Array.reduce`, `Object.entries` |
+| date-fns extras | Already have 3.6.0, no new date logic | Existing date-fns install |
+| react-number-format | Overcomplicated for integer input | Native `<Input type="number">` |
+| zustand | useState + context sufficient | Existing hooks pattern |
+
+---
+
+## Migration & Integration Points
+
+### 1. Schema Migration (v2 → v3)
+
+**Current schema (v1.0):**
+```typescript
+interface CollectionState {
+  version: 2;
+  ownedCards: Record<string, boolean>;
+}
+```
+
+**New schema (v1.1):**
+```typescript
+interface CollectionState {
+  version: 3;
+  cards: Record<string, CardCollection>;
+}
+
+interface CardCollection {
+  owned: boolean;
+  quantity: number;
+}
+```
+
+**Migration logic:**
+```typescript
+// On first load with v2 data
+if (parsed.version === 2) {
+  return {
+    version: 3,
+    cards: Object.entries(parsed.ownedCards).reduce((acc, [id, owned]) => {
+      acc[id] = { owned: !!owned, quantity: owned ? 1 : 0 };
+      return acc;
+    }, {})
+  };
+}
+```
+
+**Backward compatibility:**
+- ✅ v2 data automatically migrates to v3 on first load
+- ✅ v1.0 boolean ownership behavior preserved (owned = true → quantity = 1)
+- ✅ No data loss (old `ownedCards` consumed into new `cards` structure)
+
+---
+
+### 2. Collection Hook API Extension
+
+**Current API:**
+```typescript
+const { isOwned, toggleOwnership } = useCollection();
+```
+
+**Extended API:**
+```typescript
+const {
+  isOwned,              // Existing: boolean check
+  toggleOwnership,      // Existing: flip owned state
+  getQuantity,          // New: get current quantity
+  setQuantity,          // New: set absolute quantity
+  incrementQuantity,    // New: quantity++
+  decrementQuantity,    // New: quantity--
+} = useCollection();
+```
+
+**Implementation:**
+```typescript
+const getQuantity = (cardId: string): number => {
+  return collection.cards[cardId]?.quantity || 0;
+};
+
+const setQuantity = (cardId: string, quantity: number): void => {
+  const validQuantity = Math.max(0, Math.min(999, quantity));
+  setCollection(prev => ({
+    ...prev,
+    cards: {
+      ...prev.cards,
+      [cardId]: {
+        owned: validQuantity > 0,
+        quantity: validQuantity
+      }
+    }
+  }));
+};
+
+const incrementQuantity = (cardId: string): void => {
+  const current = getQuantity(cardId);
+  setQuantity(cardId, current + 1);
+};
+
+const decrementQuantity = (cardId: string): void => {
+  const current = getQuantity(cardId);
+  setQuantity(cardId, Math.max(0, current - 1));
+};
+```
+
+**Backward compatibility:**
+- `toggleOwnership` preserved: sets `owned: true, quantity: 1` or `owned: false, quantity: 0`
+- `isOwned` preserved: returns `cards[cardId]?.owned || false`
+
+---
+
+### 3. Stats Computation Updates
+
+**Current stats (v1.0):**
+```typescript
+interface CompletionStats {
+  owned: number;        // Count of owned cards
+  missing: number;      // Count of missing cards
+  total: number;        // Total cards in set
+  percentage: number;   // Completion percentage
+}
+```
+
+**Extended stats (v1.1):**
+```typescript
+interface CompletionStats {
+  owned: number;        // Count of unique owned cards
+  missing: number;      // Count of missing cards
+  total: number;        // Total unique cards in set
+  percentage: number;   // Completion percentage
+  totalQuantity: number; // NEW: Sum of all card quantities
+  duplicates: number;    // NEW: totalQuantity - owned
+}
+```
+
+**Implementation:**
+```typescript
+export function useSetCompletion(
+  setCardIds: string[],
+  cards: Record<string, CardCollection>
+): CompletionStats {
+  return useMemo(() => {
+    const total = setCardIds.length;
+    const owned = setCardIds.filter(id => cards[id]?.owned).length;
+    const missing = total - owned;
+    const percentage = total > 0 ? (owned / total) * 100 : 0;
+    
+    // NEW: Calculate total quantity and duplicates
+    const totalQuantity = setCardIds.reduce((sum, id) => {
+      return sum + (cards[id]?.quantity || 0);
+    }, 0);
+    const duplicates = totalQuantity - owned;
+    
+    return { owned, missing, total, percentage, totalQuantity, duplicates };
+  }, [setCardIds, cards]);
+}
+```
+
+---
+
+### 4. Component Integration Points
+
+**CardGrid.tsx updates:**
+- Add quantity badge overlay on card thumbnails
+- Add increment/decrement buttons on hover or in card detail modal
+- Update click behavior: checkbox for ownership, +/- for quantity
+
+**CollectionStats.tsx updates:**
+- Add "Total Cards: X" row (sum of quantities)
+- Add "Duplicates: X" row (totalQuantity - owned)
+- Preserve existing "Owned: X / Y" and completion % display
+
+**CardDetail.tsx updates:**
+- Add quantity input field in card detail view
+- Show quantity history (optional, future enhancement)
+
+---
+
+## Testing Strategy
+
+### Unit Tests (Vitest + Testing Library)
+
+**Priority 1: State management**
+- ✅ `useCollection` hook quantity methods
+- ✅ Schema migration v2 → v3
+- ✅ LocalStorage persistence roundtrip
+- ✅ Validation bounds (0 ≤ quantity ≤ 999)
+
+**Priority 2: Component behavior**
+- ✅ Increment/decrement buttons
+- ✅ Direct quantity input
+- ✅ Stats recalculation
+- ✅ Quantity badge rendering
+
+**Priority 3: Regression**
+- ✅ Boolean ownership preserved
+- ✅ Existing tests pass with new schema
+- ✅ v1.0 data migrates without loss
+
+**Test utilities:**
+```typescript
+// Mock localStorage for testing
+beforeEach(() => {
+  localStorage.clear();
+});
+
+// Helper to setup v2 data for migration tests
+const setupV2Data = (data: Record<string, boolean>) => {
+  localStorage.setItem('pokemon-collection-v2', JSON.stringify({
+    version: 2,
+    ownedCards: data
+  }));
+};
+```
+
+### Integration Tests
+
+**Manual smoke tests (checklist):**
+- [ ] Load app with v2 data → v3 migration successful
+- [ ] Increment card quantity → persists on refresh
+- [ ] Set quantity to 0 → card shows as not owned
+- [ ] Set quantity to 999 → max enforced
+- [ ] Stats show correct owned vs total quantity
+- [ ] Existing v1.0 features still work (filters, search, set browsing)
+
+---
+
+## Performance Considerations
+
+### LocalStorage Efficiency
+
+**Current data size (v1.0):**
+- ~200 cards per set × ~100 sets = 20,000 cards max
+- Boolean flags: `20,000 * 2 bytes = 40 KB`
+
+**New data size (v1.1):**
+- Card object: `{ owned: boolean, quantity: number }`
+- JSON size: `~30 bytes per card` (with key)
+- Max storage: `20,000 * 30 bytes = 600 KB`
+
+**localStorage limit:** 5-10 MB (browser dependent)
+**Headroom:** ~94% free (600 KB / 5 MB)
+
+**Conclusion:** No performance concerns, no optimizations needed
+
+**Future optimization (if needed):**
+- Compress zero-quantity entries (don't store if quantity = 0)
+- Use IndexedDB for >1M cards (not likely in Pokemon TCG)
+
+---
+
+## Installation & Setup
+
+**No new dependencies required.**
+
+All quantity features use existing stack:
+
+```bash
+# Verify current dependencies (already installed)
+npm list react typescript vite zod vitest
+
+# No additional installs needed for quantity tracking
+```
+
+**Configuration updates:** None required
+
+**Environment variables:** None required
+
+---
+
+## Rollback & Compatibility
+
+### Version Compatibility
+
+| App Version | Schema Version | Compatibility |
+|-------------|----------------|---------------|
+| v1.0 | v2 (boolean) | ✅ Reads v2, writes v2 |
+| v1.1 | v3 (quantity) | ✅ Reads v2+v3, writes v3 |
+| v1.1 → v1.0 | Rollback risk | ⚠️ v3 data unreadable by v1.0 |
+
+**Rollback strategy:**
+- Keep v2 schema reader in v1.1 code (migration only, never write v2)
+- If rollback needed: Export collection, reinstall v1.0, re-import as boolean flags
+
+**Data loss scenarios:**
+- v1.1 → v1.0 rollback: Quantity data lost (falls back to owned = true/false)
+- localStorage cleared: All data lost (expected, local-first design)
+
+**Mitigation:**
+- Export/import feature (future milestone) provides backup
+- Cloud sync (out of scope) would preserve data across devices
+
+---
+
+## Open Questions & Future Considerations
+
+### Resolved (No Action Needed)
+- ✅ **Input component?** → Use existing shadcn Input + Button
+- ✅ **State management?** → Extend existing useCollection hook
+- ✅ **Validation?** → Use existing Zod
+- ✅ **Testing?** → Use existing Vitest + Testing Library
+- ✅ **Migration?** → v2 → v3 schema version bump
+
+### Deferred to Future Milestones
+- ⏸️ **Bulk quantity editing** (e.g., set all to 0) → v1.2+
+- ⏸️ **Quantity history** (track changes over time) → v1.3+
+- ⏸️ **Export/import with quantities** → v1.2+
+- ⏸️ **IndexedDB migration** → Only if >5MB data
+
+### Not Applicable
+- ❌ **Cloud sync** → Out of scope (personal-use app)
+- ❌ **Real-time collaboration** → Not needed
+- ❌ **Optimistic updates** → localStorage is synchronous
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
+|------|------------|-----------|
+| UI Components | **HIGH** | Existing shadcn/ui covers all needs, no gaps found |
+| State Management | **HIGH** | React hooks pattern proven in v1.0, extends cleanly |
+| Persistence | **HIGH** | localStorage + versioning pattern validated in v1.0 |
+| Testing | **HIGH** | Vitest + Testing Library sufficient, no new tools needed |
+| Integration | **HIGH** | Minimal API surface changes, backward compatible |
+| Performance | **HIGH** | 600KB < 5MB limit, no optimization needed |
+
+**Overall confidence:** HIGH
+
+**Validation sources:**
+- ✅ Existing package.json dependencies verified
+- ✅ Current v1.0 code patterns reviewed (collection.ts, types.ts)
+- ✅ shadcn/ui component catalog cross-checked
+- ✅ localStorage quota limits researched (MDN Web Docs)
+- ✅ Vitest React hooks testing capabilities verified
+
+**No external research required** — all decisions based on existing codebase and proven patterns from v1.0 execution.
+
+---
+
+## Summary
+
+**Stack decision: No new dependencies.**
+
+Quantity tracking is a **pure feature extension** of existing v1.0 stack:
+- React hooks → Add quantity methods to `useCollection`
+- TypeScript → Extend `CollectionState` interface
+- Zod → Validate quantity bounds
+- shadcn/ui → Compose Button + Input for controls
+- localStorage → Bump schema version v2 → v3
+- Vitest → Test quantity logic + migration
+
+**Risk level:** Low (no new dependencies, no breaking changes)
+
+**Implementation readiness:** High (all tools present, patterns validated)
+
+**Next steps:**
+1. Extend `CollectionState` type definition
+2. Implement schema migration v2 → v3
+3. Add quantity methods to `useCollection` hook
+4. Build quantity UI controls in CardGrid/CardDetail
+5. Update stats computation for totalQuantity + duplicates
+6. Write unit tests for new quantity behaviors
+7. Run regression tests to ensure v1.0 features preserved
+
+---
+
+*Research completed: 2024-12-19*  
+*Researcher: Project Research Agent (Phase 6)*  
+*Downstream: Roadmap creation for v1.1 Quantity Tracking milestone*

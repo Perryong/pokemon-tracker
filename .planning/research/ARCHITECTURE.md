@@ -1,10 +1,21 @@
-# Architecture Research
+# Architecture Research: Quantity Tracking Integration
 
-**Domain:** Pokemon TCG Collection Tracker
-**Researched:** 2026-03-20
-**Confidence:** HIGH
+**Domain:** Pokemon TCG Collection Tracker - Quantity/Duplicate Tracking
+**Milestone:** v1.1 Quantity Tracking
+**Researched:** 2026-03-21
+**Confidence:** HIGH (brownfield codebase analysis)
 
-## Standard Architecture
+## Executive Summary
+
+v1.1 adds quantity tracking to an existing ownership-based architecture (v1.0 shipped). The current system uses a boolean `Record<cardId, boolean>` in localStorage. Quantity tracking requires migrating to `Record<cardId, number>` while preserving backward compatibility and maintaining the established adapter/hook/component patterns.
+
+**Key integration approach:**
+- **Safe migration** from boolean → numeric with v3 storage schema
+- **Minimal disruption** by evolving `useCollection` hook, not replacing it
+- **Component updates** focused on CardGrid (quantity controls) and stats calculations
+- **No breaking changes** to existing API hooks, types, or TCGdex integration
+
+## Existing Architecture (v1.0)
 
 ### System Overview
 
@@ -13,556 +24,688 @@
 │                    PRESENTATION LAYER                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │  Sets    │  │  Cards   │  │Collection│  │  Stats   │    │
-│  │  View    │  │  Album   │  │  View    │  │  Footer  │    │
+│  │  SetGrid │  │ CardGrid │  │Collection│  │  Stats   │    │
+│  │  (v1.0)  │  │  (v1.0)  │  │   View   │  │  Footer  │    │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │
 │       │             │              │             │           │
+│       │             │ toggleOwnership()          │           │
+│       │             │ isInCollection()           │           │
+│       │             │                            │           │
 ├───────┴─────────────┴──────────────┴─────────────┴──────────┤
 │                      DATA ACCESS LAYER                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────┐  ┌────────────────────────────┐   │
-│  │   TCGdex SDK Client  │  │  Collection Storage Hook   │   │
-│  │   (Sets, Cards)      │  │  (useCollection)           │   │
+│  │   TCGdex SDK Client  │  │  useCollection Hook        │   │
+│  │   (lib/api.ts)       │  │  (lib/collection.ts)       │   │
+│  │   - useSets()        │  │  - ownedCards: Record<>    │   │
+│  │   - useCards()       │  │  - isOwned(cardId)         │   │
+│  │   - useSeries()      │  │  - toggleOwnership()       │   │
+│  │   UNCHANGED v1.1 ✓   │  │  EVOLVE FOR v1.1 ⚠️        │   │
 │  └──────────┬───────────┘  └────────┬───────────────────┘   │
 │             │                        │                       │
 ├─────────────┴────────────────────────┴───────────────────────┤
 │                      PERSISTENCE LAYER                       │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌────────────────────┐  ┌─────────────────────────────┐    │
-│  │  TCGdex API        │  │  Browser localStorage       │    │
-│  │  (Remote)          │  │  (Local)                    │    │
+│  │  TCGdex API        │  │  localStorage v2 (v1.0)     │    │
+│  │  (Remote)          │  │  { version: 1,              │    │
+│  │  UNCHANGED ✓       │  │    ownedCards: Record<      │    │
+│  │                    │  │      string, boolean> }     │    │
+│  │                    │  │                              │    │
+│  │                    │  │  MIGRATE TO v3 (v1.1) 🔄    │    │
+│  │                    │  │  { version: 3,              │    │
+│  │                    │  │    cardQuantities: Record<  │    │
+│  │                    │  │      string, number> }      │    │
 │  └────────────────────┘  └─────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Current Component Boundaries
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Sets View** | Display all Pokemon TCG sets with filtering, search, and progress | Grid/list with set logos, completion bars, series filters |
-| **Cards Album** | Show all cards in a set with ownership toggle | Responsive grid of card images with click-to-mark |
-| **Collection View** | Display user's owned cards across all sets | Filterable list/grid aggregating owned cards |
-| **Stats Footer** | Real-time collection metrics | Fixed footer showing owned/missing/completion % |
-| **TCGdex SDK Client** | Fetch set and card data from Pokemon TCG API | Async hooks wrapping SDK methods |
-| **Collection Store** | Manage ownership state and persistence | React hook with localStorage sync |
-| **Search/Filter System** | Enable discovery by name, series, type, rarity | Client-side filtering on fetched data |
+| Component | Responsibility | Data Dependencies |
+|-----------|----------------|-------------------|
+| **SetGrid** | Display sets with progress bars | useSets(), ownedCards (read-only) |
+| **CardGrid** | Album view with ownership toggle | useCards(), isOwned(), toggleOwnership() |
+| **CollectionView** | Show all owned cards | useCollection() |
+| **Stats Footer** | Real-time completion stats | ownedCards (computed stats) |
+| **useCollection** | Collection state + persistence | localStorage 'pokemon-collection-v2' |
+| **TCGdex Hooks** | Fetch sets/cards from API | @tcgdex/sdk (external) |
 
-## Recommended Project Structure
+### Current Data Model (v1.0)
 
-```
-src/
-├── components/
-│   ├── SetGrid.tsx            # Sets view with series filter
-│   ├── CardGrid.tsx           # Cards album for selected set
-│   ├── CardDetail.tsx         # Card detail modal
-│   ├── CollectionView.tsx     # User's owned cards view
-│   ├── CollectionStats.tsx    # Stats/progress display
-│   ├── Navbar.tsx             # View navigation
-│   └── ui/                    # shadcn/Radix primitives
-│       ├── button.tsx
-│       ├── dialog.tsx
-│       ├── select.tsx
-│       ├── input.tsx
-│       └── progress.tsx
-├── lib/
-│   ├── api.ts                 # TCGdex SDK wrapper + types
-│   ├── collection.ts          # Collection store hook
-│   └── utils.ts               # Helper functions (cn, etc)
-├── hooks/
-│   └── use-toast.ts           # Toast notification system
-├── App.tsx                    # Top-level view orchestration
-└── main.tsx                   # React root mount
-```
-
-### Structure Rationale
-
-- **components/:** Feature-level UI components that compose views. Each component maps to a user-facing screen or major feature (Sets, Cards, Collection).
-- **components/ui/:** Pure presentational primitives from shadcn/ui. No business logic, just styled Radix components.
-- **lib/:** Core business logic separated from UI. `api.ts` owns all external data fetching, `collection.ts` owns all ownership state.
-- **hooks/:** Reusable React hooks for cross-cutting concerns (toasts, etc).
-- **Flat component structure:** No deep nesting because this is a view-centric app with ~6 main screens. Deep folders add navigation overhead without value.
-
-## Architectural Patterns
-
-### Pattern 1: Hook-Based Data Fetching
-
-**What:** Encapsulate API calls in custom React hooks that return `{ data, loading, error }` tuples.
-
-**When to use:** Any time a component needs external data (sets, cards, series list).
-
-**Trade-offs:**
-- ✅ Declarative: Component just calls `useSets()` and renders loading/error/data states
-- ✅ Reusable: Multiple components can share the same hook
-- ✅ Testable: Can mock hooks independently of components
-- ❌ Can cause unnecessary re-fetches if not memoized properly
-- ❌ Complex data dependencies require careful effect dependencies
-
-**Example:**
+**Collection State:**
 ```typescript
-// lib/api.ts
-export const useSets = (filters?: { series?: string }) => {
-  const [data, setData] = useState<PokemonSet[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+interface CollectionState {
+  version: 1;
+  ownedCards: Record<string, boolean>; // cardId → true/false
+}
+```
 
-  useEffect(() => {
-    const fetchSets = async () => {
-      try {
-        setLoading(true);
-        const tcgdex = new TCGdex('en');
-        const sets = await tcgdex.fetchSets();
-        const filtered = filters?.series 
-          ? sets.filter(s => s.series === filters.series)
-          : sets;
-        setData(filtered);
-      } catch (e) {
-        setError(e as Error);
-      } finally {
-        setLoading(false);
-      }
+**localStorage Key:** `pokemon-collection-v2`
+
+**Key Operations:**
+- `isOwned(cardId: string): boolean` — Check ownership
+- `toggleOwnership(cardId: string): void` — Toggle owned state
+- `addToCollection(cardId: string): void` — Mark as owned
+- `removeFromCollection(cardId: string): void` — Mark as not owned
+
+### Current Patterns
+
+**Pattern 1: Hook-Based Collection State**
+- Single `useCollection()` hook manages all ownership state
+- Auto-persists to localStorage on state changes
+- Consumed by multiple components (CardGrid, SetGrid, CollectionView)
+
+**Pattern 2: Boolean Ownership Model**
+- `ownedCards[cardId] = true` means "I own this card"
+- Missing key or `false` means "I don't own this card"
+- Stats computed by counting `true` values
+
+**Pattern 3: Component Prop Drilling**
+- App.tsx orchestrates views but doesn't hold collection state
+- Components call `useCollection()` directly (no context provider)
+- No prop drilling of collection methods
+
+## Quantity Tracking Architecture (v1.1)
+
+### New Data Model
+
+**Evolved Collection State:**
+```typescript
+interface CollectionState {
+  version: 3;
+  cardQuantities: Record<string, number>; // cardId → quantity (0 = not owned)
+}
+```
+
+**Backward Compatibility Rule:**
+```typescript
+// v2 boolean → v3 numeric migration
+// true → 1 (owned, quantity 1)
+// false/undefined → 0 (not owned)
+```
+
+**localStorage Key:** `pokemon-collection-v2` (reused; version field discriminates)
+
+### Integration Points
+
+#### 1. **lib/collection.ts** (MODIFY - Core Integration Point)
+
+**Current Interface:**
+```typescript
+interface CollectionHook {
+  ownedCards: Record<string, boolean>;
+  isOwned: (cardId: string) => boolean;
+  isInCollection: (cardId: string) => boolean; // alias
+  toggleOwnership: (cardId: string) => void;
+  addToCollection: (cardId: string) => void;
+  removeFromCollection: (cardId: string) => void;
+}
+```
+
+**New Interface (v1.1):**
+```typescript
+interface CollectionHook {
+  // EVOLVED: cardQuantities replaces ownedCards
+  cardQuantities: Record<string, number>;
+  
+  // BACKWARD COMPAT: ownedCards computed from quantities
+  ownedCards: Record<string, boolean>; // derived: qty > 0
+  
+  // ENHANCED: quantity-aware methods
+  getQuantity: (cardId: string) => number;
+  setQuantity: (cardId: string, quantity: number) => void;
+  incrementQuantity: (cardId: string) => void;
+  decrementQuantity: (cardId: string) => void;
+  
+  // PRESERVED: boolean ownership methods (now wrappers)
+  isOwned: (cardId: string) => boolean; // qty > 0
+  isInCollection: (cardId: string) => boolean; // alias
+  toggleOwnership: (cardId: string) => void; // 0 ↔ 1
+  addToCollection: (cardId: string) => void; // set qty = 1
+  removeFromCollection: (cardId: string) => void; // set qty = 0
+}
+```
+
+**Key Changes:**
+- Store `cardQuantities` as source of truth
+- Compute `ownedCards` as derived boolean map
+- Preserve existing methods as wrappers (toggleOwnership → increment/decrement)
+- Add new quantity methods
+
+**Migration Strategy:**
+```typescript
+const getInitialState = (): CollectionState => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) return { version: 3, cardQuantities: {} };
+  
+  const parsed = JSON.parse(stored);
+  
+  // v3 schema (current)
+  if (parsed.version === 3 && parsed.cardQuantities) {
+    return parsed;
+  }
+  
+  // v1 schema migration (boolean)
+  if (parsed.version === 1 && parsed.ownedCards) {
+    return {
+      version: 3,
+      cardQuantities: Object.fromEntries(
+        Object.entries(parsed.ownedCards)
+          .filter(([_, owned]) => owned) // only migrate owned cards
+          .map(([cardId, _]) => [cardId, 1]) // true → quantity 1
+      ),
     };
-    fetchSets();
-  }, [filters?.series]);
-
-  return { data, loading, error };
-};
-
-// components/SetGrid.tsx
-const SetGrid = () => {
-  const { data: sets, loading, error } = useSets();
+  }
   
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage error={error} />;
+  // Unknown version → fresh state
+  return { version: 3, cardQuantities: {} };
+};
+```
+
+#### 2. **components/CardGrid.tsx** (MODIFY - UI Integration Point)
+
+**Current Interaction:**
+```typescript
+// v1.0: Click card → toggle boolean
+<Card onClick={() => toggleOwnership(card.id)}>
+  {isOwned(card.id) && <CheckIcon />}
+</Card>
+```
+
+**New Interaction (v1.1):**
+```typescript
+// v1.1: Quantity controls + click-to-increment
+<Card onClick={() => incrementQuantity(card.id)}>
+  {getQuantity(card.id) > 0 && (
+    <Badge>{getQuantity(card.id)}</Badge>
+  )}
+  <QuantityControls
+    quantity={getQuantity(card.id)}
+    onIncrement={() => incrementQuantity(card.id)}
+    onDecrement={() => decrementQuantity(card.id)}
+    onSet={(qty) => setQuantity(card.id, qty)}
+  />
+</Card>
+```
+
+**Component Changes:**
+- Add quantity badge overlay (shows count if > 0)
+- Add increment/decrement buttons (+ / -)
+- Add manual input field (click badge → enter number)
+- Preserve existing ownership filter (owned = qty > 0)
+
+**Layout Strategy:**
+```
+┌─────────────────────┐
+│   [Card Image]      │
+│                     │
+│   ┌─────────────┐   │ ← Quantity Badge (top-right corner)
+│   │    ×3       │   │
+│   └─────────────┘   │
+│                     │
+│   ┌─────────────┐   │ ← Quantity Controls (hover/always visible)
+│   │  [-] [3] [+]│   │
+│   └─────────────┘   │
+└─────────────────────┘
+```
+
+#### 3. **lib/collection.ts** Stats Helpers (MODIFY)
+
+**Current Stats:**
+```typescript
+export interface CompletionStats {
+  owned: number;     // count of owned cards
+  missing: number;   // count of missing cards
+  total: number;     // total cards in set
+  percentage: number; // owned / total * 100
+}
+```
+
+**Enhanced Stats (v1.1):**
+```typescript
+export interface CompletionStats {
+  owned: number;      // count of cards with qty > 0
+  missing: number;    // count of cards with qty === 0
+  total: number;      // total cards in set
+  percentage: number; // owned / total * 100
   
-  return <div>{sets.map(set => <SetCard key={set.id} set={set} />)}</div>;
-};
+  // NEW: quantity-aware stats
+  totalQuantity: number;     // sum of all quantities
+  averageQuantity: number;   // avg qty per owned card
+  duplicates: number;        // count of cards with qty > 1
+}
 ```
 
-### Pattern 2: Persistent Store Hook
+**Migration Impact:**
+- `useSetCompletion()` hook UNCHANGED (uses ownership = qty > 0)
+- Add new `useSetQuantityStats()` hook for detailed metrics
+- SetGrid progress bars UNCHANGED (still ownership-based)
+- Stats footer can optionally show total quantity
 
-**What:** Single custom hook that manages collection state and automatically syncs to localStorage.
+#### 4. **components/CollectionStats.tsx** (OPTIONAL ENHANCE)
 
-**When to use:** When you need state that survives page refreshes and is accessed by multiple components.
-
-**Trade-offs:**
-- ✅ Single source of truth for collection data
-- ✅ Automatic persistence without manual save calls
-- ✅ Simple API: `addToCollection()`, `removeFromCollection()`, `isInCollection()`
-- ❌ localStorage has size limits (~5-10MB depending on browser)
-- ❌ All collection data loads into memory (fine for <10k cards)
-- ❌ No undo/redo without additional state management
-
-**Example:**
+**Current View:**
 ```typescript
-// lib/collection.ts
-const STORAGE_KEY = 'pokemon-tcg-collection';
-
-export const useCollection = () => {
-  const [collection, setCollection] = useState<Record<string, CollectionCard>>({});
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setCollection(JSON.parse(stored));
-    setIsLoaded(true);
-  }, []);
-
-  // Persist on every change
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
-    }
-  }, [collection, isLoaded]);
-
-  const addToCollection = (card: PokemonCard) => {
-    setCollection(prev => ({ ...prev, [card.id]: { ...card, owned: true } }));
-  };
-
-  const isInCollection = (cardId: string) => !!collection[cardId];
-
-  return { collection, addToCollection, isInCollection };
-};
+<div>
+  <p>Total Cards Owned</p>
+  <p>{totalCards}</p>
+</div>
 ```
 
-### Pattern 3: Computed Progress Metrics
-
-**What:** Derive completion percentages and counts from collection state rather than storing them separately.
-
-**When to use:** When displaying progress bars, stats footers, or set completion indicators.
-
-**Trade-offs:**
-- ✅ Always accurate (can't get out of sync)
-- ✅ No duplicate state to maintain
-- ✅ Simple to test (pure function)
-- ❌ Recomputes on every render unless memoized
-- ❌ Requires card count per set from API
-
-**Example:**
+**Enhanced View (v1.1):**
 ```typescript
-// lib/collection.ts
-export const calculateSetProgress = (
-  setId: string,
-  totalCards: number,
-  collection: Record<string, CollectionCard>
-) => {
-  const ownedCount = Object.values(collection)
-    .filter(card => card.set.id === setId)
-    .length;
+<div>
+  <p>Unique Cards Owned</p>
+  <p>{totalCards}</p>
+  <p>Total Cards (with duplicates)</p>
+  <p>{totalQuantity}</p>
+  <p>Average per Card</p>
+  <p>{averageQuantity.toFixed(1)}×</p>
+</div>
+```
+
+#### 5. **SetGrid.tsx** (NO CHANGE - Read-Only Consumer)
+
+**Impact:** None required. SetGrid computes completion from `ownedCards` which is derived from quantities. Progress bars work unchanged.
+
+**Rationale:** Set completion is based on "do I own this card?" not "how many do I own?" Quantity is a card-level detail.
+
+### Modified Component Boundaries
+
+| Component | v1.0 Responsibility | v1.1 Changes |
+|-----------|---------------------|--------------|
+| **SetGrid** | Display sets + progress | NONE (uses derived ownedCards) |
+| **CardGrid** | Ownership toggle | ADD: Quantity controls UI |
+| **CollectionView** | Show owned cards | OPTIONAL: Show quantities |
+| **Stats Footer** | Owned/missing/% | OPTIONAL: Add total quantity |
+| **useCollection** | Boolean ownership | CORE: Quantity storage + migration |
+| **TCGdex Hooks** | Fetch data | NONE |
+
+## Data Flow Changes
+
+### v1.0 Ownership Toggle Flow
+
+```
+User clicks card
+    ↓
+CardGrid.onClick → toggleOwnership(cardId)
+    ↓
+useCollection.toggleOwnership()
+    ↓
+setCollection({ ...prev, ownedCards: { ...prev.ownedCards, [cardId]: !prev[cardId] }})
+    ↓
+useEffect → localStorage.setItem('pokemon-collection-v2', JSON.stringify(collection))
+    ↓
+SetGrid re-renders (progress bar updates)
+Stats footer re-renders (counts update)
+```
+
+### v1.1 Quantity Increment Flow
+
+```
+User clicks + button
+    ↓
+CardGrid.onIncrement → incrementQuantity(cardId)
+    ↓
+useCollection.incrementQuantity()
+    ↓
+setCollection({ ...prev, cardQuantities: { 
+  ...prev.cardQuantities, 
+  [cardId]: (prev.cardQuantities[cardId] || 0) + 1 
+}})
+    ↓
+useEffect → localStorage.setItem('pokemon-collection-v2', JSON.stringify(collection))
+    ↓
+CardGrid re-renders (badge shows new quantity)
+SetGrid re-renders (progress unchanged unless 0→1 transition)
+Stats footer re-renders (optional total quantity update)
+```
+
+### v1.1 Manual Quantity Set Flow
+
+```
+User clicks quantity badge → opens input
+User types "5" → presses Enter
+    ↓
+CardGrid.onSet → setQuantity(cardId, 5)
+    ↓
+useCollection.setQuantity()
+    ↓
+Validate: qty >= 0, integer only
+    ↓
+setCollection({ ...prev, cardQuantities: { ...prev.cardQuantities, [cardId]: 5 }})
+    ↓
+localStorage persists
+    ↓
+UI updates with new quantity
+```
+
+## Migration Strategy
+
+### Phase-Based Rollout
+
+**Phase A: Data Layer Migration** (Minimal Risk)
+1. Update `CollectionState` interface to v3 schema
+2. Add migration logic in `getInitialState()`
+3. Implement quantity methods in `useCollection`
+4. Add derived `ownedCards` computed property
+5. Run unit tests to verify migration logic
+
+**Phase B: UI Integration** (Incremental Enhancement)
+1. Add `QuantityControls` component (standalone, reusable)
+2. Update CardGrid to show quantity badge
+3. Add increment/decrement buttons
+4. Preserve existing click-to-toggle as click-to-increment
+
+**Phase C: Stats Enhancement** (Optional Polish)
+1. Add `totalQuantity` to CompletionStats interface
+2. Update stats footer to show total count
+3. Add CollectionStats breakdown (unique vs total)
+
+### Rollback Safety
+
+**If quantity tracking needs to be reverted:**
+1. Data is NOT lost (quantities persisted)
+2. Revert `useCollection` to return boolean `ownedCards` only
+3. Hide quantity controls in CardGrid
+4. Collection continues working with ownership (qty > 0)
+
+**Version 3 → Version 1 Downgrade:**
+```typescript
+// Convert v3 quantities back to v1 booleans
+const downgradeToV1 = (v3State: CollectionState) => ({
+  version: 1,
+  ownedCards: Object.fromEntries(
+    Object.entries(v3State.cardQuantities)
+      .filter(([_, qty]) => qty > 0)
+      .map(([cardId, _]) => [cardId, true])
+  ),
+});
+```
+
+### Testing Strategy
+
+**Unit Tests (lib/collection.test.ts):**
+```typescript
+describe('Collection Migration', () => {
+  it('migrates v1 boolean to v3 quantity', () => {
+    const v1Data = { version: 1, ownedCards: { 'card-1': true, 'card-2': false }};
+    localStorage.setItem('pokemon-collection-v2', JSON.stringify(v1Data));
+    
+    const { result } = renderHook(() => useCollection());
+    
+    expect(result.current.cardQuantities).toEqual({ 'card-1': 1 });
+    expect(result.current.getQuantity('card-1')).toBe(1);
+    expect(result.current.getQuantity('card-2')).toBe(0);
+  });
   
-  return {
-    owned: ownedCount,
-    missing: totalCards - ownedCount,
-    percentage: Math.round((ownedCount / totalCards) * 100)
-  };
-};
-
-// components/SetCard.tsx
-const SetCard = ({ set }: { set: PokemonSet }) => {
-  const { collection } = useCollection();
-  const progress = useMemo(
-    () => calculateSetProgress(set.id, set.printedTotal, collection),
-    [set.id, set.printedTotal, collection]
-  );
-
-  return (
-    <div>
-      <h3>{set.name}</h3>
-      <Progress value={progress.percentage} />
-      <span>{progress.owned}/{set.printedTotal} cards</span>
-    </div>
-  );
-};
+  it('preserves backward compat - ownedCards derived from quantities', () => {
+    const { result } = renderHook(() => useCollection());
+    
+    act(() => result.current.setQuantity('card-1', 3));
+    
+    expect(result.current.ownedCards['card-1']).toBe(true);
+    expect(result.current.isOwned('card-1')).toBe(true);
+  });
+  
+  it('toggleOwnership works as 0↔1 toggle', () => {
+    const { result } = renderHook(() => useCollection());
+    
+    act(() => result.current.toggleOwnership('card-1'));
+    expect(result.current.getQuantity('card-1')).toBe(1);
+    
+    act(() => result.current.toggleOwnership('card-1'));
+    expect(result.current.getQuantity('card-1')).toBe(0);
+  });
+});
 ```
 
-### Pattern 4: View State Management in App Component
+**Integration Tests:**
+- CardGrid quantity controls increment/decrement correctly
+- Stats footer reflects quantity changes
+- SetGrid progress bar transitions on 0→1 and 1→0
+- localStorage persists and reloads quantities correctly
 
-**What:** Top-level component manages which view is active and what's selected (set, card, modal state).
+**Smoke Tests:**
+- Existing v1.0 users: Collection data migrates without loss
+- New v1.1 users: Can set quantities from scratch
+- Mixed interaction: Toggle + quantity buttons don't conflict
 
-**When to use:** Single-page apps with multiple views and shared navigation state.
+## Anti-Patterns to Avoid
 
-**Trade-offs:**
-- ✅ Simple: No routing library needed for personal app
-- ✅ Fast: No URL parsing or route matching overhead
-- ✅ Centralized: All view state in one place
-- ❌ No browser back/forward support
-- ❌ No deep linking to specific sets or cards
-- ❌ Can't share URLs with friends
+### Anti-Pattern 1: Separate Quantity State Store
 
-**Example:**
-```typescript
-// App.tsx
-const App = () => {
-  const [view, setView] = useState<'sets' | 'cards' | 'collection'>('sets');
-  const [selectedSet, setSelectedSet] = useState<PokemonSet | null>(null);
-  const [selectedCard, setSelectedCard] = useState<PokemonCard | null>(null);
+**What people might do:**
+Create a new `useQuantities()` hook separate from `useCollection()`.
 
-  return (
-    <div>
-      <Navbar view={view} onSetView={setView} />
-      
-      {view === 'sets' && <SetGrid onSetSelect={(set) => {
-        setSelectedSet(set);
-        setView('cards');
-      }} />}
-      
-      {view === 'cards' && selectedSet && (
-        <CardGrid set={selectedSet} onCardSelect={setSelectedCard} />
-      )}
-      
-      {view === 'collection' && <CollectionView />}
-      
-      <CardDetail card={selectedCard} />
-    </div>
-  );
-};
-```
+**Why it's wrong:**
+- Two sources of truth (ownership vs quantity)
+- Sync issues between boolean and numeric states
+- Doubled localStorage writes
+- Component complexity (must use both hooks)
 
-## Data Flow
+**Do this instead:**
+Evolve `useCollection` to store quantities, derive ownership.
 
-### Primary Flow: Browse Sets → View Cards → Mark Ownership
+### Anti-Pattern 2: Breaking Change Migration
 
-```
-User clicks set
-    ↓
-SetGrid → onSetSelect() → App.tsx (setSelectedSet, setView('cards'))
-    ↓
-CardGrid mounts → useCards(setId) → TCGdex SDK → fetch cards
-    ↓
-User clicks card image → toggles ownership
-    ↓
-CardGrid → useCollection() → addToCollection() / removeFromCollection()
-    ↓
-Collection hook → updates state → syncs to localStorage
-    ↓
-All components using useCollection re-render (stats, progress bars)
-```
+**What people might do:**
+Change `ownedCards` type from `Record<string, boolean>` to `Record<string, number>` directly.
 
-### Secondary Flow: View Collection
+**Why it's wrong:**
+- Breaks all existing components using `ownedCards`
+- Forces simultaneous migration of SetGrid, CardGrid, CollectionView
+- Higher regression risk
+- Loses backward compat with v1 data
 
-```
-User clicks "Collection" in nav
-    ↓
-Navbar → onSetView('collection') → App.tsx (setView)
-    ↓
-CollectionView mounts → useCollection() → reads from state
-    ↓
-Applies client-side filters (rarity, set, name)
-    ↓
-Renders owned cards in grid
-```
+**Do this instead:**
+Add `cardQuantities` as new field, compute `ownedCards` as derived boolean map.
 
-### State Update Pattern
+### Anti-Pattern 3: Quantity in Card Data Model
 
-```
-User Action (click card)
-    ↓
-Event Handler (handleCardClick)
-    ↓
-Collection Hook (addToCollection)
-    ↓
-State Update (setCollection)
-    ↓
-├─ Re-render consumers (CardGrid, Stats, SetGrid progress bars)
-└─ Persist to localStorage (via useEffect)
-```
+**What people might do:**
+Add `quantity?: number` field to `PokemonCard` interface.
 
-### Key Data Flows
+**Why it's wrong:**
+- `PokemonCard` is canonical card data from TCGdex (read-only)
+- Mixing API data with user collection data
+- Breaks separation of concerns (data fetching vs state management)
+- Makes card types inconsistent (some have qty, some don't)
 
-1. **Set Loading:** App mounts → SetGrid calls useSets() → TCGdex fetches all sets → displays with computed progress from collection
-2. **Card Loading:** User selects set → CardGrid calls useCards(setId) → TCGdex fetches set cards → displays with ownership indicators from collection
-3. **Ownership Toggle:** User clicks card → checks if in collection → calls add/remove → collection updates → progress bars re-render
-4. **Stats Display:** Stats component reads collection hook → computes totals → renders in footer (updates reactively when collection changes)
-5. **Search/Filter:** User types in search → filters applied client-side to already-fetched data → no API calls
+**Do this instead:**
+Keep quantity in `useCollection` hook, join by `cardId` at render time.
+
+### Anti-Pattern 4: Eager UI Complexity
+
+**What people might do:**
+Add bulk quantity actions (e.g., "Set all commons to 4×") in v1.1.
+
+**Why it's wrong:**
+- Feature scope creep
+- Adds UI complexity before validating basic quantity workflow
+- Increases testing surface area
+- May not match user needs (validate first)
+
+**Do this instead:**
+Ship increment/decrement/manual input first. Defer bulk actions to v1.2 if validated.
+
+### Anti-Pattern 5: No Migration Fallback
+
+**What people might do:**
+Assume all users will cleanly migrate from v1 to v3.
+
+**Why it's wrong:**
+- Users may have corrupted localStorage
+- Schema may have unknown versions from dev testing
+- Migration bugs could cause data loss
+
+**Do this instead:**
+Handle all cases: v1 → v3, v3 → v3, unknown → fresh start with console warnings.
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-1k cards | **Current architecture is optimal.** localStorage handles this easily, client-side filtering is instant. |
-| 1k-10k cards | **Fine with current approach.** localStorage limit is ~5-10MB; 10k cards as JSON is ~2-3MB. Consider pagination in collection view for perceived performance. |
-| 10k-100k cards | **IndexedDB recommended.** localStorage becomes slow to parse. IndexedDB allows querying without loading entire collection into memory. Virtual scrolling required for card grids. |
-| Multiple users | **Backend + auth required.** Move collection storage to database with user accounts. Add sync layer to handle offline changes. |
+### Current Scale (v1.0)
+- **Data size:** ~1KB per 100 owned cards (boolean map)
+- **localStorage limit:** 5-10MB (browser-dependent)
+- **Max collection:** ~50,000 cards before localStorage issues
+- **Performance:** Instant (in-memory map lookups)
 
-### Scaling Priorities
+### v1.1 Scale Impact
+- **Data size:** ~2KB per 100 owned cards (numeric quantities)
+- **Increased by:** ~2× (number values larger than boolean)
+- **Max collection:** ~25,000 cards before localStorage issues
+- **Performance:** Still instant (quantity lookups same complexity)
 
-1. **First bottleneck: Client-side filtering with large collections**
-   - **When:** Collection view shows 1000+ owned cards, filtering lags
-   - **Fix:** Add virtual scrolling (react-window) to render only visible cards. Move filtering to worker thread if needed.
+### If Collection Grows Beyond localStorage
 
-2. **Second bottleneck: localStorage size limits**
-   - **When:** Collection reaches ~8k cards (approaching 5MB JSON)
-   - **Fix:** Migrate to IndexedDB with Dexie.js wrapper. Store only card IDs + metadata, fetch full card data on-demand.
+**Bottleneck:** localStorage quota exceeded (DOMException).
 
-3. **Third bottleneck: API rate limits**
-   - **When:** Fetching many sets/cards hits TCGdex rate limits
-   - **Fix:** Implement request batching and caching layer. Store fetched sets/cards in IndexedDB to avoid refetching on revisit.
+**Solution Path:**
+1. **v1.1:** Stay with localStorage (sufficient for personal collections)
+2. **v1.2:** Migrate to IndexedDB if localStorage errors detected
+3. **v2.0:** Add optional cloud sync with backend (requires accounts)
 
-## Anti-Patterns
+**When to migrate:**
+- User has >10,000 owned cards with quantities
+- localStorage errors in console
+- User requests multi-device sync
 
-### Anti-Pattern 1: Storing Full Card Objects in Collection
+**For v1.1:** No scaling changes needed. Personal collections rarely exceed 5,000 cards.
 
-**What people do:** Store entire `PokemonCard` object (with images, attacks, etc) in collection state and localStorage.
+## Build Order Recommendation
 
-**Why it's wrong:**
-- Bloats localStorage with duplicate data (card details are fetched from API anyway)
-- Makes serialization slow (deep object cloning on every update)
-- Collection can exceed localStorage size limits faster
+### Sequential Work Phases
 
-**Do this instead:**
-```typescript
-// ❌ BAD: Storing full card
-const collection: Record<string, PokemonCard> = {
-  "xy1-1": { id: "xy1-1", name: "...", images: {...}, attacks: [...], ... }
-};
-
-// ✅ GOOD: Store only IDs + user metadata
-const collection: Record<string, CollectionMetadata> = {
-  "xy1-1": { 
-    cardId: "xy1-1", 
-    owned: true, 
-    quantity: 2, 
-    condition: "Near Mint",
-    acquiredDate: "2026-03-20"
-  }
-};
-
-// Fetch full card data from API when needed (or use a join pattern)
+**Phase 1: Data Foundation (Low Risk)**
+```
+1. Define v3 CollectionState interface
+2. Implement migration logic (v1 → v3)
+3. Add quantity methods to useCollection
+4. Add derived ownedCards property
+5. Write unit tests for migration + quantity operations
 ```
 
-### Anti-Pattern 2: Separate Progress State
-
-**What people do:** Store completion percentages and counts in separate state variables or localStorage keys.
-
-**Why it's wrong:**
-- Creates duplicate source of truth that can desync
-- Requires manual updates in multiple places
-- Makes bugs hard to trace (which state is correct?)
-
-**Do this instead:**
-```typescript
-// ❌ BAD: Separate progress state
-const [collection, setCollection] = useState({});
-const [progress, setProgress] = useState({ owned: 0, total: 0 });
-
-// When adding card, must update both:
-addCard(card);
-setProgress(prev => ({ ...prev, owned: prev.owned + 1 }));
-
-// ✅ GOOD: Derive from collection
-const progress = useMemo(() => {
-  const owned = Object.keys(collection).length;
-  const total = currentSet.printedTotal;
-  return { owned, total, percentage: (owned / total) * 100 };
-}, [collection, currentSet]);
+**Phase 2: UI Integration (Moderate Risk)**
+```
+6. Create QuantityControls component (isolated)
+7. Add quantity badge to CardGrid card items
+8. Wire increment/decrement buttons
+9. Update CardGrid to use getQuantity()
+10. Test CardGrid with quantity controls
 ```
 
-### Anti-Pattern 3: Fetching Cards One-by-One
-
-**What people do:** When showing a set's cards, loop through card IDs and fetch each individually.
-
-**Why it's wrong:**
-- Makes N+1 API requests (one per card)
-- Slow to load (serial network requests)
-- Hits API rate limits quickly
-
-**Do this instead:**
-```typescript
-// ❌ BAD: Individual fetches
-for (const cardId of set.cardIds) {
-  const card = await tcgdex.fetch('cards', cardId); // N requests!
-}
-
-// ✅ GOOD: Batch fetch via set endpoint
-const setWithCards = await tcgdex.fetch('sets', setId); // 1 request
-const cards = setWithCards.cards; // All cards included
+**Phase 3: Stats Enhancement (Low Risk - Optional)**
+```
+11. Add totalQuantity to CompletionStats
+12. Update stats footer to show total count
+13. Add CollectionStats quantity breakdown
 ```
 
-### Anti-Pattern 4: Using Global State for Everything
-
-**What people do:** Put all state (view, selected set, collection, API data) in a global store like Redux.
-
-**Why it's wrong:**
-- Massive overkill for a personal collection tracker
-- Adds boilerplate and complexity
-- Harder to reason about data flow
-- Makes components harder to test in isolation
-
-**Do this instead:**
-```typescript
-// ❌ BAD: Everything in Redux
-const dispatch = useDispatch();
-const sets = useSelector(state => state.sets.data);
-const loading = useSelector(state => state.sets.loading);
-dispatch(fetchSets()); // in useEffect
-
-// ✅ GOOD: Local state + custom hooks
-const { data: sets, loading } = useSets(); // Simple, clear
-const { collection, addToCollection } = useCollection(); // Encapsulated
+**Phase 4: Polish & Documentation (Low Risk)**
+```
+14. Add toast notifications for quantity changes
+15. Document migration in CHANGELOG.md
+16. Update README with quantity features
+17. Run smoke tests on production build
 ```
 
-## Integration Points
+### Dependency Graph
 
-### External Services
+```
+Migration Logic (1-2) → Quantity Methods (3-4) → Unit Tests (5)
+                                 ↓
+                     QuantityControls Component (6)
+                                 ↓
+                     CardGrid Integration (7-9) → Integration Tests (10)
+                                 ↓
+                     Stats Enhancement (11-13) — OPTIONAL
+                                 ↓
+                     Polish & Docs (14-17)
+```
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| **TCGdex API** | REST API via `@tcgdex/sdk` package | SDK wraps endpoints for sets, cards, series. Returns typed data. No auth required. |
-| **Browser localStorage** | Native Web Storage API | Used for collection persistence. 5-10MB limit. Synchronous read/write. |
-| **Radix UI primitives** | React component imports | Headless UI components. Style with Tailwind via shadcn/ui wrappers. |
-| **Lucide React icons** | Direct imports from `lucide-react` | Tree-shakeable icon set. Import only needed icons. |
+### Risk Assessment
 
-### Internal Boundaries
+| Phase | Risk Level | Mitigation |
+|-------|------------|------------|
+| Data Foundation | Low | Migration tested with v1 data samples; rollback possible |
+| UI Integration | Medium | Increment changes in CardGrid; test ownership filter compatibility |
+| Stats Enhancement | Low | Optional; no impact if deferred |
+| Polish | Low | Non-functional improvements |
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| **Component ↔ API layer** | Custom hooks (useSets, useCards) | Components call hooks, hooks return data/loading/error. Unidirectional data flow. |
-| **Component ↔ Collection store** | useCollection hook | Components call methods (add/remove), hook manages state + localStorage sync. |
-| **View ↔ View (navigation)** | Callback props through App.tsx | Child passes event up (onSetSelect), parent updates state (setView), triggers re-render. |
-| **UI primitive ↔ Feature component** | Props interface | Feature components import primitives, pass styling/behavior via props. No direct state coupling. |
+### Success Criteria
 
-## Build Order Recommendations
+**Phase 1 Complete When:**
+- [ ] v1 → v3 migration preserves all owned cards
+- [ ] v3 state persists correctly to localStorage
+- [ ] `ownedCards` derived property matches v1 behavior
+- [ ] All useCollection unit tests pass
 
-### Phase 1: Data Foundation
-**Why first:** Can't build UI without knowing what data looks like
-- Set up TCGdex SDK integration
-- Define TypeScript interfaces for Set, Card, Collection
-- Build `useSets()` and `useCards()` hooks
-- Verify API responses match types
+**Phase 2 Complete When:**
+- [ ] User can increment/decrement card quantity
+- [ ] Quantity badge displays correctly
+- [ ] Ownership filter (owned/missing) still works
+- [ ] SetGrid progress bars update on 0→1 transitions
 
-### Phase 2: Collection Storage
-**Why second:** Core business logic that UI depends on
-- Implement `useCollection()` hook with localStorage
-- Add CRUD methods (add/remove/update)
-- Build progress calculation utilities
-- Test persistence across page reloads
+**Phase 3 Complete When:**
+- [ ] Stats footer shows total quantity (optional)
+- [ ] CollectionStats shows unique vs total (optional)
 
-### Phase 3: Sets View
-**Why third:** Entry point for user workflow
-- Build SetGrid component with set cards
-- Add series filter dropdown
-- Add name search input
-- Wire progress bars (uses Phase 2)
+**Phase 4 Complete When:**
+- [ ] User-facing documentation updated
+- [ ] Smoke tests pass on production build
+- [ ] No console errors in browser
 
-### Phase 4: Cards Album
-**Why fourth:** Main interaction surface
-- Build CardGrid with card images
-- Add click-to-toggle ownership (uses Phase 2)
-- Implement size toggle (small/medium cards)
-- Add ownership filters (all/owned/missing)
+## Integration Checklist
 
-### Phase 5: Stats & Polish
-**Why last:** Enhancement layer over core functionality
-- Build stats footer with live counts
-- Add CollectionView for cross-set owned cards
-- Implement card detail modal
-- Polish transitions and loading states
+### Pre-Implementation
 
-**Dependency rationale:**
-- Can't build Sets View without API hooks (Phase 1)
-- Can't show progress without collection store (Phase 2)
-- Cards Album requires Sets View for navigation (Phase 3)
-- Stats require both collection store (Phase 2) and rendered views to display in (Phases 3-4)
+- [x] Understand existing v1.0 architecture
+- [x] Identify integration points (useCollection, CardGrid)
+- [x] Define migration strategy (v1 → v3)
+- [x] Plan backward compatibility (ownedCards derived)
+- [x] Document data flow changes
 
-**Parallel work opportunities:**
-- Phase 1 and Phase 2 can be built in parallel (no dependencies)
-- Within Phase 3, filter UI can be built while progress bars are in progress
-- Phase 5 stats footer and CollectionView can be built simultaneously
+### Implementation
 
-## Existing Architecture (Brownfield Notes)
+- [ ] Update CollectionState interface (version 3)
+- [ ] Implement v1→v3 migration in getInitialState()
+- [ ] Add quantity methods (get, set, increment, decrement)
+- [ ] Add ownedCards computed property
+- [ ] Create QuantityControls component
+- [ ] Update CardGrid with quantity UI
+- [ ] Update stats calculations (optional totalQuantity)
+- [ ] Write unit tests for migration + operations
+- [ ] Write integration tests for CardGrid + stats
 
-**Current state:** The project already has:
-- React + TypeScript + Vite foundation
-- shadcn/ui component system fully integrated
-- Existing `api.ts` with PokemonSet/PokemonCard types
-- Existing `collection.ts` with useCollection hook
-- Existing view components (SetGrid, CardGrid, CollectionView, etc)
-- Working localStorage persistence pattern
+### Validation
 
-**What needs adjustment for tracker requirements:**
-1. **API integration:** Current `api.ts` uses direct fetch to Pokemon TCG API. Needs migration to `@tcgdex/sdk` per project requirements.
-2. **Set progress calculation:** Collection data exists but progress bars/completion indicators need to be computed from it.
-3. **Album controls:** CardGrid exists but missing size toggle, ownership filters, and in-set search.
-4. **Stats footer:** CollectionStats exists but may need real-time updates and fixed positioning.
-5. **Set logos:** SetGrid needs to display official set logos (from `set.images.logo` field).
-6. **Series filtering:** Sets view needs series dropdown (data from TCGdex series endpoint).
+- [ ] Smoke test: Migrate existing v1 collection
+- [ ] Smoke test: Create new v3 collection
+- [ ] Smoke test: Increment/decrement quantities
+- [ ] Smoke test: Ownership filter with quantities
+- [ ] Smoke test: SetGrid progress with quantities
+- [ ] Manual test: localStorage persists correctly
+- [ ] Manual test: Page reload preserves quantities
 
 ## Sources
 
-**Architecture Analysis:**
-- Project codebase analysis (`.planning/codebase/ARCHITECTURE.md`) — HIGH confidence
-- Existing code review (`src/App.tsx`, `src/lib/api.ts`, `src/lib/collection.ts`) — HIGH confidence
-- PROJECT.md requirements (TCGdex SDK integration, localStorage persistence) — HIGH confidence
+**Confidence Level: HIGH**
 
-**Domain Patterns:**
-- React SPA architecture patterns (2026 best practices) — HIGH confidence from training data
-- localStorage persistence patterns — HIGH confidence from training data
-- Collection tracking UX patterns — MEDIUM confidence from training data + inference
+This architecture research is based on:
+- ✅ Direct codebase analysis of v1.0 shipped application
+- ✅ Existing file structure: `src/lib/collection.ts`, `src/components/CardGrid.tsx`, `src/lib/api.ts`
+- ✅ Existing data model: CollectionState v1 schema in localStorage
+- ✅ Project context: `.planning/PROJECT.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`
+- ✅ v1.0 requirements archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
+- ✅ Existing patterns: Hook-based state, localStorage persistence, component boundaries
 
-**Pokemon TCG Specific:**
-- TCGdex SDK usage patterns — MEDIUM confidence from package documentation patterns
-- Set/card data structures — HIGH confidence from existing codebase types
+**No external sources required** — this is brownfield integration research based on existing codebase analysis.
+
+**Verification Method:** Direct file inspection and trace of data flow through components.
 
 ---
-*Architecture research for: Pokemon TCG Collection Tracker*
-*Researched: 2026-03-20*
+
+*Architecture research for: Pokemon TCG Collection Tracker v1.1 Quantity Tracking*
+*Researched: 2026-03-21*
+*Confidence: HIGH (direct codebase analysis)*

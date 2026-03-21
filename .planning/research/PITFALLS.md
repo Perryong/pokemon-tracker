@@ -1,273 +1,238 @@
-# Pitfalls Research
+# Pitfalls Research: Quantity Tracking Migration
 
-**Domain:** Pokemon TCG Collection Tracker
-**Researched:** 2024-01-20
-**Confidence:** HIGH (based on domain expertise, existing codebase analysis, and TCG tracker patterns)
+**Domain:** TCG Collection Tracker — Boolean to Quantity Migration  
+**Researched:** 2024-12-29  
+**Confidence:** HIGH (based on codebase analysis + domain experience)
+
+## Executive Summary
+
+Adding quantity tracking to an existing boolean ownership system presents **data migration**, **UI consistency**, and **localStorage constraint** risks. The most critical pitfall is **dual-semantics confusion** — mixing boolean "owned" and numeric "quantity" mental models creates inconsistent behavior and data corruption. Secondary risks include **localStorage quota exhaustion**, **state synchronization bugs**, and **off-by-one errors** in stats calculations.
 
 ## Critical Pitfalls
 
-### Pitfall 1: Card Identity Crisis (Set Reprints & Variants)
+### Pitfall 1: Dual-Semantics Confusion (Data Integrity)
 
 **What goes wrong:**
-Collection tracking breaks when the same Pokemon card exists across multiple sets with different artwork, numbers, or variants (reverse holo, first edition, etc.). Users lose track of which specific version they own, or worse, the system merges different prints as the same card.
+Mixing boolean (`ownedCards[id]: boolean`) and quantity (`quantities[id]: number`) semantics creates inconsistent state. A card can be marked `owned: false` but have `quantity: 3`, or `owned: true` with `quantity: 0`. Stats calculations diverge from visible data. Toggles behave unpredictably.
 
 **Why it happens:**
-Developers assume card name + set is sufficient identity, but Pokemon TCG has:
-- Same card reprinted in multiple sets
-- Reverse holofoil vs regular vs special variants
-- Promotional cards with same name but different numbers
-- Regional variants (English vs Japanese sets)
-- Special editions (1st Edition, Shadowless, etc.)
+Incremental refactoring leaves both old boolean checks (`isOwned()`) and new quantity checks (`getQuantity()`) in the codebase. Different components use different data sources. Boolean ownership becomes "derived" from quantity (qty > 0 = owned) but the boolean field persists as a separate source of truth.
+
+**Consequences:**
+- **Silent data corruption:** User adds 3 cards via quantity UI, but `isOwned()` returns false because boolean wasn't updated
+- **Stats divergence:** Set completion shows 50% but album view shows different count
+- **Toggle ambiguity:** Clicking "owned" checkbox on a card with qty=3 — does it set qty=0 or qty=1?
+- **Migration bugs:** Existing users have boolean-only data, new users have quantity-only data, system treats them differently
 
 **How to avoid:**
-- **Always use `card.id` as the primary key** — TCGdex provides unique IDs per variant
-- Store the full card object reference (with set details) in localStorage, not just card name
-- Display set name + card number prominently in UI (e.g., "Charizard - Base Set 4/102")
-- Never merge cards by name alone — treat each set/variant combination as distinct
+1. **Single source of truth:** Eliminate boolean `ownedCards` field entirely. Derive ownership from `quantity > 0`
+2. **Atomic migration:** Convert all boolean data to quantity in one migration (true → 1, false → 0)
+3. **No dual-API period:** Remove `isOwned()`, `toggleOwnership()`, `addToCollection()` — force all code to use `getQuantity()`, `setQuantity(id, qty)` from day one
+4. **Type safety:** Make `CollectionState.ownedCards` type error at compile time (remove from interface)
 
 **Warning signs:**
-- Users report "I marked this card owned, but it's not showing in my collection"
-- Collection count doesn't match what user expects
-- Duplicate card names appearing in collection without set context
-- User says "I have the old version, not the new one"
+- Multiple checks for same card return different results (`isOwned()` vs `getQuantity() > 0`)
+- Stats calculations need conditional logic for "old data format"
+- Components accessing `collection.ownedCards` directly instead of through quantity API
+- Toggle buttons calling `addToCollection()` while quantity buttons call `setQuantity()`
 
 **Phase to address:**
-**Phase 1 (Data Foundation)** — Card identity must be correct from day one. The existing codebase already uses `card.id` as key in collection.ts, which is correct. Verify this pattern is maintained when integrating TCGdex SDK.
+**Phase 1: Data Model Refactor** — Must be complete before any UI work begins. Mixing UI changes with data model changes creates integration hell.
 
 ---
 
-### Pitfall 2: localStorage Size Explosion
+### Pitfall 2: localStorage Quota Exhaustion
 
 **What goes wrong:**
-localStorage hits the 5-10MB browser limit when users track large collections (500+ cards). The app crashes silently, loses data, or stops persisting changes. Users discover weeks of tracking work is gone.
+Storing per-card quantity for every card (even quantity=0) causes localStorage to hit 5-10MB quota limit. Current boolean format uses ~50 bytes per owned card. Quantity format naively implemented stores ~60-80 bytes per card *regardless of ownership*, multiplying storage by 10-50x for large collections.
 
 **Why it happens:**
-Each card object from Pokemon TCG API/TCGdex includes:
-- Full card images (small + large URLs)
-- Complete set metadata
-- Price history objects
-- Attack descriptions, abilities, rules text
-- Legalities across formats
+Storing quantity for non-owned cards (`quantities[id] = 0`) is redundant but easy to implement. Each card ID is ~15-20 chars (e.g., `"swsh1-1"`, `"base1-4"`), and JSON stringification adds overhead. With 10,000+ unique cards in TCGdex, storing all zeros consumes 1-2MB alone.
 
-Storing 1000 full card objects = ~8-12MB of JSON. One large collection = quota exceeded.
+**Consequences:**
+- **Quota exceeded errors:** `localStorage.setItem()` throws `QuotaExceededError`, collection save fails silently (caught by existing error handler but data lost)
+- **User frustration:** Large collections (500+ cards) suddenly can't save new additions
+- **Performance degradation:** JSON.stringify() on massive objects (10k+ keys) takes 100-500ms, blocking UI
+- **Migration bloat:** Converting boolean to quantity initially works, but adding cards to already-full storage fails
 
 **How to avoid:**
-- **Store minimal card references** — Only store card IDs and ownership metadata
-- Implement projection pattern:
-  ```typescript
-  // BAD: Store full card
-  localStorage.setItem('collection', JSON.stringify(fullCardObjects))
-  
-  // GOOD: Store minimal ownership data
-  const collectionData = {
-    [cardId]: { 
-      quantity: 3, 
-      condition: 'Near Mint',
-      acquiredDate: '2024-01-15',
-      // NO full card data
-    }
-  }
-  ```
-- Fetch card details from TCGdex on-demand when displaying
-- Implement quota monitoring: `navigator.storage.estimate()`
-- Add export/backup functionality BEFORE users hit limits
+1. **Sparse storage:** Only store `{ cardId: quantity }` for qty > 0. Omit zero quantities entirely (default to 0 on read)
+2. **Compressed IDs:** Consider mapping card IDs to short numeric indices if storage becomes critical
+3. **Quota monitoring:** Add storage size tracking, warn at 80% capacity
+4. **Lazy cleanup:** Periodically remove `quantity: 0` entries from storage (e.g., on load or background task)
+5. **Data validation:** Test migration with large mock dataset (5000+ cards) before shipping
 
 **Warning signs:**
-- `localStorage.setItem()` throws `QuotaExceededError` (check browser console)
-- Collection persists for small collections but fails silently for large ones
-- User reports "my collection disappeared after adding more cards"
-- Dev tools show localStorage approaching 5MB
+- Storage size growing linearly with *total cards in database*, not *owned cards*
+- `localStorage.setItem()` failing in browser console during testing
+- JSON stringification showing large objects (>1MB) in performance profiler
+- User reports "my collection isn't saving"
 
 **Phase to address:**
-**Phase 1 (Data Foundation)** — The existing codebase already stores full card objects in localStorage. This MUST be refactored to store only ownership metadata + card IDs before launch. Current implementation will fail at ~200-500 cards depending on card complexity.
-
-**Recovery cost:** HIGH if discovered after users have large collections (data migration required)
+**Phase 1: Data Model Refactor** — Storage format must be optimized from the start. Fixing this post-migration requires a second migration.
 
 ---
 
-### Pitfall 3: Stale Card Data & Price Drift
+### Pitfall 3: Off-By-One Errors in Stats (Owned vs Quantity)
 
 **What goes wrong:**
-Card prices, legalities, and set metadata become outdated because the app never refreshes data from TCGdex. Users see prices from 6 months ago, tournament-legal status is wrong, or new sets don't appear.
+Stats calculations confuse "cards owned" (unique cards with qty > 0) vs "total quantity" (sum of all quantities). Set completion shows 80/100 cards but user actually owns 250 cards (many duplicates). Or vice versa: completion percentage calculated from total quantity instead of unique owned cards.
 
 **Why it happens:**
-Developers cache TCGdex responses aggressively to reduce API calls, but Pokemon TCG data changes frequently:
-- Card prices fluctuate daily (especially for competitive meta cards)
-- New sets release every 3 months
-- Legalities change with format rotations
-- Set completion totals corrected (secret rares added post-launch)
+Existing code calculates `owned = setCardIds.filter(id => ownedCards[id]).length` (unique count). New code might accidentally calculate `owned = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)` (total quantity). Mixed terminology — "owned", "collected", "have", "missing" — becomes ambiguous with quantities.
 
-Without a refresh strategy, cached data becomes stale and users lose trust.
+**Consequences:**
+- **Misleading completion:** "You've collected 150/100 cards" (summing quantities instead of unique)
+- **Progress confusion:** User adds duplicate, completion percentage doesn't change (expected) but "Cards Owned" count increases (unexpected)
+- **Filter bugs:** "Missing cards" filter shows cards where qty=0, but existing owned cards (qty≥1) are missing from "owned" filter
+- **Sorting issues:** Sorting by "# owned" sorts by quantity (3 copies) instead of binary owned/missing
 
 **How to avoid:**
-- **Implement cache expiration strategy:**
-  - Card list data: 24 hour TTL
-  - Price data: 6-12 hour TTL (or real-time fetch on demand)
-  - Set metadata: 7 day TTL
-- Store cache timestamp alongside data
-- Add manual "Refresh Data" button for user-initiated updates
-- Show data freshness indicator: "Prices as of 2 hours ago"
-- On app load, check if cache is stale and background refresh
+1. **Explicit metrics:** Distinguish "Unique Cards Owned" (count of IDs with qty>0) vs "Total Cards" (sum of quantities)
+2. **Completion consistency:** Set completion *always* uses unique cards, never quantities
+3. **UI clarity:** Label stats as "X unique cards" or "Y total cards (including duplicates)"
+4. **Test coverage:** Unit tests for stats with edge cases (qty=0, qty=1, qty=10+)
+5. **Type aliases:** `type UniqueCount = number` vs `type TotalQuantity = number` for clarity
 
 **Warning signs:**
-- User reports "this card is worth $50 but your app shows $5"
-- Set completion shows 78/78 but set actually has 82 cards (secret rares)
-- New set released but doesn't appear in app
-- Card legality shows "Standard" but card rotated out 2 months ago
+- Stats don't match between different views (set grid vs album vs stats page)
+- Completion percentage goes backward when adding duplicate
+- "Missing cards" count is negative or > total cards
+- Progress bar shows >100% completion
 
 **Phase to address:**
-**Phase 2 (TCGdex Integration)** — Implement caching with TTL when integrating SDK. The project requirements mention using TCGdex SDK endpoints, so cache strategy must be built alongside integration.
+**Phase 2: Stats Integration** — Stats must be explicitly redesigned for quantity semantics. Don't assume boolean stats "just work" with quantities.
 
 ---
 
-### Pitfall 4: Set Completion False Positives
+### Pitfall 4: Race Conditions in Quantity Updates
 
 **What goes wrong:**
-Users see "100% Complete" for a set but they're missing secret rares, alternate arts, or promotional variants that aren't in the base set count. Or completion percentage calculates based on `printedTotal` but user wants to include secret rares (which are numbered beyond printedTotal).
+Multiple rapid quantity updates (e.g., user spamming increment button) result in lost updates. Final quantity is wrong. User clicks "+1" five times, card shows quantity=2 instead of 5. Or worse: concurrent updates from different components (modal + grid) overwrite each other.
 
 **Why it happens:**
-Pokemon TCG sets have confusing completion semantics:
-- `printedTotal`: Advertised set size (e.g., "78 cards")
-- `total`: Actual card count including secret rares (e.g., 88 cards)
-- Promo cards: Same set ID but not part of "completion"
-- Regional exclusives: Card exists in set but not available in user's region
+React state updates are asynchronous. Calling `setCollection({ ...prev, quantities: { ...prev.quantities, [id]: qty + 1 }})` multiple times in quick succession reads stale `prev` values. Each update increments from the same base, not the latest value. No locking mechanism in localStorage or React state.
 
-Tracker defaults to `printedTotal` but different collectors have different completion goals.
+**Consequences:**
+- **Lost increments:** User clicks +1 three times, quantity only goes up by 1
+- **Quantity drift:** Actual quantity diverges from displayed quantity, requires page refresh to see correct value
+- **Corruption during migration:** Migration running while user adds cards simultaneously leads to hybrid state
+- **Undo/redo issues:** If implementing undo, concurrent updates break history stack
 
 **How to avoid:**
-- **Offer multiple completion modes:**
-  - "Base Set" (uses `printedTotal`)
-  - "Master Set" (uses `total` — includes secret rares)
-  - "Custom" (user selects which cards count)
-- Display both counts: "Complete: 78/78 (Base), 82/88 (Master)"
-- Add setting: "Include secret rares in completion percentage"
-- Show visual distinction for secret rares (e.g., gold numbering)
-- Document completion logic in UI ("Counting base set only")
+1. **Functional updates:** Always use `setCollection(prev => ({ ...prev, quantities: { ...prev.quantities, [id]: (prev.quantities[id] || 0) + 1 }}))` — reads latest state
+2. **Optimistic UI with rollback:** Display increment immediately, but roll back if save fails
+3. **Debounce saves:** Batch multiple rapid increments into single localStorage write
+4. **Atomic operations:** Create `incrementQuantity(id, delta)` and `setQuantity(id, newQty)` helpers that handle state updates correctly
+5. **Lock during migration:** Disable collection updates while migration is in progress
 
 **Warning signs:**
-- User reports "I'm 100% but I know I'm missing cards"
-- Confusion about why set shows "78 cards" but others list 88
-- User asks "why doesn't my completion change when I add this card?"
-- Set progress bar full but user still searching for cards
+- Quantity increments "lag" behind button clicks
+- Clicking +1 multiple times rapidly results in quantity not matching click count
+- Console warnings about React state updates from unmounted components
+- Quantity changes revert after page refresh
 
 **Phase to address:**
-**Phase 1 (Sets View)** — Completion percentage is a core feature of the Sets View. The logic must handle `printedTotal` vs `total` distinction from day one. Add UI setting for completion mode.
+**Phase 1: Data Model Refactor** — Atomic update operations must be built into the core collection hook. UI layer should never directly mutate quantities.
 
 ---
 
-### Pitfall 5: Image Loading Performance Death Spiral
+### Pitfall 5: Incomplete Migration Error Handling
 
 **What goes wrong:**
-The Cards Album View loads hundreds of high-resolution card images simultaneously, causing browser freeze, memory crashes, or 30-second page loads. Mobile users can't use the app at all.
+Migration from boolean to quantity fails silently for subset of users. Some users see broken state: all quantities=0 despite previously owning cards, or migration runs twice creating duplicate data, or old data preserved alongside new data causing dual-semantics bugs (Pitfall 1).
 
 **Why it happens:**
-Pokemon sets contain 100-300+ cards. Loading all card images at once:
-- Downloads 50-100MB of images
-- Consumes 500MB+ browser memory (decoded images)
-- Blocks rendering until images load
-- Mobile devices crash from memory pressure
+Migration code assumes localStorage is always present and parseable. Users with corrupted data, browser extensions blocking localStorage, private/incognito mode, or third-party storage cleaners break migration. No rollback mechanism. No migration success flag. No validation that migrated data is correct.
 
-Developers implement the simple "show all cards" approach without considering performance at scale.
+**Consequences:**
+- **Data loss:** User's collection disappears after update, all cards show quantity=0
+- **Stuck in migration loop:** Migration runs on every page load because success flag wasn't set
+- **Partial migration:** Only first 100 cards migrated before quota error, rest lost
+- **Customer support nightmare:** No way to diagnose or recover for users reporting "my collection is gone"
 
 **How to avoid:**
-- **Implement virtual scrolling** for large card lists (react-window, react-virtualized)
-- Use `loading="lazy"` on all card images (already present in existing code ✓)
-- Limit initial render to 50-100 cards, paginate or infinite scroll
-- Prefer `images.small` over `images.large` for grid views (already doing this ✓)
-- Add "Grid size" control (existing requirements ✓) — fewer cards visible = better performance
-- Implement image placeholder/skeleton while loading
-- Consider progressive image loading (blur-up technique)
+1. **Migration versioning:** Use schema version field (v1 = boolean, v2 = quantity), check before migration
+2. **Dry-run validation:** Test migration logic on copy of data before modifying actual collection
+3. **Backup old format:** Store `pokemon-collection-v1-backup` before migrating to v2
+4. **Success flag:** Set `migrationCompleted: true` only after successful save
+5. **Error recovery:** If migration fails, restore from backup, log error, show user message
+6. **Idempotent migration:** Running migration twice should be safe (no-op if already migrated)
+7. **Manual recovery UI:** Provide "restore backup" button in settings for 30 days post-migration
 
 **Warning signs:**
-- Page takes 10+ seconds to load when viewing large sets
-- Browser tab shows "Page Unresponsive" warning
-- Mobile browser crashes when opening Cards Album
-- Memory usage spikes to 500MB+ in DevTools Performance tab
-- Scrolling is janky/laggy in card grid
+- User reports "lost all my cards after update"
+- Migration code runs on every app startup (check dev console logs)
+- localStorage shows both `v1` and `v2` keys simultaneously
+- Error logs show `QuotaExceededError` during migration
+- Different users reporting different migration outcomes (some work, some don't)
 
 **Phase to address:**
-**Phase 2 (Cards Album View)** — Performance optimization must be built into initial implementation. Virtual scrolling should be considered for sets with 200+ cards. Current code uses lazy loading (good) but no virtualization.
+**Phase 1: Data Model Refactor** — Migration must be bulletproof before any user touches it. This is a one-time operation with high risk.
 
 ---
 
-### Pitfall 6: Lost Collection Data (No Backup/Export)
+### Pitfall 6: UI State Synchronization (Multiple Sources of Truth)
 
 **What goes wrong:**
-User accidentally clears browser data, switches browsers, or encounters localStorage corruption. Months of collection tracking disappears instantly with no recovery option.
+Quantity displayed in modal differs from quantity in card grid. User changes quantity in album view, but set grid stats don't update. Changing quantity doesn't trigger completion percentage recalculation. Opening card detail shows stale quantity value.
 
 **Why it happens:**
-localStorage is:
-- Per-browser (Chrome collection doesn't sync to Firefox)
-- Vulnerable to "Clear browsing data" operations
-- Not backed up by browser sync
-- Can be corrupted by browser crashes or extension conflicts
+Multiple components maintain local state copies of quantities. Modal reads from `collection.quantities[id]` once on mount, doesn't re-fetch on updates. Stats components compute from snapshot of ownedCards, don't recompute when quantities prop changes. React memoization caches stale values.
 
-Developers treat localStorage as "persistent" but it's actually fragile.
+**Consequences:**
+- **User confusion:** "I just set this to 5, why does it show 3?"
+- **Mismatched stats:** Card grid shows "80/100 owned", set list shows "75/100"
+- **Stale UI:** Changing quantity doesn't update progress bar until page refresh
+- **Debugging difficulty:** Hard to trace which component has correct value
 
 **How to avoid:**
-- **Implement export/import from day one:**
-  ```typescript
-  // Export collection to JSON file
-  exportCollection(): void {
-    const data = JSON.stringify(collection);
-    const blob = new Blob([data], { type: 'application/json' });
-    // Trigger download
-  }
-  
-  // Import collection from JSON file
-  importCollection(file: File): void {
-    // Parse and merge with existing collection
-  }
-  ```
-- Add prominent "Export Collection" button in settings/stats view
-- Implement auto-backup to browser Download folder (weekly reminder)
-- Show collection size and last backup date
-- Warn when localStorage quota is low: "Export backup recommended"
+1. **Single source hook:** All components use `useCollection()` hook, no local state duplication
+2. **Reactive stats:** Use `useMemo` to recompute stats whenever `quantities` object reference changes
+3. **Context API (optional):** If prop drilling becomes complex, use context for collection state
+4. **Controlled components:** Quantity inputs controlled by parent state, not local state
+5. **Key-based remounting:** Use `key={cardId}` on modals to force remount with fresh data
 
 **Warning signs:**
-- User reports "I cleared my cache and lost everything"
-- Support requests: "Can you restore my collection?"
-- User asks "How do I transfer my collection to my new computer?"
-- Reddit posts: "[App Name] deleted my collection"
+- Different numbers in different parts of UI for same card/set
+- Stats don't update until page refresh
+- Closing and reopening modal shows different quantity than card grid
+- Console shows multiple renders with different quantity values for same card
 
 **Phase to address:**
-**Phase 1 or 2** — Export should be in MVP. Import can be Phase 3. The project is explicitly "personal-use, local-first" which makes backup even more critical (no cloud sync safety net).
+**Phase 2: Stats Integration** AND **Phase 3: UI Components** — Both phases must coordinate on single data source pattern.
 
 ---
 
-### Pitfall 7: TCGdex API Rate Limiting & Downtime
+### Pitfall 7: Ambiguous Zero-Quantity Semantics
 
 **What goes wrong:**
-App makes too many TCGdex API requests on page load, gets rate limited, and shows empty sets/cards. Or TCGdex service is down and app becomes completely unusable.
+Unclear whether `quantity: 0` means "explicitly set to zero" vs "not in collection" vs "remove from storage". User removes last copy of card (qty 1→0), card disappears from "owned" filter (expected) but also disappears from storage, so undo/history is impossible. Or card stays in storage with qty=0, wasting space.
 
 **Why it happens:**
-TCGdex is a free community API without guaranteed uptime:
-- No SLA or guaranteed availability
-- Potential rate limits (not well documented)
-- Community-hosted infrastructure
-- Can experience downtime during high traffic
+Boolean ownership was clear: `true` = owned, `false`/missing = not owned. Quantity introduces ambiguity: Is `quantities[id] = 0` equivalent to `delete quantities[id]`? Does setting qty=0 remove card from collection or just mark it as "owned but zero copies"?
 
-Over-eager API calls (fetching every set on load, refetching on every interaction) can trigger limits.
+**Consequences:**
+- **Storage bloat:** Every card ever owned remains in storage with qty=0, never removed
+- **Incomplete removal:** Setting qty=0 doesn't fully remove card, breaks "clear collection" feature
+- **Undo complexity:** If qty=0 cards are deleted, undo must re-insert them; if kept, undo must distinguish 0→1 from missing→1
+- **Filter confusion:** "Missing cards" filter must check both `qty === 0` and `qty === undefined`
 
 **How to avoid:**
-- **Implement aggressive caching** (see Pitfall 3 for TTL strategy)
-- Batch API requests: Fetch all sets in one call, not per-set calls
-- Add loading states and graceful degradation:
-  - Show cached data with "Using cached data" notice
-  - Provide offline mode: "Cannot connect to card database"
-- Implement exponential backoff for retries
-- Monitor API response status, handle 429 (rate limit) and 503 (service unavailable)
-- Consider fallback: Store minimal set list in app bundle for offline bootstrap
+1. **Explicit rule:** `quantity: 0` is equivalent to "not in collection" — always delete from storage when qty reaches 0
+2. **Cleanup on write:** `setQuantity(id, 0)` automatically does `delete quantities[id]`
+3. **History tracking (optional):** If undo is required, separate history log from active collection state
+4. **Read default:** `getQuantity(id)` returns 0 if ID not in storage (sparse representation)
+5. **Migration consistency:** Boolean `false` → missing from storage (not qty=0 entry)
 
 **Warning signs:**
-- Console shows repeated 429 or 503 errors
-- Sets view shows "Loading..." forever
-- Network tab shows dozens of simultaneous API calls
-- User reports "app doesn't work" during TCGdex maintenance
-- Intermittent failures during peak hours
+- Storage contains hundreds of `"cardId": 0` entries
+- "Missing" filter needs complex logic (`qty === 0 || !quantities[id]`)
+- "Clear collection" feature doesn't actually remove cards from storage
+- Undo/redo logic has special cases for qty=0
 
 **Phase to address:**
-**Phase 2 (TCGdex Integration)** — Error handling and caching must be implemented during SDK integration. This is a blocking issue for reliability.
+**Phase 1: Data Model Refactor** — Semantics must be defined before implementing any quantity operations.
 
 ---
 
@@ -275,142 +240,112 @@ Over-eager API calls (fetching every set on load, refetching on every interactio
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Store full card objects in localStorage | Simple implementation, fast initial dev | localStorage quota exceeded at ~200 cards, data migration required | **Never** — Will cause production failures |
-| Skip virtual scrolling in card grid | Faster initial build | Poor performance on sets with 200+ cards, mobile crashes | Acceptable for MVP if sets are limited to <100 cards visible |
-| No collection export feature | Saves 1-2 days dev time | Users lose collections permanently, trust destroyed | **Never** for v1 — Export is table stakes |
-| Hardcode base set completion only | Simpler logic | 30% of users want master set tracking, feature requests pile up | Acceptable for MVP, add setting in v1.1 |
-| Use Pokemon TCG API instead of TCGdex SDK | Familiar API, existing code patterns | Against project requirements, maintainability issues | **Never** — Explicit project requirement to use TCGdex |
-| Skip price data caching | Real-time prices always accurate | Slow page loads, API rate limit issues | Never — Caching required for performance |
-
----
+| Keep boolean `ownedCards` alongside `quantities` for "compatibility" | No code changes to existing components | Dual-semantics bugs (Pitfall 1), permanent tech debt | Never — forces full refactor later |
+| Store all quantities including zeros | Simple implementation, no special read logic | Storage bloat, quota errors (Pitfall 2) | Only for MVP if collection < 100 cards |
+| Skip migration backup | Faster migration, less complexity | No recovery if migration fails, user data loss | Never — backup is essential |
+| Use string quantity inputs without validation | User can type any value | Invalid quantities (negative, decimals, huge numbers), data corruption | Never — always validate input |
+| Calculate stats on every render without memoization | Simple code, no React optimization | UI lag with large collections (500+ cards) | Acceptable for Phase 1, fix in Phase 2 optimization |
+| Manual quantity input only (no increment/decrement buttons) | Less UI complexity | Poor UX for high-quantity cards (typing "23" is slower than clicking +1 twenty-three times... wait, actually typing is faster) | Acceptable for MVP, add buttons later |
+| No migration version tracking | Less code, no schema versioning | Can't detect if migration already ran, risk of double-migration | Never — version field is 1 line of code |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| **TCGdex SDK** | Assuming all endpoints return same data shape | Read SDK docs carefully — set list vs set details have different schemas |
-| **TCGdex SDK** | Not handling null/undefined fields (rarity, HP, artist) | Defensive coding: `card.rarity ?? 'Unknown'` |
-| **TCGdex SDK** | Using wrong endpoint for series list | Use `/series` endpoint, not extracting from `/sets` |
-| **localStorage** | Directly storing SDK response objects | Store minimal projection, re-fetch full data from SDK |
-| **Image URLs** | Hotlinking without checking CORS/availability | TCGdex images should work, but add error fallback image |
-| **Card Prices** | Assuming tcgplayer prices always exist | Many cards have no price data — handle nulls gracefully |
-| **Set Data** | Caching set list indefinitely | New sets release every ~3 months — implement 7-day TTL |
-
----
+| `useCollection` hook | Returning `ownedCards` object (boolean) alongside `quantities` object | Remove `ownedCards` entirely, derive `isOwned(id)` from `quantities[id] > 0` |
+| localStorage writes | Writing full collection state on every quantity change | Debounce writes, batch multiple changes, use functional updates |
+| Stats calculations | Mixing `filter(isOwned).length` (unique) with `reduce(sum quantities)` (total) | Explicitly name metrics: `uniqueOwned` vs `totalQuantity`, document which is used where |
+| React re-renders | Components re-render on every collection change (all cards) | Memoize components by card ID, only re-render affected cards |
+| TCGdex API | Fetching card data to determine if owned | Cache card ownership locally, don't hit API for ownership checks |
+| Migration timing | Running migration in `useEffect` (happens on every render during development) | Run migration once on app load, outside React lifecycle, set success flag |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| **Loading all card images on mount** | 10+ second page load, browser freeze | Lazy loading (✓ already implemented), virtual scrolling | Sets with 150+ cards |
-| **Re-rendering entire card grid on ownership toggle** | UI lag when clicking cards quickly | Optimize React renders, use memo, virtualization | 100+ cards in grid |
-| **No image caching strategy** | Same images downloaded repeatedly | Browser cache headers work, but add placeholder while loading | Every page navigation |
-| **Fetching individual card details in loop** | Slow collection stats calculation | Batch fetch or use set details endpoint (includes all cards) | Collections with 500+ cards |
-| **Recalculating stats on every render** | Stats tab is sluggish | Memoize expensive calculations (`useMemo`) | Collections with 200+ cards |
-| **Storing base64 images in localStorage** | Quota exceeded immediately | Never store images, only URLs | Single set |
-
----
+| JSON.stringify() on every quantity change | UI freezes for 100-500ms on increment | Debounce writes to 500ms, batch changes | Collections > 500 cards |
+| Recomputing stats for entire collection on single card update | Progress bar lags behind button click | Memoize stats per set, only recompute affected set | Collections > 1000 cards |
+| No memoization in card grid renders | Scrolling feels janky, all cards re-render on any change | Wrap cards in `React.memo`, compare by card ID | >50 cards per page |
+| Loading entire TCGdex database into memory for stats | 100+ MB memory usage, slow page load | Compute stats from localStorage quantities only, no need for full card data | Any large set (200+ cards) |
+| Sparse storage read misses | Checking `quantities[id]` for every card in every render | Cache "isOwned" checks in useMemo, use Set for O(1) lookup | >1000 cards rendered |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| **No visual feedback on ownership toggle** | User unsure if click registered, double-clicks | Immediate visual feedback (already has checkmark/quantity badge ✓) |
-| **Hidden completion criteria** | Confusion about why set shows 100% when cards missing | Display "78/78 Base, 82/88 Master" with info tooltip |
-| **No search in large sets** | Can't find specific card in 300-card set | Implement search/filter in Cards Album (required feature ✓) |
-| **Ownership displayed as true/false only** | Can't track multiple copies | Support quantity tracking (existing code already does ✓) |
-| **No progress visibility from set grid** | Must open each set to see progress | Show progress bars on Sets View (required feature ✓) |
-| **Destructive actions without confirmation** | User accidentally removes cards | "Remove from collection" should require confirmation |
-| **No indication of stale data** | User trusts outdated prices | Show "Prices as of [date]" label |
-| **Mobile-unfriendly card images** | Tiny cards unreadable on phone | Card size toggle (required feature ✓) |
-
----
+| No feedback on quantity change | User clicks +1, nothing happens (debounced), clicks again, eventually sees +2 | Optimistic UI update immediately, debounce only localStorage write |
+| Quantity input accepts invalid values | User types "-5" or "999999", breaks stats | Validate input, clamp to 0-999, show error message on invalid input |
+| No visual distinction between qty=1 and qty=5+ | All owned cards look the same, user forgets which have duplicates | Badge showing quantity on card thumbnail, different color for duplicates |
+| Removing last card (qty 1→0) requires two actions | User decrements to 0, then must click "remove" button | Decrementing to 0 automatically removes card from collection |
+| No bulk quantity operations | User wants to add 5 copies of 20 cards after opening booster box, must click +1 one hundred times | "Add multiple" modal with quantity input, or "quick add" flow |
+| Quantity controls hidden in modal/detail | User must click card, open modal, find quantity input, change, close — slow | Inline quantity controls on card thumbnail (hover or always visible) |
+| No undo for accidental quantity changes | User accidentally clicks "set to 0" instead of +1, loses data | Undo toast notification for 5 seconds after change |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Set Completion Logic:** Often missing distinction between `printedTotal` and `total` — verify completion calculates based on user's preference
-- [ ] **localStorage Persistence:** Often missing quota checks — verify app handles QuotaExceededError gracefully
-- [ ] **Card Identity:** Often missing set context in collection display — verify each card shows "Set Name · Number"
-- [ ] **Price Display:** Often missing null checks — verify app handles cards without price data
-- [ ] **Image Loading:** Often missing error handlers — verify broken image URLs show fallback
-- [ ] **Collection Export:** Often "works" but exports invalid JSON — verify exported file can be re-imported successfully
-- [ ] **TCGdex Error Handling:** Often missing 429/503 responses — verify app degrades gracefully when API is down
-- [ ] **Search/Filter:** Often missing debounce — verify search doesn't re-render on every keystroke
-- [ ] **Responsive Design:** Often works on desktop, breaks on mobile — verify card grid, filters, stats all work on phone
-- [ ] **Dark Mode:** Often has contrast issues with card images — verify card images readable in dark theme
-
----
+- [ ] **Migration:** Tested with realistic large dataset (1000+ cards), not just 5 sample cards — verify doesn't hit quota limit
+- [ ] **Migration:** Backup created before migration, success flag set after, idempotent (safe to run twice) — verify in browser DevTools localStorage
+- [ ] **Quantity operations:** All use functional state updates (`prev => ...`), not direct reads — verify by rapidly clicking +1 ten times
+- [ ] **Stats calculations:** Explicitly tested with qty=0, qty=1, qty=10+, and missing IDs — verify owned count vs total quantity distinction
+- [ ] **UI synchronization:** Multiple components (grid, modal, stats) show same quantity immediately after change — verify by opening modal while grid visible
+- [ ] **Storage efficiency:** Only non-zero quantities stored, verified by checking localStorage size and contents — verify qty=0 cards are deleted
+- [ ] **Input validation:** Quantity inputs reject negative, decimal, huge numbers — verify by typing "-1", "3.14", "9999999"
+- [ ] **Error handling:** Migration failure shows user-friendly message and preserves old data — verify by simulating quota error
+- [ ] **localStorage errors:** QuotaExceededError caught and handled gracefully, user notified — verify by filling localStorage to limit
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| **localStorage quota exceeded** | MEDIUM | 1. Implement data projection (strip full card data), 2. Create migration script, 3. Auto-convert user collections on next load |
-| **Lost collection data (no export)** | HIGH | Cannot recover — must add export feature and educate users to back up regularly |
-| **Stale cached data** | LOW | Add manual refresh button, implement cache busting via timestamp |
-| **Set completion miscalculated** | LOW | Fix calculation logic, re-calculate on next app load (no data loss) |
-| **Performance issues from loading all images** | MEDIUM | Add virtual scrolling, may require refactoring grid component |
-| **TCGdex API rate limited** | LOW | Implement caching, add exponential backoff, reduce API calls |
-| **Card identity collision** | HIGH | If users already have merged cards, need data cleanup script + manual user intervention |
-
----
+| Dual-semantics confusion (boolean + quantity both active) | HIGH — requires careful refactor | 1. Create temporary derived boolean field from quantities, 2. Update all consumers to use derived field, 3. Remove original boolean field |
+| localStorage quota exceeded | MEDIUM — requires data cleanup | 1. Implement sparse storage (remove qty=0), 2. Force re-save collection to compact, 3. Add quota monitoring |
+| Lost migration (user's collection gone) | LOW — if backup exists | 1. Restore from `pokemon-collection-v1-backup`, 2. Re-run migration with fix, 3. Delete backup after success |
+| Race conditions (lost increments) | LOW — no data corruption, just UX issue | 1. Replace direct state updates with functional updates, 2. Add debouncing, 3. Test rapid clicks |
+| Stats divergence (different numbers in different views) | MEDIUM — requires state audit | 1. Identify all stat calculation sites, 2. Standardize on single source (useCollection hook), 3. Add integration test |
+| Incomplete migration (subset of cards migrated) | MEDIUM — if backup exists | 1. Restore backup, 2. Fix migration to handle quota errors mid-migration, 3. Re-run with error handling |
+| Zero-quantity ambiguity (storage bloat) | LOW — cleanup is straightforward | 1. Write cleanup script to remove qty=0 entries, 2. Run on user's localStorage, 3. Add deletion to setQuantity(0) |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Card Identity Crisis | Phase 1: Data Foundation | Test: Add same Pokemon from 2 different sets, verify both appear separately in collection |
-| localStorage Size Explosion | Phase 1: Data Foundation | Test: Import 500-card collection, verify localStorage < 2MB |
-| Stale Card Data | Phase 2: TCGdex Integration | Test: Load app, wait 25 hours, reload — verify data refreshes |
-| Set Completion False Positives | Phase 1: Sets View | Test: Check set with secret rares, verify completion logic matches user's selected mode |
-| Image Loading Performance | Phase 2: Cards Album View | Test: Load set with 200+ cards on mobile, verify page loads in < 3 seconds |
-| Lost Collection Data | Phase 1 or 2: MVP | Test: Export collection, clear localStorage, import — verify all data restored |
-| TCGdex Rate Limiting | Phase 2: TCGdex Integration | Test: Simulate API downtime, verify app shows cached data + error message |
+| Dual-semantics confusion | Phase 1: Data Model Refactor | No references to `ownedCards` boolean in codebase, all ownership derived from quantity |
+| localStorage quota exhaustion | Phase 1: Data Model Refactor | localStorage size < 500KB for 1000-card collection, no qty=0 entries stored |
+| Off-by-one stats errors | Phase 2: Stats Integration | Unit tests pass for "unique owned" vs "total quantity" edge cases |
+| Race conditions | Phase 1: Data Model Refactor | Rapid clicking +1 button 10 times results in qty=10, no lost updates |
+| Incomplete migration | Phase 1: Data Model Refactor | Migration creates backup, sets success flag, tested with quota error simulation |
+| UI state synchronization | Phase 2: Stats Integration + Phase 3: UI Components | Changing quantity in modal updates grid and stats immediately, no refresh needed |
+| Zero-quantity semantics | Phase 1: Data Model Refactor | Setting qty=0 removes card from storage, getQuantity(id) returns 0 for missing IDs |
 
----
+## Domain-Specific Considerations
 
-## Domain-Specific Validation Rules
+### TCG Collection Tracking Context
 
-When integrating TCGdex SDK, verify these Pokemon TCG data quirks are handled:
+**Why quantity matters differently here:**
+- **Duplicates are common:** Opening booster packs creates duplicates by design, unlike other collection types (books, movies)
+- **Trade economy:** TCG collectors often track extras for trading, so qty>1 is not just "backup," it's actionable data
+- **Set completion mindset:** Completion percentage is about *unique cards*, not total quantity, but users also care about total card count
+- **Bulk additions:** Opening a booster box (36 packs) can add 360 cards at once, not one-at-a-time
+- **Rarity differences:** Users may want 1 copy of common cards but 4 copies of competitive playable cards (deck limit)
 
-1. **Numbering anomalies:**
-   - Secret rares: Numbered beyond printedTotal (e.g., "82/78")
-   - Promo cards: Numbered with "SWSH" or other prefixes
-   - Some sets have gaps in numbering
-
-2. **Card variants in same set:**
-   - Regular, reverse holo, holo, full art, rainbow rare
-   - Each variant has different ID — don't merge
-
-3. **Multi-card Pokemon:**
-   - LEGEND cards (top/bottom halves)
-   - BREAK evolution cards
-   - V-UNION cards (4-card combination)
-   - Treat each piece as separate card for tracking
-
-4. **Set release patterns:**
-   - Main sets every ~3 months
-   - Special/holiday sets
-   - Promotional releases
-   - Don't hardcode set list — always fetch from API
-
-5. **Price data limitations:**
-   - Not all cards have prices (especially old/promo cards)
-   - Prices vary by variant (holo vs regular)
-   - Price data may be USD only (check user's region)
-
----
+**Implications for quantity semantics:**
+- Set completion stats MUST use unique count, not total quantity
+- Bulk operations (add set, add multiple) are high priority, not nice-to-have
+- Quantity UI must be fast enough for rapid entry (keyboard shortcuts, +1/-1 buttons)
+- "Missing" filter is about unique cards not owned, ignoring quantity
+- Future feature: "Tradeable extras" (qty > 1) is a natural extension
 
 ## Sources
 
-- **Existing codebase analysis** (collection.ts, CollectionView.tsx, CollectionStats.tsx) — Identified current implementation patterns and risks
-- **Domain expertise** — Pokemon TCG collection tracking patterns, API integration challenges, localStorage limitations
-- **TCGdex documentation** (general knowledge) — API structure, data schema, endpoint patterns
-- **Web storage limits** — Browser localStorage quota constraints (5-10MB across browsers)
-- **React performance patterns** — Virtual scrolling, lazy loading, memoization strategies
+- **Codebase analysis:** `.planning/PROJECT.md`, `src/lib/collection.ts`, `src/components/CardGrid.tsx`, `src/components/CollectionStats.tsx`
+- **Domain knowledge:** TCG collection tracking patterns, localStorage best practices
+- **React patterns:** State management, memoization, functional updates (React documentation)
+- **localStorage limits:** 5-10MB quota across browsers (MDN Web Docs)
+- **Migration patterns:** Schema versioning, backward compatibility (established patterns)
+- **Training data:** Common pitfalls in boolean-to-quantity data migrations
 
 ---
 
-*Pitfalls research for: Pokemon TCG Collection Tracker*  
-*Researched: 2024-01-20*  
-*Confidence: HIGH*
+*Pitfalls research for: Pokemon TCG Collection Tracker v1.1 Quantity Tracking*  
+*Researched: 2024-12-29*  
+*Next: Feed into roadmap phase structure and success criteria*

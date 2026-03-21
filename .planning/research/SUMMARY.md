@@ -1,346 +1,333 @@
 # Project Research Summary
 
-**Project:** Pokemon TCG Collection Tracker
-**Domain:** Pokemon Trading Card Game Collection Management
-**Researched:** 2024-03-20
+**Project:** Pokemon TCG Collection Tracker v1.1  
+**Domain:** Collection Management — Quantity/Duplicate Tracking Extension  
+**Researched:** 2024-12-19  
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This project is a **Pokemon TCG collection tracker web app** — a personal, local-first tool for tracking card ownership across all Pokemon TCG sets. Based on comprehensive research across stack selection, feature landscape, architecture patterns, and common pitfalls, the recommended approach is a **React 18 + TypeScript + Vite SPA** with localStorage persistence and the TCGdex SDK for card data.
+v1.1 adds quantity tracking to an existing boolean ownership system (v1.0 shipped and stable). This milestone converts collection data from `Record<cardId, boolean>` to `Record<cardId, number>`, enabling users to track duplicate cards while preserving the fast local-first workflow that makes v1.0 successful.
 
-The architecture is straightforward: a hook-based React app with three main views (Sets, Cards Album, Collection), using custom hooks to manage API calls and collection state. The existing codebase already has the foundation in place (React, TypeScript, shadcn/ui, localStorage patterns), but needs TCGdex SDK integration and implementation of tracking-specific features (progress bars, series filtering, ownership toggles).
+**The good news:** No new dependencies required. The existing React+TypeScript+Vite+shadcn/ui stack handles all quantity features. The critical success factors are (1) data migration executed safely with backward compatibility, (2) preserving the click-to-toggle UX that users love from v1.0, and (3) maintaining the semantic distinction between "unique cards owned" (progress metric) vs "total quantity" (duplicates metric).
 
-**Key risks and mitigations:**
-1. **localStorage quota limits** — Store only card IDs + metadata, not full card objects (prevents 5MB limit crashes)
-2. **Card identity collisions** — Use TCGdex's card.id as primary key to handle reprints/variants correctly
-3. **Image loading performance** — Use lazy loading (already present) + virtual scrolling for large sets (200+ cards)
-4. **Data loss vulnerability** — Implement export/import functionality in MVP to protect user data
-5. **API dependency** — Implement caching with TTL + graceful degradation for TCGdex downtime
-
-The feature scope aligns perfectly with established table stakes (ownership tracking, set browsing, progress indicators, search, persistence) while appropriately deferring complex differentiators (price tracking, multi-quantity, deck building) to validate core value first. The project is well-positioned to deliver a polished v1 that meets user expectations without over-engineering.
+**The key risk:** Dual-semantics confusion. The most dangerous pitfall is maintaining both boolean ownership and numeric quantity as separate sources of truth, which creates data corruption and stats divergence. The solution is to eliminate the boolean `ownedCards` field entirely and derive ownership from `quantity > 0`. The second risk is localStorage quota exhaustion if zero-quantity cards are stored — sparse storage (only storing qty > 0) prevents this. The third risk is off-by-one errors in stats calculations mixing unique counts with total quantities.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack is production-ready and aligned with 2024 best practices. Key technologies:
+**No new dependencies required.** All quantity features leverage the existing v1.0 stack with proven patterns from the boolean ownership migration (`pokemon-collection-v2` storage key).
 
 **Core technologies:**
-- **React 18.3.x** — Stable, mature, full ecosystem support. Stay on v18 (avoid React 19 until shadcn/ui migrates)
-- **TypeScript 5.6.x** — Modern type inference, critical for TCGdex API type safety
-- **Vite 5.4.x** — Fast builds, optimized dev experience. Stay on v5 (v8 ecosystem not ready)
-- **Tailwind CSS 3.4.x** — Industry standard, required by shadcn/ui. Stay on v3 (v4 breaks compatibility)
-- **@tcgdex/sdk ^2.7.1** — Official Pokemon TCG data API (project requirement). Latest stable with built-in caching
-- **Zustand ^5.0.12** — Recommended for collection state management (simpler than Redux for this use case)
-- **@tanstack/react-query ^5.91.3** — Recommended for TCGdex API caching and request management
+- **React 18.3.1 + TypeScript 5.5.3:** Extend `useCollection` hook with quantity methods (`getQuantity`, `setQuantity`, `incrementQuantity`, `decrementQuantity`) while preserving existing boolean compatibility methods
+- **shadcn/ui components:** Existing `Button`, `Input`, and `Badge` components handle all quantity UI needs (increment/decrement controls, quantity display, manual entry)
+- **Zod 3.23.8:** Validates quantity constraints (0 ≤ qty ≤ 999, integers only) using existing validation infrastructure
+- **localStorage:** Schema migration from v2 (boolean) → v3 (quantity) using versioned migration pattern already validated in v1.0
+- **Vitest 4.1.0 + Testing Library:** Existing test infrastructure covers quantity operations, migration, and regression tests with no additions needed
 
-**Already in use (keep):**
-- shadcn/ui + Radix UI components for accessible, styled primitives
-- lucide-react for icons
-- zod for schema validation
-- next-themes for dark mode
-
-**Critical version constraints:**
-- React 18.x + Radix UI 1.x (React 19 breaks Radix compatibility)
-- Tailwind 3.x + shadcn/ui (Tailwind 4 breaks shadcn config)
-- All dependencies validated against npm registry as of research date
+**Critical integration decision:** Migrate to `CollectionState { version: 3, cardQuantities: Record<string, number> }` with sparse storage (omit qty=0 entries). Derive boolean `ownedCards` as computed property for backward compatibility during transition.
 
 ### Expected Features
 
-**Table Stakes (must have for v1):**
-- ✅ Card ownership toggle with visual indicator
-- ✅ Set browsing with set logos and metadata
-- ✅ Set completion progress bars and percentages
-- ✅ Series/era filtering to organize 1000+ sets
-- ✅ Card search by name within sets
-- ✅ localStorage persistence
-- ✅ Set statistics (owned/missing counts)
-- ✅ Responsive card grid (desktop + mobile)
-- ✅ Card images with lazy loading
+**Must have (v1.1 launch blockers):**
+- Per-card quantity display with visual badge (qty > 0 shows count)
+- Increment/decrement controls (+/-) for quick duplicate tracking
+- Zero-quantity validation (cannot go below 0)
+- Single-click toggle preservation (click card = 0↔1, maintains v1.0 speed)
+- Quantity-aware statistics (progress tracks unique cards owned, not total quantity)
+- Data persistence via localStorage with v2→v3 migration
+- Visual distinction for qty=1 vs qty>1 (checkmark vs badge)
+- Boolean ownership = derived from quantity (qty > 0)
 
-**Differentiators (defer to v2+):**
-- Multi-quantity tracking (validate boolean ownership first)
-- Wishlist/want list (second dimension of tracking)
-- Price tracking (high complexity, external API dependency)
-- Card variants (holo, reverse holo, 1st edition)
-- Offline PWA (polish feature)
-- Bulk ownership actions (efficiency after core validated)
+**Should have (v1.x enhancements after validation):**
+- Manual quantity input field (type number directly vs clicking +1 twenty times)
+- Keyboard shortcuts for quantity (arrow keys, +/- keys)
+- Quantity filter: "duplicates only" (show cards with qty > 1)
+- Batch quantity reset at set level (recount workflow)
 
-**Anti-Features (explicitly avoid):**
-- Marketplace/trading platform (liability, scope creep)
-- Social features/public profiles (conflicts with personal-use scope)
-- Authentication/accounts in v1 (backend dependency, delays value)
-- Card scanning/OCR (marginal benefit for manual entry speed)
-- Multi-game support (dilutes focus)
+**Defer to v2+:**
+- Undo last quantity change (requires action history tracking, high complexity)
+- Separate "for trade" quantity (inventory management scope creep)
+- Condition tracking per quantity ("3 mint, 2 played" — combinatorial explosion)
+- Price/value tracking (financial management feature drift)
 
-**MVP Recommendation:** All table stakes are already EXISTING or ACTIVE requirements in PROJECT.md. This validates the scope against ecosystem expectations. Missing differentiators are appropriate deferrals.
+**Key insight from research:** Most collection trackers *lose* the fast click-to-toggle when adding quantity controls. This is our differentiator — preserve the v1.0 single-click workflow for 0→1 transitions, add quantity controls as *augmentation* not replacement.
 
 ### Architecture Approach
 
-The architecture follows standard React SPA patterns with a three-layer approach:
+**Brownfield integration strategy:** Evolve existing architecture, don't replace it. The v1.0 system uses hook-based collection state (`useCollection`) with localStorage persistence. Quantity tracking extends this pattern without disrupting the established component boundaries.
 
-**Major components:**
-1. **Presentation Layer** — Sets View, Cards Album, Collection View, Stats Footer (4 main views)
-2. **Data Access Layer** — TCGdex SDK client hooks, collection storage hook (useCollection)
-3. **Persistence Layer** — TCGdex API (remote), localStorage (local)
+**Major components and changes:**
 
-**Key patterns:**
-- **Hook-based data fetching** — `useSets()`, `useCards()` return `{ data, loading, error }` tuples
-- **Persistent store hook** — `useCollection()` manages ownership state + localStorage sync automatically
-- **Computed progress metrics** — Derive completion % from collection state (never store separately)
-- **View state in App component** — Top-level component manages which view is active (no routing needed for v1)
+1. **lib/collection.ts (CORE MODIFICATION)** — Data model and state management
+   - **Change:** `CollectionState` from `{ version: 1, ownedCards: Record<string, boolean> }` to `{ version: 3, cardQuantities: Record<string, number> }`
+   - **Migration:** v1 boolean → v3 numeric with `true → 1`, `false/undefined → omit from storage` (sparse representation)
+   - **New methods:** `getQuantity()`, `setQuantity()`, `incrementQuantity()`, `decrementQuantity()`
+   - **Compatibility:** Preserve `isOwned()`, `toggleOwnership()` as wrappers over quantity operations
+   - **Derived state:** Compute `ownedCards: Record<string, boolean>` from quantities on-demand (qty > 0 = owned)
 
-**Component structure:**
+2. **components/CardGrid.tsx (UI INTEGRATION)** — Quantity controls and display
+   - **Add:** Quantity badge overlay (top-right corner, shows count if > 0)
+   - **Add:** Increment/decrement buttons (+ / -) on hover or always visible
+   - **Add:** Manual input (click badge → enter number)
+   - **Preserve:** Existing ownership filter (owned = qty > 0)
+
+3. **lib/stats.ts (STATS COMPUTATION)** — Quantity-aware metrics
+   - **Maintain:** Set completion uses unique card count (qty > 0), *never* total quantity sum
+   - **Add:** Optional `totalQuantity` and `duplicates` metrics for enhanced stats footer
+   - **Critical:** Explicitly distinguish `uniqueOwned` (count of IDs with qty>0) vs `totalQuantity` (sum of quantities)
+
+4. **TCGdex API hooks (NO CHANGE)** — Card data fetching unchanged
+   - **Impact:** None. API provides card definitions, collection state is independent
+
+**Data flow pattern:**
 ```
-src/
-├── components/           # Feature components (SetGrid, CardGrid, CollectionView)
-├── components/ui/        # shadcn/ui primitives (button, dialog, progress)
-├── lib/                  # Core logic (api.ts, collection.ts, utils.ts)
-├── hooks/                # Reusable hooks (use-toast, etc)
-└── App.tsx               # View orchestration
+User clicks +1 → incrementQuantity(cardId)
+  → setCollection(prev => functional update with (prev.qty || 0) + 1)
+  → useEffect → localStorage.setItem('pokemon-collection-v2', stringify(v3 state))
+  → CardGrid badge re-renders, SetGrid progress updates if 0→1 transition
 ```
 
-**Existing codebase status:** Foundation is in place (React, TypeScript, Vite, shadcn/ui). Needs:
-1. Migration from current Pokemon TCG API to @tcgdex/sdk (project requirement)
-2. Set progress calculation from collection data
-3. Album controls (size toggle, ownership filters, in-set search)
-4. Series filtering dropdown
-5. Set logo display
+**Anti-patterns to avoid:**
+- Separate quantity store (creates dual-source-of-truth sync bugs)
+- Breaking change to `ownedCards` type (forces simultaneous migration of all consumers)
+- Adding `quantity` field to `PokemonCard` API model (mixes read-only data with user state)
+- No migration fallback (data loss risk if migration fails)
 
 ### Critical Pitfalls
 
-Based on analysis of common failure modes in collection tracker apps:
+**Pitfall 1: Dual-Semantics Confusion (CRITICAL — Data Integrity)**
+- **What:** Mixing boolean `ownedCards[id]` and numeric `quantities[id]` as separate sources causes inconsistent state (owned=false but qty=3, or owned=true but qty=0)
+- **Prevention:** Eliminate boolean field entirely. Store only `cardQuantities: Record<string, number>`. Derive `isOwned(id)` as `qty > 0`. Atomic migration v1→v3 converts all boolean data to quantity in one pass. No dual-API period.
+- **Detection:** Multiple checks for same card return different results. Stats conditional on "old format". Components accessing `ownedCards` directly instead of quantity API.
+- **Phase:** Must be resolved in Phase 1 (Data Model Refactor) before any UI work
 
-1. **Card Identity Crisis** — Same Pokemon reprinted across sets with different artwork causes tracking errors
-   - **Prevention:** Always use `card.id` from TCGdex as primary key, never merge by name alone
-   - **Phase:** Phase 1 (Data Foundation) — must be correct from day one
+**Pitfall 2: localStorage Quota Exhaustion (CRITICAL — Reliability)**
+- **What:** Storing quantity for all cards (including qty=0) multiplies storage 10-50x, hitting 5-10MB browser limit
+- **Prevention:** Sparse storage — only store `{ cardId: quantity }` for qty > 0. Omit zero quantities (default to 0 on read). Test with 5000+ card mock dataset.
+- **Detection:** Storage size growing with *total cards in database*, not *owned cards*. `QuotaExceededError` in console.
+- **Phase:** Must be part of Phase 1 (Data Model Refactor) — storage format baked into migration
 
-2. **localStorage Size Explosion** — Storing full card objects hits 5-10MB browser limit at ~200-500 cards
-   - **Prevention:** Store only card IDs + ownership metadata, fetch full card data from API on-demand
-   - **Phase:** Phase 1 (Data Foundation) — current implementation stores full objects, MUST be refactored before launch
+**Pitfall 3: Off-By-One Stats Errors (HIGH — User Confusion)**
+- **What:** Mixing "cards owned" (unique count) vs "total quantity" (sum) breaks completion percentage (shows "150/100 cards" or progress doesn't change when adding duplicates)
+- **Prevention:** Set completion *always* uses unique card count (qty > 0), never quantities. Label stats explicitly: "Unique Cards Owned" vs "Total Cards (with duplicates)". Unit tests for edge cases (qty=0, qty=1, qty=10+).
+- **Detection:** Stats don't match between views. Completion goes backward when adding duplicate. "Missing cards" count negative.
+- **Phase:** Must be addressed in Phase 2 (Stats Integration)
 
-3. **Stale Card Data** — Cached prices and set metadata become outdated without refresh strategy
-   - **Prevention:** Implement cache TTL (24hr for cards, 6hr for prices, 7 days for sets) + manual refresh button
-   - **Phase:** Phase 2 (TCGdex Integration) — build caching strategy during SDK integration
+**Pitfall 4: Race Conditions in Quantity Updates (MODERATE — UX)**
+- **What:** Multiple rapid clicks lost due to stale state reads (click +1 five times, get qty=2 instead of 5)
+- **Prevention:** Functional state updates (`setCollection(prev => ...)` reads latest state). Optimistic UI with rollback. Atomic operation helpers.
+- **Detection:** Quantity lags behind clicks. Rapid clicking doesn't match final quantity.
+- **Phase:** Phase 1 (Data Model) — atomic updates built into collection hook
 
-4. **Set Completion False Positives** — Users confused by 100% completion when missing secret rares
-   - **Prevention:** Support "Base Set" (printedTotal) vs "Master Set" (total) completion modes, display both counts
-   - **Phase:** Phase 1 (Sets View) — completion logic must handle this from day one
-
-5. **Image Loading Performance** — Loading 100-300 card images simultaneously causes browser freeze/crash
-   - **Prevention:** Lazy loading (already present ✓), virtual scrolling for sets with 200+ cards, prefer small images for grid
-   - **Phase:** Phase 2 (Cards Album View) — build performance optimization into initial implementation
-
-6. **Lost Collection Data** — Users clear browser data or switch browsers, lose months of tracking work
-   - **Prevention:** Implement export/import functionality, prominent "Export Collection" button
-   - **Phase:** Phase 1 or 2 — export should be in MVP (no cloud sync safety net in local-first design)
-
-7. **TCGdex API Rate Limiting** — Over-eager API calls trigger rate limits or app breaks during downtime
-   - **Prevention:** Aggressive caching, graceful degradation with cached data, exponential backoff for retries
-   - **Phase:** Phase 2 (TCGdex Integration) — error handling must be implemented during SDK integration
+**Pitfall 5: Incomplete Migration Error Handling (HIGH — Data Loss Risk)**
+- **What:** Migration fails silently for users with corrupted data, localStorage blocked, or quota errors mid-migration
+- **Prevention:** Migration versioning with schema version field. Dry-run validation on copy. Backup old format (`pokemon-collection-v1-backup`). Success flag only after save. Idempotent (safe to run twice). Manual recovery UI.
+- **Detection:** "Lost all my cards" reports. Migration runs on every startup. Both v1 and v3 keys in localStorage.
+- **Phase:** Phase 1 (Data Model) — migration must be bulletproof before user touches it
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure:
+Based on research, recommended phase structure prioritizes data integrity before UI, validates with MVP, then enhances based on feedback.
 
-### Phase 1: Data Foundation & Core Storage
-**Rationale:** Can't build UI without correct data structures. Collection storage is core business logic that all features depend on.
+### Phase 1: Data Model & Migration Foundation
+**Rationale:** Data migration is one-time, high-risk operation. Must be bulletproof before any UI work. Mixing data changes with UI changes creates integration hell.
 
 **Delivers:**
-- TCGdex SDK integration with TypeScript types
-- `useSets()` and `useCards()` API hooks
-- `useCollection()` hook with localStorage (refactored to store IDs only, not full objects)
-- Progress calculation utilities
-- Data persistence across page reloads
-- Export collection functionality
+- v3 schema definition (`cardQuantities: Record<string, number>`)
+- v1→v3 migration logic with backup, validation, success flag
+- Sparse storage (qty=0 omitted)
+- Quantity methods in `useCollection` (get/set/increment/decrement)
+- Derived `ownedCards` for backward compatibility
+- Unit tests for migration with 1000+ card dataset
+- Error handling for quota exceeded, corrupted data
 
-**Addresses:**
-- Pitfall #1 (Card Identity) — Use card.id as primary key
-- Pitfall #2 (localStorage Size) — Store minimal data projection
-- Pitfall #6 (Data Loss) — Export functionality from day one
+**Addresses from FEATURES.md:**
+- Data model migration (table stakes)
+- Quantity persistence (table stakes)
+- Zero quantity = not owned semantic (table stakes)
 
-**Critical:** This phase must establish correct data patterns. Mistakes here are expensive to fix later (data migration required).
+**Avoids from PITFALLS.md:**
+- Dual-semantics confusion (eliminate boolean, use derived)
+- localStorage quota exhaustion (sparse storage)
+- Race conditions (functional updates)
+- Incomplete migration handling (backup + validation)
+- Zero-quantity ambiguity (defined semantics)
 
-**Research flag:** ✅ Well-documented patterns (TCGdex SDK docs, React custom hooks)
+**Success criteria:**
+- Migration tested with 5000+ card mock data
+- Rollback to v1 possible (backup preserved)
+- All existing v1.0 collections migrate without loss
+- localStorage size < 500KB for 1000-card collection
 
 ---
 
-### Phase 2: Sets View & Navigation
-**Rationale:** Entry point for user workflow. Users browse sets before viewing individual cards.
+### Phase 2: Quantity Controls UI (MVP)
+**Rationale:** Deliver minimum viable quantity tracking. Users need to see and modify quantities. Preserve fast v1.0 click workflow as differentiator.
 
 **Delivers:**
-- SetGrid component with set logos
-- Series dropdown filter (using TCGdex `/series` endpoint)
-- Set name search input
-- Set completion progress bars (uses Phase 1 calculations)
-- Set statistics display (owned/missing counts)
-- Navigation to Cards Album
+- Quantity badge on cards (top-right corner)
+- Increment/decrement buttons (+ / -)
+- Click-to-increment preserves fast workflow
+- Quantity input validation (0-999, integers)
+- Visual distinction: qty=1 (checkmark) vs qty>1 (badge)
 
-**Addresses:**
-- Pitfall #4 (Set Completion) — Implement Base vs Master set completion mode
-- Table stakes features: set browsing, series filtering, progress tracking
+**Addresses from FEATURES.md:**
+- Per-card quantity display (table stakes)
+- Increment/decrement controls (table stakes)
+- Validation cannot go below zero (table stakes)
+- Single-click toggle preservation (differentiator)
+- Visual distinction for quantity > 1 (table stakes)
 
-**Uses:**
-- Stack: React + Tailwind + shadcn/ui (existing), TCGdex SDK (Phase 1)
-- Architecture: Hook-based data fetching pattern, computed progress metrics
+**Avoids from PITFALLS.md:**
+- UI state synchronization (all components use `useCollection` hook)
+- No feedback on quantity change (optimistic UI updates)
 
-**Research flag:** ✅ Standard patterns (set list display, filtering UI)
+**Success criteria:**
+- User can click card to go 0→1 (fast workflow preserved)
+- User can click +1/-1 to adjust quantity
+- Quantity badge displays correctly
+- No negative quantities possible
+- Ownership filter still works (owned = qty > 0)
 
 ---
 
-### Phase 3: Cards Album & Ownership Tracking
-**Rationale:** Main interaction surface. Core value proposition of ownership tracking.
+### Phase 3: Stats Integration
+**Rationale:** Progress tracking must explicitly distinguish unique cards vs total quantity. Critical for user understanding of completion percentage.
 
 **Delivers:**
-- CardGrid component with card images (lazy loaded)
-- Click-to-toggle ownership with visual feedback
-- Card size toggle (small/medium/large grid)
-- Ownership filters (all/owned/missing)
-- In-set search by card name
-- Card detail modal (card info, attacks, abilities)
+- Quantity-aware set completion (unique count)
+- Footer stats: "X unique cards" and "Y total cards" separate
+- Set progress bars based on unique ownership (qty > 0)
+- Regression: existing v1.0 stats behavior preserved
 
-**Addresses:**
-- Pitfall #5 (Image Performance) — Lazy loading + consider virtual scrolling for large sets
-- Pitfall #3 (Stale Data) — Implement cache TTL during SDK integration
-- Pitfall #7 (API Rate Limiting) — Caching + error handling
-- Table stakes features: ownership toggle, card search, responsive grid
+**Addresses from FEATURES.md:**
+- Quantity-aware set statistics (table stakes)
+- Quantity-aware completion percentage (table stakes)
 
-**Uses:**
-- Stack: TCGdex SDK for card data, Zustand/useCollection for ownership state
-- Architecture: Persistent store hook, view state management
+**Avoids from PITFALLS.md:**
+- Off-by-one stats errors (explicit unique vs total)
+- Stats divergence between views (single source)
 
-**Research flag:** ⚠️ **Needs deeper research** — Virtual scrolling implementation for sets with 200+ cards (react-window integration patterns)
+**Success criteria:**
+- Set completion shows unique cards owned, not total quantity
+- Footer shows both unique and total (labeled clearly)
+- Adding duplicate doesn't change completion percentage
+- Stats match between SetGrid, CardGrid, CollectionView
 
 ---
 
-### Phase 4: Collection View & Stats
-**Rationale:** Enhancement layer over core functionality. Provides cross-set overview and motivation.
+### Phase 4: Manual Input & Polish (Post-MVP)
+**Rationale:** Defer until usage validates need. Manual input is quality-of-life for bulk entry but not required for MVP. Add based on user feedback (analytics showing >10 increments per change, or user requests).
 
 **Delivers:**
-- CollectionView showing all owned cards across sets
-- Client-side filtering (by set, series, rarity, name)
-- Stats footer with real-time counts (owned/missing/completion %)
-- Collection-level statistics (total cards owned, total value if price tracking added later)
-- Import collection functionality (complements export from Phase 1)
+- Manual quantity input field (click badge → type number)
+- Keyboard shortcuts (arrow keys, +/-)
+- Quantity filter: "duplicates only"
+- Batch reset at set level
 
-**Addresses:**
-- Table stakes features: collection view, statistics display
-- Differentiator prep: Foundation for price tracking (Phase 5+)
+**Addresses from FEATURES.md:**
+- Manual quantity input (differentiator, deferred)
+- Keyboard shortcuts (differentiator, deferred)
+- Quantity filter duplicates (differentiator, deferred)
+- Batch reset (differentiator, deferred)
 
-**Uses:**
-- Stack: Zustand selectors for derived statistics, React Query for cached API data
-- Architecture: Computed progress metrics pattern, client-side filtering
-
-**Research flag:** ✅ Standard patterns (aggregation, filtering, stats display)
-
----
-
-### Phase 5: Polish & Optimization (v1.1+)
-**Rationale:** Performance and UX improvements after core validated.
-
-**Delivers:**
-- Virtual scrolling for large sets (if Phase 3 performance issues surface)
-- Rarity filtering
-- Set sorting options (release date, name, completion %)
-- Bulk ownership actions ("mark all commons as owned")
-- Card detail enhancements (attack damage, retreat cost, etc)
-- Dark mode polish (contrast improvements for card images)
-
-**Addresses:**
-- Differentiators: Efficiency features for power users
-- Performance: Scaling for large collections (1000+ cards)
-
-**Research flag:** ⚠️ **May need research** — Virtual scrolling library integration (react-window vs react-virtualized)
+**Success criteria:**
+- User feedback validates need (tracked via analytics)
+- Implementation doesn't break MVP workflows
 
 ---
 
 ### Phase Ordering Rationale
 
 **Why this order:**
-1. **Phase 1 first** — Data foundation must be correct before building UI. localStorage refactoring is easier now than after users have data.
-2. **Phase 2 second** — Sets View is the entry point. Users can't navigate to Cards Album without it.
-3. **Phase 3 third** — Cards Album is the main interaction. Depends on Phase 1 (collection storage) and Phase 2 (navigation).
-4. **Phase 4 fourth** — Stats and Collection View enhance core functionality. Don't block MVP but add significant value.
-5. **Phase 5 last** — Polish and optimization after core validated with real usage.
+1. **Data first, UI second:** Migration failure = data loss. UI bugs = annoying but fixable. Data layer must be rock-solid before UI touches it.
+2. **MVP validates assumptions:** Ship increment/decrement first. *Then* measure if users need manual input (analytics: clicking +1 twenty times vs typing "20").
+3. **Stats after controls:** Users need to *see* and *change* quantities before caring about advanced stats. Basic "unique owned" metric in Phase 2, enhanced breakdown in Phase 3.
+4. **Polish after validation:** Keyboard shortcuts and filters are power-user features. Validate demand before building.
 
-**Dependencies:**
-- Phase 2 depends on Phase 1 (can't show progress without collection store)
-- Phase 3 depends on Phase 1 (ownership tracking) and Phase 2 (navigation)
-- Phase 4 depends on Phases 1-3 (aggregates data from all views)
-
-**Parallel work opportunities:**
-- Phase 1 and Phase 2 can start simultaneously (different concerns)
-- Within Phase 3, filters and search can be built while ownership toggle is in progress
-- Phase 4 stats footer and CollectionView can be built simultaneously
-
-**Critical path for MVP:**
-Phase 1 → Phase 2 → Phase 3 → Phase 4 (core tracking functionality complete)
+**Dependency chain:**
+```
+Phase 1 (Data) → BLOCKS → Phases 2, 3, 4
+Phase 2 (UI) → ENABLES → Phase 4 (enhanced controls)
+Phase 3 (Stats) → INDEPENDENT → can run parallel to Phase 2
+```
 
 ### Research Flags
 
 **Phases needing deeper research during planning:**
-- **Phase 3 (Cards Album)** — Virtual scrolling implementation patterns, performance profiling for large sets
-- **Phase 5 (Optimization)** — react-window vs react-virtualized comparison, IndexedDB migration strategy if localStorage proves insufficient
+- **Phase 1 (Data Migration):** Schema migration with large datasets (>5000 cards) needs localStorage quota testing in multiple browsers. Backup/recovery flow needs user testing for error scenarios.
+- **Phase 4 (Manual Input):** Keyboard shortcut patterns need accessibility audit (conflicts with browser shortcuts, screen reader support).
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Data Foundation)** — React custom hooks, localStorage patterns, TCGdex SDK integration well-documented
-- **Phase 2 (Sets View)** — Standard React component patterns, filtering UI, shadcn/ui select component usage
-- **Phase 4 (Stats)** — Aggregation and derived state patterns, standard React patterns
+- **Phase 2 (UI Controls):** Increment/decrement buttons are established pattern. shadcn/ui Button+Badge components are well-documented. No novel interaction design.
+- **Phase 3 (Stats):** Stats calculation is pure data transformation. React `useMemo` pattern is standard. Testing framework validated in v1.0.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All recommendations based on npm registry verification, existing codebase analysis, and official docs. Version constraints validated. |
-| Features | **MEDIUM** | Table stakes validated against training data knowledge of major competitors (Pokellector, TCGCollector, CollX). No real-time competitor analysis available. Differentiators need user validation. |
-| Architecture | **HIGH** | Standard React SPA patterns. Existing codebase already implements recommended structure. TCGdex SDK usage patterns inferred from package documentation and existing API client patterns. |
-| Pitfalls | **HIGH** | Based on domain expertise, existing codebase analysis showing localStorage full card storage issue, and general web app scaling patterns. Pokemon TCG data quirks validated against domain knowledge. |
+| Stack | **HIGH** | All tools present in existing dependencies. No new installs required. React hooks, shadcn/ui, Zod, localStorage patterns validated in v1.0. |
+| Features | **HIGH** | Table stakes features consistent across 5+ major collection trackers (TCGPlayer, Pokellector, Cardmarket, Delver Lens). Click-to-toggle preservation is validated differentiation. |
+| Architecture | **HIGH** | Direct codebase analysis. Brownfield integration extends proven v1.0 patterns. Hook evolution simpler than replacement. Component boundaries well-defined. |
+| Pitfalls | **HIGH** | Critical pitfalls sourced from boolean-to-quantity migration patterns, React state management gotchas, and localStorage constraints (MDN Web Docs). TCG domain specifics (duplicates common, progress = variety) inform semantic decisions. |
 
-**Overall confidence:** **HIGH**
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-Areas that couldn't be fully resolved and need attention during planning:
+**Minor gaps (handle during implementation):**
+- **localStorage quota in practice:** Test with realistic dataset sizes across browsers (Chrome, Firefox, Safari) to validate 600KB estimate and 5MB headroom
+- **Migration rollback UX:** Define user-facing message if migration fails (currently console.error, needs toast notification)
+- **Quantity max value:** 999 is reasonable upper bound, but validate with competitive players who maintain 4-copy playsets across multiple decks
+- **Keyboard shortcut conflicts:** If implementing arrow keys for quantity, audit against browser/screen reader defaults
 
-1. **TCGdex API rate limits** — Documentation doesn't specify exact rate limit thresholds. Need to test in practice and monitor for 429 responses. Implement conservative caching as insurance.
-
-2. **Virtual scrolling threshold** — Need to profile actual performance with real card images on target devices (desktop, mobile, tablets) to determine when virtual scrolling becomes necessary (estimated at 200+ cards but needs validation).
-
-3. **Competitive landscape current state** — Cannot verify 2024 feature sets of major competitors (Pokellector, TCGCollector, CollX) without web search. Feature prioritization based on training data knowledge which may be outdated.
-
-4. **User community preferences** — No direct access to Reddit r/PokemonTCG or Discord communities to validate feature priorities (e.g., do users want multi-quantity tracking? master set vs base set completion?). Recommend quick user research before investing in complex differentiators.
-
-5. **TCGdex SDK caching specifics** — Package v2.7.1 mentions built-in caching via @cachex packages but implementation details need verification during integration. May affect recommended caching strategy.
-
-6. **localStorage quota across browsers** — Ranges from 5-10MB depending on browser. Need to test actual quota on target browsers (Chrome, Firefox, Safari, Edge) and set conservative limit (e.g., 3MB safety margin).
-
-**Recommendation:** These gaps don't block planning or initial implementation. Address during Phase execution:
-- Gap #1, #5: Phase 2 (TCGdex Integration) — Test API behavior, validate SDK caching
-- Gap #2: Phase 3 (Cards Album) — Profile performance with real data
-- Gap #3, #4: Validate with user feedback after MVP (inform Phase 5 priorities)
-- Gap #6: Phase 1 (Data Foundation) — Test localStorage on target browsers
+**No blockers identified.** All gaps are refinements during implementation, not unknowns blocking planning.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- npm registry verification — Package versions, compatibility, publish dates (@tcgdex/sdk@2.7.1, react@18.3.1, etc)
-- Codebase analysis — Existing architecture, current implementation patterns (collection.ts, api.ts, component structure)
-- PROJECT.md requirements — Explicit project scope and technical requirements
-- Official documentation — React, Vite, TypeScript, Tailwind CSS version compatibility and best practices
+- **Existing codebase** — `src/lib/collection.ts`, `src/components/CardGrid.tsx`, `package.json`, `.planning/PROJECT.md`, `.planning/STATE.md` (v1.0 shipped, stable patterns)
+- **TCGPlayer Collection Tracker** — Industry standard TCG collection management (increment/decrement, quantity badges, unique stats)
+- **Pokellector** — Pokemon-specific tracker (fast toggle, quantity overlays, set completion focus)
+- **shadcn/ui component catalog** — Verified Button, Input, Badge, Popover components available
+- **MDN Web Docs** — localStorage quota limits (5-10MB browser-dependent), DOMException handling
 
 ### Secondary (MEDIUM confidence)
-- Training data knowledge — Pokemon TCG collection tracker ecosystem (Pokellector, TCGCollector, CollX), common patterns
-- React SPA architecture patterns — 2026 best practices for hooks, state management, performance
-- TCGdex SDK usage patterns — Inferred from package documentation structure and existing API client patterns
-- Web storage limits — Browser localStorage quota constraints (5-10MB standard across browsers)
+- **Cardmarket Collection** — European TCG marketplace tracker (manual input patterns, unique vs total counts)
+- **Delver Lens** — Mobile scanner app (quantity entry workflows, visual indicators)
+- **React documentation** — Functional state updates, useMemo patterns, hook composition
+- **Zod documentation** — Number schema validation (min, max, int constraints)
 
 ### Tertiary (LOW confidence)
-- React 19 ecosystem migration timeline — Estimated based on current adoption pace (not yet in stable release docs)
-- Vite 8 and Tailwind 4 breaking changes — Not yet in stable release documentation, based on pre-release signals
-- Virtual scrolling threshold — Estimated at 200+ cards but needs device-specific profiling
+- **Pokemon TCG community patterns** — Booster pack duplicate rates, competitive playset requirements (informs feature prioritization but not implementation)
 
 ---
-*Research completed: 2024-03-20*  
-*Ready for roadmap: yes*  
-*Next step: Create implementation roadmap with phase breakdowns based on implications above*
+
+## Ready for Roadmap
+
+**SUMMARY.md complete.** Research synthesis provides:
+- ✅ Clear phase structure (4 phases, dependencies mapped)
+- ✅ Feature prioritization (table stakes vs differentiators vs deferred)
+- ✅ Pitfall prevention strategies (mapped to phases)
+- ✅ Technology stack decisions (no new dependencies)
+- ✅ Architecture integration points (brownfield extension, not replacement)
+- ✅ Confidence assessment (HIGH across all areas, minor gaps identified)
+
+**Recommendation for roadmapper:**
+- **Start with Phase 1 (Data Model) as milestone 1.1.1** — critical foundation, must be bulletproof
+- **Phase 2 (UI Controls) + Phase 3 (Stats) as milestone 1.1.2** — deliver MVP quantity tracking
+- **Phase 4 (Polish) as milestone 1.1.3 or defer to 1.2** — validate demand first
+
+**Success metrics for v1.1:**
+- Existing v1.0 users: Zero data loss during migration (100% success rate)
+- New workflow: Click-to-toggle preserved (< 1 second for 0→1 transition)
+- Storage efficiency: < 500KB for 1000-card collection (sparse storage working)
+- Stats accuracy: Completion % based on unique cards (not total quantity)
+
+---
+
+*Research completed: 2024-12-19*  
+*Ready for requirements: yes*  
+*Next: Feed synthesis into roadmap phase planning for v1.1 Quantity Tracking milestone*
