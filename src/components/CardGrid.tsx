@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ChevronDown, Filter, Plus, Check, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Filter, Plus, Check, Loader2, Search, Minus } from 'lucide-react';
+import { computeQuantityStats } from '@/lib/stats';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -54,7 +55,11 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   const { 
     isInCollection, 
     addToCollection, 
-    removeFromCollection 
+    removeFromCollection,
+    getQuantity,
+    incrementQuantity,
+    decrementQuantity,
+    cardQuantities,
   } = useCollection();
 
   // Build filters for the API request
@@ -91,12 +96,9 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
 
   // Compute stats from FILTERED dataset for consistency with visible cards
   const stats = useMemo(() => {
-    const total = filteredCards.length;
-    const owned = filteredCards.filter(card => isInCollection(card.id)).length;
-    const missing = total - owned;
-    const percentage = total > 0 ? (owned / total) * 100 : 0;
-    return { owned, missing, total, percentage };
-  }, [filteredCards, isInCollection]);
+    const cardIds = filteredCards.map(c => c.id);
+    return computeQuantityStats(cardIds, cardQuantities);
+  }, [filteredCards, cardQuantities]);
 
   // Track if any client-side filters are active (for hiding pagination)
   const hasClientFilters = ownershipFilter !== 'all' || nameSearch.trim() !== '';
@@ -145,10 +147,13 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
     setProcessingCards(prev => new Set(prev).add(card.id));
     
     try {
+      const qty = getQuantity(card.id);
       await removeFromCollection(card.id);
       toast({
         title: "Card Removed",
-        description: `${card.name} has been removed from your collection.`,
+        description: qty > 1 
+          ? `${card.name} (${qty} copies) removed from collection.`
+          : `${card.name} has been removed from your collection.`,
         duration: 2000,
       });
     } catch (error) {
@@ -368,7 +373,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                   onClick={() => onCardSelect(card)}
                 >
                   <div className="relative">
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center z-10">
                       <Button
                         variant={isOwned ? "destructive" : "default"}
                         size="sm"
@@ -394,6 +399,44 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                           </>
                         )}
                       </Button>
+                      
+                      {/* Quantity controls - positioned below toggle button */}
+                      <div className="flex items-center gap-1 mt-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 w-7 p-0 bg-white/90 hover:bg-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            decrementQuantity(card.id);
+                          }}
+                          disabled={getQuantity(card.id) === 0}
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        
+                        <Badge 
+                          variant="secondary" 
+                          className="min-w-[2rem] justify-center bg-white/90 text-foreground"
+                        >
+                          {getQuantity(card.id)}
+                        </Badge>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 w-7 p-0 bg-white/90 hover:bg-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            incrementQuantity(card.id);
+                          }}
+                          disabled={getQuantity(card.id) >= 999}
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                     <img
                       src={card.images.small || fallbackCardImage}
@@ -408,6 +451,15 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                         }
                       }}
                     />
+                    {/* Quantity badge for owned cards */}
+                    {isOwned && (
+                      <Badge 
+                        className="absolute top-2 right-2 bg-green-500 text-white z-20"
+                        variant="default"
+                      >
+                        {getQuantity(card.id)}
+                      </Badge>
+                    )}
                   </div>
                   <CardContent className={cn("p-3", sizeMode === 'small' && "p-2")}>
                      <div className="flex justify-between items-start">
@@ -504,7 +556,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
           <div className="flex gap-6 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Owned:</span>
-              <Badge className="bg-green-500 hover:bg-green-500">{stats.owned}</Badge>
+              <Badge className="bg-green-500 hover:bg-green-500">{stats.uniqueOwned}</Badge>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Missing:</span>
@@ -512,11 +564,15 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Completion:</span>
-              <Badge className="bg-blue-500 hover:bg-blue-500">{stats.percentage.toFixed(1)}%</Badge>
+              <Badge className="bg-blue-500 hover:bg-blue-500">{stats.completionPercent.toFixed(1)}%</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Total Qty:</span>
+              <Badge variant="outline">{stats.totalQuantity}</Badge>
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            {stats.total} cards shown
+            {filteredCards.length} cards shown
           </div>
         </div>
       </div>
