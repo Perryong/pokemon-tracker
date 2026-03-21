@@ -100,7 +100,6 @@ describe('Collection Persistence Tests', () => {
     const originalSetItem = Storage.prototype.setItem;
     const mockSetItem = vi.fn(() => {
       const error = new DOMException('Quota exceeded', 'QuotaExceededError');
-      error.name = 'QuotaExceededError';
       throw error;
     });
     Storage.prototype.setItem = mockSetItem;
