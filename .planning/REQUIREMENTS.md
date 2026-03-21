@@ -54,6 +54,17 @@ Deferred to future release. Tracked but not in current roadmap.
 - **PORT-01**: User can export and import collection data through app UI.
 - **PORT-02**: User can see expanded collection analytics beyond basic completion metrics.
 
+## Release Hardening Requirements (Phase 02.1)
+
+Post-feature stabilization requirements for release confidence. These validate and harden existing v1 behavior without adding new capabilities.
+
+- [ ] **HARD-01**: Vitest test infrastructure is operational and `npm test` executes successfully.
+- [ ] **HARD-02**: Collection persistence tests verify ownership survives reload/hydration flows.
+- [ ] **HARD-03**: Stats calculation tests verify owned/missing/completion percentage accuracy.
+- [ ] **HARD-04**: Production build (`npm run build`) completes without errors.
+- [ ] **HARD-05**: Release smoke checklist passes for critical v1 user journeys on production build.
+- [ ] **HARD-06**: Non-critical findings are documented in a deferred backlog with severity/rationale.
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
@@ -91,6 +102,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALBM-06 | Phase 3 | Complete |
 | ALBM-07 | Phase 3 | Complete |
 | STAT-01 | Phase 3 | Complete |
+| HARD-01 | Phase 02.1 | Pending |
+| HARD-02 | Phase 02.1 | Pending |
+| HARD-03 | Phase 02.1 | Pending |
+| HARD-04 | Phase 02.1 | Pending |
+| HARD-05 | Phase 02.1 | Pending |
+| HARD-06 | Phase 02.1 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
