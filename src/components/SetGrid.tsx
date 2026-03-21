@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import { PokemonSet, useSets } from '@/lib/api';
+import { PokemonSet, useSets, useSeries } from '@/lib/api';
 import { useCollection } from '@/lib/collection';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon} from 'lucide-react';
+import { CalendarIcon, Search } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -44,6 +45,8 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   const [legalityFilter, setLegalityFilter] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [seriesFilter, setSeriesFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const pageSize = 20;
 
   // Build filters object based on selected filters
@@ -67,6 +70,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
 
   const { sets, totalSets, loading, error } = useSets(currentPage, pageSize, filters);
   const { ownedCards } = useCollection();
+  const { series } = useSeries();
   const totalPages = Math.ceil(totalSets / pageSize);
 
   const completionBySet = useMemo(() => {
@@ -98,6 +102,21 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
     return completionMap;
   }, [sets, ownedCards]);
 
+  // Filter by series (most restrictive first)
+  const filteredBySeries = useMemo(() => {
+    if (!seriesFilter) return sets;
+    return sets.filter(set => set.series === seriesFilter);
+  }, [sets, seriesFilter]);
+
+  // Filter by search query
+  const filteredBySearch = useMemo(() => {
+    if (!searchQuery.trim()) return filteredBySeries;
+    const query = searchQuery.toLowerCase().trim();
+    return filteredBySeries.filter(set => 
+      set.name.toLowerCase().includes(query)
+    );
+  }, [filteredBySeries, searchQuery]);
+
   const getCompletion = (setId: string, total: number | undefined) => {
     return (
       completionBySet[setId] ?? {
@@ -117,6 +136,8 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
     setLegalityFilter(null);
     setStartDate(undefined);
     setEndDate(undefined);
+    setSeriesFilter(null);
+    setSearchQuery('');
   };
 
   if (error) {
@@ -137,6 +158,32 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
         <h1 className="text-3xl font-bold">Pokémon TCG Sets</h1>
         
         <div className="flex flex-wrap gap-2">
+          <Select 
+            value={seriesFilter || "all"} 
+            onValueChange={(value) => setSeriesFilter(value === "all" ? null : value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Series" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Series</SelectItem>
+              {series.map(s => (
+                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search sets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 w-[200px]"
+            />
+          </div>
+          
           <Select value={legalityFilter || "none"} onValueChange={(value) => setLegalityFilter(value === "none" ? null : value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Format Legality" />
@@ -187,7 +234,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
             </PopoverContent>
           </Popover>
           
-          {(legalityFilter || startDate || endDate) && (
+          {(legalityFilter || startDate || endDate || seriesFilter || searchQuery) && (
             <Button variant="ghost" onClick={clearFilters}>
               Clear Filters
             </Button>
@@ -223,7 +270,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
       {!loading && sets.length > 0 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {sets.map((set) => {
+            {filteredBySearch.map((set) => {
               const completion = getCompletion(set.id, set.total);
 
               return (
