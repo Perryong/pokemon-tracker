@@ -61,15 +61,27 @@ Plans:
 
 ---
 
-### Phase 02.1:Build a Pokemon TCG Collection Tracker application using React.js, shadcn/ui components, and the TCGdex JavaScript SDK (@tcgdex/sdk). (INSERTED)
+### Phase 02.1: Release Hardening (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Harden existing v1 functionality by validating critical user flows, establishing automated regression tests, and ensuring production build readiness
+
 **Depends on:** Phase 2
-**Plans:** 0 plans
+
+**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06
+
+**Success Criteria** (what must be TRUE):
+  1. Vitest test infrastructure operational with `npm test` command
+  2. Collection persistence tests verify ownership survives reload
+  3. Stats calculation tests verify owned/missing/percentage accuracy
+  4. Production build (`npm run build`) completes without errors
+  5. All 27 smoke checklist items pass against production build
+  6. Any non-critical issues documented in deferred backlog
+
+**Plans:** 2 plans (2 waves)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 02.1 to break down)
+- [ ] 02.1-01-PLAN.md — Test infrastructure + critical regression tests (HARD-01, HARD-02, HARD-03)
+- [ ] 02.1-02-PLAN.md — Production build + smoke checklist + release gate (HARD-04, HARD-05, HARD-06)
 
 ### Phase 3: Cards Album & Ownership Tracking
 **Goal**: User can view and track ownership of individual cards within selected sets with real-time feedback
