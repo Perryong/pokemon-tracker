@@ -1,39 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PokemonCard } from './api';
-
-// New storage key for minimal schema (prevents breaking existing data)
-const STORAGE_KEY = 'pokemon-collection-v2';
-
-// Minimal collection state interface
-interface CollectionState {
-  version: 1;
-  ownedCards: Record<string, boolean>;
-}
-
-// Helper function to get initial state from localStorage
-const getInitialState = (): CollectionState => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.version === 1 && typeof parsed.ownedCards === 'object') {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to load collection:', e);
-  }
-  return { version: 1, ownedCards: {} };
-};
+import { CollectionStateV3, STORAGE_KEY } from './collection-types';
+import { getInitialState, clearBackup } from './migration';
 
 // Hook for managing the collection
 export const useCollection = () => {
-  const [collection, setCollection] = useState<CollectionState>(getInitialState);
+  const [collection, setCollection] = useState<CollectionStateV3>(getInitialState);
 
   // Persist to localStorage whenever collection changes
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+      // Clear backup after successful save (migration complete)
+      clearBackup();
     } catch (e) {
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
         console.error('localStorage quota exceeded');
@@ -43,56 +22,114 @@ export const useCollection = () => {
     }
   }, [collection]);
 
-  // Check if a card is owned
-  const isOwned = (cardId: string): boolean => {
-    return !!collection.ownedCards[cardId];
-  };
+  // Core quantity operations with sparse storage
+  const setQuantity = useCallback((cardId: string, quantity: number): void => {
+    setCollection(prev => {
+      const newQuantities = { ...prev.cardQuantities };
+      const clamped = Math.max(0, Math.min(999, Math.floor(quantity)));
+      
+      if (clamped === 0) {
+        delete newQuantities[cardId]; // Sparse
+      } else {
+        newQuantities[cardId] = clamped;
+      }
+      
+      return { ...prev, cardQuantities: newQuantities };
+    });
+  }, []);
 
-  // Alias for backward compatibility with CardGrid.tsx
-  const isInCollection = isOwned;
+  const getQuantity = useCallback((cardId: string): number => {
+    return collection.cardQuantities[cardId] || 0;
+  }, [collection.cardQuantities]);
 
-  // Toggle ownership of a card
-  const toggleOwnership = (cardId: string): void => {
-    setCollection((prev) => ({
-      ...prev,
-      ownedCards: {
-        ...prev.ownedCards,
-        [cardId]: !prev.ownedCards[cardId],
-      },
-    }));
-  };
+  // Derived ownership (single source of truth: qty > 0)
+  const isOwned = useCallback((cardId: string): boolean => {
+    return !!collection.cardQuantities[cardId];
+  }, [collection.cardQuantities]);
 
-  // Add a card to the collection (mark as owned)
-  // Accepts either cardId string or card object for backward compatibility
-  const addToCollection = (cardOrId: string | PokemonCard | { id: string }): void => {
+  // Backward-compatible derived ownedCards
+  const ownedCards = useMemo(() => {
+    const derived: Record<string, boolean> = {};
+    Object.keys(collection.cardQuantities).forEach(id => {
+      derived[id] = true;
+    });
+    return derived;
+  }, [collection.cardQuantities]);
+
+  // Compatibility wrappers
+  const toggleOwnership = useCallback((cardId: string): void => {
+    setCollection(prev => {
+      const current = prev.cardQuantities[cardId] || 0;
+      const newQuantities = { ...prev.cardQuantities };
+      if (current > 0) {
+        delete newQuantities[cardId]; // Toggle off: sparse delete
+      } else {
+        newQuantities[cardId] = 1; // Toggle on
+      }
+      return { ...prev, cardQuantities: newQuantities };
+    });
+  }, []);
+
+  const addToCollection = useCallback((cardOrId: string | PokemonCard | { id: string }): void => {
     const cardId = typeof cardOrId === 'string' ? cardOrId : cardOrId.id;
-    setCollection((prev) => ({
-      ...prev,
-      ownedCards: {
-        ...prev.ownedCards,
-        [cardId]: true,
-      },
-    }));
-  };
-
-  // Remove a card from the collection (mark as not owned)
-  const removeFromCollection = (cardId: string): void => {
-    setCollection((prev) => {
-      const { [cardId]: removed, ...rest } = prev.ownedCards;
+    setCollection(prev => {
+      if (prev.cardQuantities[cardId]) return prev; // Already owned, no-op
       return {
         ...prev,
-        ownedCards: rest,
+        cardQuantities: { ...prev.cardQuantities, [cardId]: 1 }
       };
     });
-  };
+  }, []);
+
+  const removeFromCollection = useCallback((cardId: string): void => {
+    setCollection(prev => {
+      const { [cardId]: _, ...rest } = prev.cardQuantities;
+      return { ...prev, cardQuantities: rest };
+    });
+  }, []);
+
+  // New quantity APIs for Phase 5
+  const incrementQuantity = useCallback((cardId: string): void => {
+    setCollection(prev => {
+      const current = prev.cardQuantities[cardId] || 0;
+      if (current >= 999) return prev;
+      return {
+        ...prev,
+        cardQuantities: { ...prev.cardQuantities, [cardId]: current + 1 }
+      };
+    });
+  }, []);
+
+  const decrementQuantity = useCallback((cardId: string): void => {
+    setCollection(prev => {
+      const current = prev.cardQuantities[cardId] || 0;
+      if (current <= 0) return prev;
+      const newQty = current - 1;
+      const newQuantities = { ...prev.cardQuantities };
+      if (newQty === 0) {
+        delete newQuantities[cardId]; // Sparse
+      } else {
+        newQuantities[cardId] = newQty;
+      }
+      return { ...prev, cardQuantities: newQuantities };
+    });
+  }, []);
 
   return {
-    ownedCards: collection.ownedCards,
+    // Backward-compatible API
+    ownedCards,
     isOwned,
-    isInCollection,
+    isInCollection: isOwned,
     toggleOwnership,
     addToCollection,
     removeFromCollection,
+    
+    // New quantity API
+    getQuantity,
+    setQuantity,
+    incrementQuantity,
+    decrementQuantity,
+    cardQuantities: collection.cardQuantities, // Direct access for Phase 5
   };
 };
 

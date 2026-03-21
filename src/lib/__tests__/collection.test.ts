@@ -25,8 +25,8 @@ describe('Collection Persistence Tests', () => {
 
     const parsed = JSON.parse(stored!);
     expect(parsed).toEqual({
-      version: 1,
-      ownedCards: { 'card-1': true },
+      version: 3,
+      cardQuantities: { 'card-1': 1 },
     });
   });
 
@@ -42,8 +42,8 @@ describe('Collection Persistence Tests', () => {
 
     const parsed = JSON.parse(stored!);
     expect(parsed).toEqual({
-      version: 1,
-      ownedCards: { 'card-2': true },
+      version: 3,
+      cardQuantities: { 'card-2': 1 },
     });
 
     expect(result.current.isOwned('card-2')).toBe(true);
@@ -71,8 +71,8 @@ describe('Collection Persistence Tests', () => {
 
     const parsed = JSON.parse(stored!);
     expect(parsed).toEqual({
-      version: 1,
-      ownedCards: {},
+      version: 3,
+      cardQuantities: {},
     });
   });
 
