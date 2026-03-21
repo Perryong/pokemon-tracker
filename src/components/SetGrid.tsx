@@ -259,15 +259,17 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
         </div>
       )}
 
-      {!loading && sets.length === 0 && (
+      {!loading && filteredBySearch.length === 0 && (
         <div className="text-center p-8 bg-muted rounded-lg">
           <h2 className="text-2xl font-semibold mb-2">No Sets Found</h2>
-          <p className="mb-4">No Pokémon card sets match your current filters.</p>
+          <p className="mb-4 text-muted-foreground">
+            No Pokémon card sets match your current filters.
+          </p>
           <Button onClick={clearFilters}>Clear Filters</Button>
         </div>
       )}
 
-      {!loading && sets.length > 0 && (
+      {!loading && filteredBySearch.length > 0 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredBySearch.map((set) => {
@@ -338,8 +340,11 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
                         )}
                       </div>
                       {completion.percentage === 100 && (
-                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700" variant="outline">
-                          Complete
+                        <Badge 
+                          className="border-emerald-500 bg-emerald-100 text-emerald-700 font-semibold" 
+                          variant="outline"
+                        >
+                          ✓ Complete
                         </Badge>
                       )}
                     </div>
@@ -349,7 +354,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
             })}
           </div>
 
-          {totalPages > 1 && (
+          {totalPages > 1 && !seriesFilter && !searchQuery && (
             <Pagination className="my-8">
               <PaginationContent>
                 <PaginationItem>
