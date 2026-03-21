@@ -16,6 +16,15 @@ Let me reliably track my Pokemon TCG collection progress by set, with fast card-
 - ✅ **Quality gates**: 14 automated tests passing, 27 smoke checks passed, production build verified
 - ✅ **Architecture**: React + TypeScript + Vite + shadcn/ui + TCGdex SDK + localStorage persistence
 
+## Current Milestone: v1.1 Quantity Tracking
+
+**Goal:** Add quantity-based collection tracking so users can track duplicates per card while preserving fast local-first workflows.
+
+**Target features:**
+- Per-card quantity controls (increment/decrement/manual update)
+- Quantity-aware set and album statistics
+- Persistence and migration for quantity data in localStorage
+
 ## Next Milestone Goals (v1.1 candidate scope)
 
 - Define and prioritize next milestone requirements via `/gsd-new-milestone`
@@ -37,7 +46,7 @@ Let me reliably track my Pokemon TCG collection progress by set, with fast card-
 
 ### Active
 
-- [ ] Define v1.1 requirements baseline (new milestone planning)
+- [ ] Ship quantity tracking for duplicates in album and set progress workflows
 
 ### Out of Scope
 
@@ -66,4 +75,4 @@ This is a brownfield React codebase with established component architecture and 
 | Enforce zero blocker/critical defects at release gate | Raised confidence in v1.0 production readiness | ✓ Good |
 
 ---
-*Last updated: 2026-03-21 after v1.0 milestone completion*
+*Last updated: 2026-03-21 after starting v1.1 Quantity Tracking*
