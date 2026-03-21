@@ -54,7 +54,11 @@ Plans:
 6. User sees both unique-owned and total-quantity stats displayed separately and clearly labeled
 7. User gets consistent stats across SetGrid, CardGrid, and collection summary after quantity updates
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Stats helper + CardGrid quantity controls and enhanced footer
+- [ ] 05-02-PLAN.md — SetGrid, CollectionView, CollectionStats quantity-aware updates
 
 ---
 
