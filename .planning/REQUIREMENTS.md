@@ -64,25 +64,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QTY-01 | TBD | Pending |
-| QTY-02 | TBD | Pending |
-| QTY-03 | TBD | Pending |
-| QTY-04 | TBD | Pending |
-| CTRL-01 | TBD | Pending |
-| CTRL-02 | TBD | Pending |
-| CTRL-03 | TBD | Pending |
-| CTRL-04 | TBD | Pending |
-| STATQ-01 | TBD | Pending |
-| STATQ-02 | TBD | Pending |
-| STATQ-03 | TBD | Pending |
-| TESTQ-01 | TBD | Pending |
-| TESTQ-02 | TBD | Pending |
-| TESTQ-03 | TBD | Pending |
+| QTY-01 | Phase 4 | Pending |
+| QTY-02 | Phase 4 | Pending |
+| QTY-03 | Phase 4 | Pending |
+| QTY-04 | Phase 4 | Pending |
+| CTRL-01 | Phase 5 | Pending |
+| CTRL-02 | Phase 5 | Pending |
+| CTRL-03 | Phase 5 | Pending |
+| CTRL-04 | Phase 5 | Pending |
+| STATQ-01 | Phase 5 | Pending |
+| STATQ-02 | Phase 5 | Pending |
+| STATQ-03 | Phase 5 | Pending |
+| TESTQ-01 | Phase 6 | Pending |
+| TESTQ-02 | Phase 6 | Pending |
+| TESTQ-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️ (will be mapped by roadmapper)
+- Mapped to phases: 14 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-21*
