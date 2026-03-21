@@ -16,11 +16,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Sets View
 
-- [ ] **SETS-01**: User can view all available Pokemon TCG sets with official logos.
-- [ ] **SETS-02**: User can filter sets by series using a dropdown (for example Sword & Shield, Scarlet & Violet).
-- [ ] **SETS-03**: User can search sets by name with live filtering as they type.
-- [ ] **SETS-04**: User sees per-set collection progress bars based on owned cards versus set total.
-- [ ] **SETS-05**: User sees a distinct completion indicator when a set reaches 100% ownership.
+- [x] **SETS-01**: User can view all available Pokemon TCG sets with official logos.
+- [x] **SETS-02**: User can filter sets by series using a dropdown (for example Sword & Shield, Scarlet & Violet).
+- [x] **SETS-03**: User can search sets by name with live filtering as they type.
+- [x] **SETS-04**: User sees per-set collection progress bars based on owned cards versus set total.
+- [x] **SETS-05**: User sees a distinct completion indicator when a set reaches 100% ownership.
 
 ### Cards Album View
 
@@ -78,11 +78,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERS-01 | Phase 1 | Complete |
 | PERS-02 | Phase 1 | Complete |
 | PERS-03 | Phase 1 | Complete |
-| SETS-01 | Phase 2 | Pending |
-| SETS-02 | Phase 2 | Pending |
-| SETS-03 | Phase 2 | Pending |
-| SETS-04 | Phase 2 | Pending |
-| SETS-05 | Phase 2 | Pending |
+| SETS-01 | Phase 2 | Complete |
+| SETS-02 | Phase 2 | Complete |
+| SETS-03 | Phase 2 | Complete |
+| SETS-04 | Phase 2 | Complete |
+| SETS-05 | Phase 2 | Complete |
 | ALBM-01 | Phase 3 | Pending |
 | ALBM-02 | Phase 3 | Pending |
 | ALBM-03 | Phase 3 | Pending |
