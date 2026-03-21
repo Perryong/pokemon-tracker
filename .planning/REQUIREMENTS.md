@@ -1,0 +1,89 @@
+# Requirements: Pokemon TCG Collection Tracker
+
+**Defined:** 2026-03-21
+**Core Value:** Let me reliably track my Pokemon TCG collection progress by set, with fast card-level updates that persist between sessions.
+
+## v1.1 Requirements
+
+Requirements for this milestone (quantity tracking). Each maps to roadmap phases.
+
+### Data Model & Migration
+
+- [ ] **QTY-01**: User's existing ownership data migrates safely from boolean storage to quantity storage with no data loss.
+- [ ] **QTY-02**: App stores collection quantities sparsely (only cards with quantity > 0) to keep localStorage usage efficient.
+- [ ] **QTY-03**: App derives owned-state from quantity (`quantity > 0`) so ownership and quantity cannot diverge.
+- [ ] **QTY-04**: User can rely on migration fallback/backup behavior if quantity migration fails.
+
+### Quantity Controls
+
+- [ ] **CTRL-01**: User can increment a card quantity from the album view.
+- [ ] **CTRL-02**: User can decrement a card quantity and never go below zero.
+- [ ] **CTRL-03**: User can still use single-click card toggle for fast `0 ↔ 1` ownership changes.
+- [ ] **CTRL-04**: User sees clear quantity badges/indicators for cards with duplicates.
+
+### Statistics & Progress Semantics
+
+- [ ] **STATQ-01**: User sees set completion based on unique owned cards, not total duplicate count.
+- [ ] **STATQ-02**: User sees separate unique-owned and total-quantity metrics where stats are shown.
+- [ ] **STATQ-03**: User gets consistent stats across SetGrid, CardGrid, and collection summary views after quantity updates.
+
+### Validation & Regression
+
+- [ ] **TESTQ-01**: Quantity migration logic is covered by automated tests for normal and edge-case payloads.
+- [ ] **TESTQ-02**: Quantity controls are covered by automated tests (increment, decrement, 0-floor, fast toggle behavior).
+- [ ] **TESTQ-03**: Existing v1.0 core behaviors (set browsing, filters, persistence) remain verified after quantity changes.
+
+## Future Requirements (Deferred)
+
+### Enhanced Quantity UX
+
+- **QUX-01**: User can type quantity directly via manual numeric input.
+- **QUX-02**: User can use keyboard shortcuts for quantity adjustments.
+- **QUX-03**: User can filter album cards by duplicates-only (`quantity > 1`).
+- **QUX-04**: User can run set-level batch quantity reset/recount flows.
+
+### Advanced Collection Scope
+
+- **ADVQ-01**: User can track trade inventory separately from owned quantity.
+- **ADVQ-02**: User can track card condition distribution per quantity.
+- **ADVQ-03**: User can track price/value by quantity holdings.
+
+## Out of Scope
+
+Explicitly excluded for v1.1 milestone to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Cloud sync or multi-device quantity sync | Maintains local-first architecture and avoids backend expansion in v1.1 |
+| Marketplace/trading workflows | Not required to deliver duplicate tracking core value |
+| OCR/scanner-driven quantity auto-increment | High complexity and outside current milestone focus |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| QTY-01 | TBD | Pending |
+| QTY-02 | TBD | Pending |
+| QTY-03 | TBD | Pending |
+| QTY-04 | TBD | Pending |
+| CTRL-01 | TBD | Pending |
+| CTRL-02 | TBD | Pending |
+| CTRL-03 | TBD | Pending |
+| CTRL-04 | TBD | Pending |
+| STATQ-01 | TBD | Pending |
+| STATQ-02 | TBD | Pending |
+| STATQ-03 | TBD | Pending |
+| TESTQ-01 | TBD | Pending |
+| TESTQ-02 | TBD | Pending |
+| TESTQ-03 | TBD | Pending |
+
+**Coverage:**
+- v1.1 requirements: 14 total
+- Mapped to phases: 0
+- Unmapped: 14 ⚠️ (will be mapped by roadmapper)
+
+---
+*Requirements defined: 2026-03-21*
+*Last updated: 2026-03-21 after v1.1 milestone initialization*
