@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PokemonCard, PokemonSet, useCards } from '@/lib/api';
 import { useCollection } from '@/lib/collection';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ChevronDown, Filter, Plus, Check, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, ChevronDown, Filter, Plus, Check, Loader2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -44,6 +45,9 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   const [rarityFilter, setRarityFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [processingCards, setProcessingCards] = useState<Set<string>>(new Set());
+  const [sizeMode, setSizeMode] = useState<'small' | 'medium'>('medium');
+  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'owned' | 'missing'>('all');
+  const [nameSearch, setNameSearch] = useState('');
   const pageSize = 20;
 
   const { toast } = useToast();
@@ -63,6 +67,31 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
 
   const totalPages = Math.ceil(totalCards / pageSize);
 
+  // Client-side filtering for ownership and name search
+  const filteredCards = useMemo(() => {
+    let filtered = cards;
+    
+    // Ownership filter
+    if (ownershipFilter === 'owned') {
+      filtered = filtered.filter(card => isInCollection(card.id));
+    } else if (ownershipFilter === 'missing') {
+      filtered = filtered.filter(card => !isInCollection(card.id));
+    }
+    
+    // Name search (case-insensitive)
+    if (nameSearch.trim()) {
+      const searchLower = nameSearch.toLowerCase();
+      filtered = filtered.filter(card => 
+        card.name.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filtered;
+  }, [cards, ownershipFilter, nameSearch, isInCollection]);
+
+  // Track if any client-side filters are active (for hiding pagination)
+  const hasClientFilters = ownershipFilter !== 'all' || nameSearch.trim() !== '';
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo(0, 0);
@@ -72,6 +101,8 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
     setTypeFilter(null);
     setSubtypeFilter(null);
     setRarityFilter(null);
+    setOwnershipFilter('all');
+    setNameSearch('');
   };
 
   const handleAddToCollection = async (card: PokemonCard, e: React.MouseEvent) => {
@@ -134,6 +165,11 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   const fallbackCardImage =
     'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"260\" height=\"360\" viewBox=\"0 0 260 360\"><rect width=\"260\" height=\"360\" rx=\"16\" fill=\"%23f4f4f5\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"%23a1a1aa\" font-family=\"Inter,Arial\" font-size=\"16\">Image Unavailable</text></svg>';
 
+  const gridClasses = {
+    small: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2',
+    medium: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'
+  };
+
   if (error) {
     return (
       <div className="flex flex-col items-center p-8 bg-red-50 rounded-lg text-red-800">
@@ -175,6 +211,42 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
             <p className="text-sm text-muted-foreground">
               {selectedSet.total} cards in this set
             </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          {/* Size Toggle */}
+          <Select value={sizeMode} onValueChange={(v) => setSizeMode(v as 'small' | 'medium')}>
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="small">Small</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Ownership Filter */}
+          <Select value={ownershipFilter} onValueChange={(v) => setOwnershipFilter(v as 'all' | 'owned' | 'missing')}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="owned">Owned</SelectItem>
+              <SelectItem value="missing">Missing</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Name Search */}
+          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              placeholder="Search cards..."
+              className="pl-9"
+            />
           </div>
         </div>
 
@@ -251,10 +323,10 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className={cn("grid", gridClasses[sizeMode])}>
           {Array.from({ length: 20 }).map((_, index) => (
             <Card key={index}>
-              <CardContent className="p-3">
+              <CardContent className={cn("p-3", sizeMode === 'small' && "p-2")}>
                 <Skeleton className="h-64 w-full mb-4" />
                 <Skeleton className="h-5 w-3/4 mb-2" />
                 <Skeleton className="h-4 w-1/2 mb-2" />
@@ -263,7 +335,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
             </Card>
           ))}
         </div>
-       ) : cards.length === 0 ? (
+       ) : filteredCards.length === 0 ? (
         <div className="text-center p-8 bg-muted rounded-lg">
           <h2 className="text-2xl font-semibold mb-2">No Cards Found</h2>
           <p className="mb-4">No cards match your current filters.</p>
@@ -271,8 +343,8 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-           {cards.map((card) => {
+          <div className={cn("grid", gridClasses[sizeMode])}>
+           {filteredCards.map((card) => {
              const isOwned = isInCollection(card.id);
               const isProcessing = processingCards.has(card.id);
               
@@ -328,32 +400,36 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
                       }}
                     />
                   </div>
-                  <CardContent className="p-3">
+                  <CardContent className={cn("p-3", sizeMode === 'small' && "p-2")}>
                      <div className="flex justify-between items-start">
                        <div>
-                         <h3 className="font-semibold text-sm">{card.name}</h3>
-                         <p className="text-xs text-muted-foreground">{card.number}/{selectedSet.printedTotal}</p>
+                         <h3 className={cn("font-semibold", sizeMode === 'small' ? "text-xs" : "text-sm")}>{card.name}</h3>
+                         {sizeMode === 'medium' && (
+                           <p className="text-xs text-muted-foreground">{card.number}/{selectedSet.printedTotal}</p>
+                         )}
                        </div>
                      </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {card.rarity && (
-                        <Badge variant="outline" className="text-xs">
-                          {card.rarity}
-                        </Badge>
-                      )}
-                      {card.types && card.types.map(type => (
-                        <Badge key={type} variant="secondary" className="text-xs">
-                          {type}
-                        </Badge>
-                      ))}
-                    </div>
+                    {sizeMode === 'medium' && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {card.rarity && (
+                          <Badge variant="outline" className="text-xs">
+                            {card.rarity}
+                          </Badge>
+                        )}
+                        {card.types && card.types.map(type => (
+                          <Badge key={type} variant="secondary" className="text-xs">
+                            {type}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
             })}
           </div>
 
-          {totalPages > 1 && (
+          {totalPages > 1 && !hasClientFilters && (
             <Pagination className="my-8">
               <PaginationContent>
                 <PaginationItem>
