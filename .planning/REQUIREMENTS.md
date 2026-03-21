@@ -58,9 +58,9 @@ Deferred to future release. Tracked but not in current roadmap.
 
 Post-feature stabilization requirements for release confidence. These validate and harden existing v1 behavior without adding new capabilities.
 
-- [ ] **HARD-01**: Vitest test infrastructure is operational and `npm test` executes successfully.
-- [ ] **HARD-02**: Collection persistence tests verify ownership survives reload/hydration flows.
-- [ ] **HARD-03**: Stats calculation tests verify owned/missing/completion percentage accuracy.
+- [x] **HARD-01**: Vitest test infrastructure is operational and `npm test` executes successfully.
+- [x] **HARD-02**: Collection persistence tests verify ownership survives reload/hydration flows.
+- [x] **HARD-03**: Stats calculation tests verify owned/missing/completion percentage accuracy.
 - [ ] **HARD-04**: Production build (`npm run build`) completes without errors.
 - [ ] **HARD-05**: Release smoke checklist passes for critical v1 user journeys on production build.
 - [ ] **HARD-06**: Non-critical findings are documented in a deferred backlog with severity/rationale.
@@ -102,9 +102,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALBM-06 | Phase 3 | Complete |
 | ALBM-07 | Phase 3 | Complete |
 | STAT-01 | Phase 3 | Complete |
-| HARD-01 | Phase 02.1 | Pending |
-| HARD-02 | Phase 02.1 | Pending |
-| HARD-03 | Phase 02.1 | Pending |
+| HARD-01 | Phase 02.1 | Complete |
+| HARD-02 | Phase 02.1 | Complete |
+| HARD-03 | Phase 02.1 | Complete |
 | HARD-04 | Phase 02.1 | Pending |
 | HARD-05 | Phase 02.1 | Pending |
 | HARD-06 | Phase 02.1 | Pending |
@@ -113,8 +113,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 20 total
 - Mapped to phases: 20
 - Unmapped: 0 ✓
-- Completed: 20/20 (100%) ✅
+- Completed: 23/26 (88%) (20 v1 + 3 hardening complete)
 
 ---
 *Requirements defined: 2026-03-20*
-*Last updated: 2026-03-21 - All v1 requirements complete*
+*Last updated: 2026-03-21 - Phase 02.1 Plan 01 complete (test infrastructure)*

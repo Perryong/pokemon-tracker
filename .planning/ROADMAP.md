@@ -80,7 +80,7 @@ Plans:
 **Plans:** 2 plans (2 waves)
 
 Plans:
-- [ ] 02.1-01-PLAN.md — Test infrastructure + critical regression tests (HARD-01, HARD-02, HARD-03)
+- [x] 02.1-01-PLAN.md — Test infrastructure + critical regression tests (HARD-01, HARD-02, HARD-03)
 - [ ] 02.1-02-PLAN.md — Production build + smoke checklist + release gate (HARD-04, HARD-05, HARD-06)
 
 ### Phase 3: Cards Album & Ownership Tracking
@@ -113,9 +113,10 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Persistence | 4/4 | Complete | 2026-03-21 |
 | 2. Sets View & Navigation | 1/1 | Complete | 2026-03-21 |
+| 02.1. Release Hardening | 1/2 | In Progress | - |
 | 3. Cards Album & Ownership Tracking | 2/2 | Complete | 2026-03-21 |
 
-**Overall Progress**: 3/3 phases complete (100%) ✅
+**Overall Progress**: 8/9 plans complete (89%)
 
 ---
 

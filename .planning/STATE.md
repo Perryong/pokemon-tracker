@@ -2,36 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-21T03:44:08.320Z"
+status: executing
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-03-21T08:07:30Z"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 6
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_plan: 4/4
-status: verifying
-last_updated: "2026-03-20T17:47:22.599Z"
-progress:
-  total_phases: 4
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State: Pokemon TCG Collection Tracker
 
 **Last Updated**: 2026-03-21  
 **Mode**: yolo  
-**Status**: Phase 2 executed successfully (all requirements verified)
+**Status**: Phase 02.1 Plan 01 complete (test infrastructure)
 
 ---
 
@@ -54,8 +39,8 @@ Plan and execute Phase 3 (Cards Album & Ownership Tracking).
 
 ## Current Position
 
-Phase: 03 (cards-album-ownership-tracking) — COMPLETE
-Current Plan: 2/2 (completed)
+Phase: 02.1 (release-hardening) — EXECUTING
+Plan: 2 of 2 (Plan 02.1-01 complete)
 
 ## Performance Metrics
 
@@ -65,13 +50,13 @@ Current Plan: 2/2 (completed)
 - Requirements mapped: 20/20 (100% coverage)
 - Orphaned requirements: 0
 
-- **Execution Velocity**:
+**Execution Velocity**:
 
-- Phases completed: 3/3
-- Plans completed: 7 (Phase 01: 4 plans, Phase 02: 1 plan, Phase 03: 2 plans)
+- Phases completed: 3/4 (Phase 02.1 in progress)
+- Plans completed: 8 (Phase 01: 4 plans, Phase 02: 1 plan, Phase 02.1: 1 plan, Phase 03: 2 plans)
 - Plans in progress: 0
 - Plans blocked: 0
-- Average plan duration: 5.6 minutes
+- Average plan duration: 5.1 minutes
 
 **Plan Runs**
 
@@ -81,6 +66,7 @@ Current Plan: 2/2 (completed)
 | Phase 02 P01 | 8m | 3 tasks | 1 file |
 | Phase 03 P01 | 2.8m | 2 tasks | 2 files |
 | Phase 03 P02 | 0.2m | 3 tasks | 1 file |
+| Phase 02.1 P01 | 4.2m | 3 tasks | 4 files |
 
 **Quality Indicators**:
 
@@ -118,6 +104,8 @@ Current Plan: 2/2 (completed)
 | Two size modes for card grid density | 2026-03-21 | Balance between overview density (small 8-col) and detail visibility (medium 5-col) | 03-01 UI |
 | Calculate stats from filtered cards | 2026-03-21 | Stats should reflect what user sees on screen; consistent with filter behavior | 03-02 stats |
 | Fixed footer with backdrop blur | 2026-03-21 | Always visible regardless of scroll; modern glassmorphism aesthetic with z-40 layering | 03-02 UI |
+| Vitest with happy-dom environment | 2026-03-21 | Lightweight DOM simulation faster than jsdom; matches Vite ecosystem | 02.1-01 testing |
+| Watch mode disabled in vitest config | 2026-03-21 | CI/CD needs run-once behavior; developers can override with --watch flag | 02.1-01 testing |
 
 ### Next Milestones
 
@@ -134,6 +122,8 @@ Current Plan: 2/2 (completed)
 - [x] Execute Phase 3 Plan 03-01 (Album controls)
 - [x] Execute Phase 3 Plan 03-02 (Stats footer + verification)
 - [x] Validate Phase 3 success criteria
+- [x] Execute Phase 02.1 Plan 02.1-01 (Test infrastructure and regression tests)
+- [ ] Execute Phase 02.1 Plan 02.1-02 (Production build and smoke testing)
 - [ ] v1 Release Planning
 
 ### Open Questions
@@ -146,9 +136,9 @@ None - Phase 2 builds succeeded without errors. Previous Collection dashboard bl
 
 ## Session
 
-**Last Date:** 2026-03-21T03:58:28Z
-**Stopped At:** Completed 03-02-PLAN.md (Phase 3 complete)
-**Resume File:** .planning/phases/03-cards-album-ownership-tracking/03-02-SUMMARY.md
+**Last Date:** 2026-03-21T08:07:30Z
+**Stopped At:** Completed 02.1-01-PLAN.md (test infrastructure)
+**Resume File:** .planning/phases/02.1-build-a-pokemon-tcg-collection-tracker-application-using-react-js-shadcn-ui-components-and-the-tcgdex-javascript-sdk-tcgdex-sdk/02.1-01-SUMMARY.md
 
 ---
 
@@ -156,62 +146,61 @@ None - Phase 2 builds succeeded without errors. Previous Collection dashboard bl
 
 ### What Just Happened
 
-1. ✓ Executed Plan 03-02: Fixed stats footer with real-time updates
-2. ✓ Added stats useMemo calculating owned/missing/completion from filteredCards
-3. ✓ Implemented fixed bottom footer with backdrop blur and proper z-layering
-4. ✓ Added container pb-24 padding to prevent footer overlap
-5. ✓ Verified real-time reactivity via React useMemo dependencies
-6. ✓ User verified all Phase 3 requirements (ALBM-01..07 + STAT-01) functional
-7. ✓ Created 03-02-SUMMARY.md and updated STATE/ROADMAP/REQUIREMENTS
-8. ✓ Phase 3 COMPLETE - all requirements verified
+1. ✓ Executed Plan 02.1-01: Vitest infrastructure and regression tests
+2. ✓ Installed vitest, @testing-library/react, happy-dom, vite-tsconfig-paths
+3. ✓ Created vitest.config.ts with happy-dom environment and path aliases
+4. ✓ Added `npm test` script to package.json
+5. ✓ Wrote 7 collection persistence tests (all passing)
+6. ✓ Wrote 7 stats calculation tests (all passing)
+7. ✓ Created 02.1-01-SUMMARY.md with test results
+8. ✓ Updated STATE/ROADMAP/REQUIREMENTS to reflect progress
+9. ✓ Requirements HARD-01, HARD-02, HARD-03 now complete
 
 ### What's Next
 
-**Phase 3 Status**: COMPLETE ✅
+**Phase 02.1 Status**: IN PROGRESS (1/2 plans complete)
 
-All v1 requirements (20/20) now fulfilled:
-- ✅ Phase 1: Data Foundation & Persistence (7 requirements)
-- ✅ Phase 2: Sets View & Navigation (5 requirements)
-- ✅ Phase 3: Cards Album & Ownership Tracking (8 requirements)
+**Immediate**: Execute Plan 02.1-02 (Production build and smoke testing)
+- Run `npm run build` to verify production bundle
+- Execute 27-point smoke checklist against built app
+- Document any non-critical issues in deferred backlog
+- Complete requirements HARD-04, HARD-05, HARD-06
 
-**Immediate**: Project ready for v1 release or additional polish/testing.
+**Phase 02.1 execution progress**:
 
-**Phase 3 execution complete**:
+- ✅ Plan 02.1-01: Test infrastructure + regression tests
+- ⏳ Plan 02.1-02: Production build + smoke checklist
 
-- ✅ Plan 03-01: Album view controls (size toggle, ownership filter, name search)
-- ✅ Plan 03-02: Fixed stats footer with real-time updates + full verification
+**Phase 02.1 Requirements Progress**:
 
-**Phase 3 Requirements Progress**:
-
-- ✅ ALBM-01: Responsive card album grid
-- ✅ ALBM-02: Real card images with lazy loading
-- ✅ ALBM-03: Click-to-toggle ownership
-- ✅ ALBM-04: Green ring owned indicator
-- ✅ ALBM-05: Card size toggle (small/medium)
-- ✅ ALBM-06: Ownership filter (all/owned/missing)
-- ✅ ALBM-07: Card name search with live filtering
-- ✅ STAT-01: Fixed stats footer with real-time updates
+- ✅ HARD-01: Vitest test infrastructure operational
+- ✅ HARD-02: Collection persistence tests complete
+- ✅ HARD-03: Stats calculation tests complete
+- ⏳ HARD-04: Production build verification
+- ⏳ HARD-05: Smoke checklist execution
+- ⏳ HARD-06: Deferred backlog documentation
 
 ### If You're Resuming After a Break
 
 Read:
 
 1. `.planning/ROADMAP.md` — Project roadmap (all phases complete)
-2. `.planning/REQUIREMENTS.md` — All v1 requirements (20/20 complete)
+1. `.planning/ROADMAP.md` — Project roadmap (Phase 02.1 in progress: 1/2 plans complete)
+2. `.planning/REQUIREMENTS.md` — Requirements (23/26 complete: 20 v1 + 3 hardening)
 3. This file (STATE.md) — Current position and context
-4. `.planning/phases/03-cards-album-ownership-tracking/03-02-SUMMARY.md` — Latest execution results
+4. `.planning/phases/02.1-build-a-pokemon-tcg-collection-tracker-application-using-react-js-shadcn-ui-components-and-the-tcgdex-javascript-sdk-tcgdex-sdk/02.1-01-SUMMARY.md` — Latest execution results
 
-**Project Status**: All v1 requirements complete. Ready for release or additional testing/polish.
+**Project Status**: v1 features complete (20/20). Release hardening in progress (3/6 complete).
 
 ### Resume Update
 
-Last session: 2026-03-21T03:58:28Z
-Stopped at: Completed 03-02-PLAN.md (Phase 3 complete)
-Resume file: .planning/phases/03-cards-album-ownership-tracking/03-02-SUMMARY.md
+Last session: 2026-03-21T08:07:30Z
+Stopped at: Completed 02.1-01-PLAN.md (test infrastructure and regression tests)
+Resume file: .planning/phases/02.1-build-a-pokemon-tcg-collection-tracker-application-using-react-js-shadcn-ui-components-and-the-tcgdex-javascript-sdk-tcgdex-sdk/02.1-01-SUMMARY.md
  
 ---
 
 *State initialized: 2026-03-20*  
-*Last execution: 2026-03-21 03:58*  
-*Status: Phase 3 complete - all v1 requirements fulfilled*  
-*Next: v1 release or additional testing/polish*
+*Last execution: 2026-03-21 08:07*  
+*Status: Phase 02.1 in progress - test infrastructure complete*  
+*Next: Execute Plan 02.1-02 (production build and smoke testing)*
