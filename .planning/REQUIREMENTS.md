@@ -9,10 +9,10 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 
 ### Data Model & Migration
 
-- [ ] **QTY-01**: User's existing ownership data migrates safely from boolean storage to quantity storage with no data loss.
-- [ ] **QTY-02**: App stores collection quantities sparsely (only cards with quantity > 0) to keep localStorage usage efficient.
+- [x] **QTY-01**: User's existing ownership data migrates safely from boolean storage to quantity storage with no data loss. ✅ 04-01
+- [x] **QTY-02**: App stores collection quantities sparsely (only cards with quantity > 0) to keep localStorage usage efficient. ✅ 04-01
 - [ ] **QTY-03**: App derives owned-state from quantity (`quantity > 0`) so ownership and quantity cannot diverge.
-- [ ] **QTY-04**: User can rely on migration fallback/backup behavior if quantity migration fails.
+- [x] **QTY-04**: User can rely on migration fallback/backup behavior if quantity migration fails. ✅ 04-01
 
 ### Quantity Controls
 
@@ -29,7 +29,7 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 
 ### Validation & Regression
 
-- [ ] **TESTQ-01**: Quantity migration logic is covered by automated tests for normal and edge-case payloads.
+- [x] **TESTQ-01**: Quantity migration logic is covered by automated tests for normal and edge-case payloads. ✅ 04-01
 - [ ] **TESTQ-02**: Quantity controls are covered by automated tests (increment, decrement, 0-floor, fast toggle behavior).
 - [ ] **TESTQ-03**: Existing v1.0 core behaviors (set browsing, filters, persistence) remain verified after quantity changes.
 
@@ -64,10 +64,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QTY-01 | Phase 4 | Pending |
-| QTY-02 | Phase 4 | Pending |
-| QTY-03 | Phase 4 | Pending |
-| QTY-04 | Phase 4 | Pending |
+| QTY-01 | Phase 4 | ✅ Complete (04-01) |
+| QTY-02 | Phase 4 | ✅ Complete (04-01) |
+| QTY-03 | Phase 4 | In progress (04-02) |
+| QTY-04 | Phase 4 | ✅ Complete (04-01) |
 | CTRL-01 | Phase 5 | Pending |
 | CTRL-02 | Phase 5 | Pending |
 | CTRL-03 | Phase 5 | Pending |
@@ -75,15 +75,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STATQ-01 | Phase 5 | Pending |
 | STATQ-02 | Phase 5 | Pending |
 | STATQ-03 | Phase 5 | Pending |
-| TESTQ-01 | Phase 6 | Pending |
+| TESTQ-01 | Phase 4/6 | ✅ Complete (04-01) |
 | TESTQ-02 | Phase 6 | Pending |
 | TESTQ-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 14 total
 - Mapped to phases: 14 ✓
-- Unmapped: 0 ✓
+- Complete: 4 (QTY-01, QTY-02, QTY-04, TESTQ-01)
+- In progress: 1 (QTY-03)
+- Pending: 9
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-21 after v1.1 milestone initialization*
+*Last updated: 2026-03-21 (Plan 04-01 complete)*

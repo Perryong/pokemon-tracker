@@ -32,7 +32,7 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Core migration infrastructure (types, Zod schemas, backup/rollback)
+- [x] 04-01-PLAN.md — Core migration infrastructure (types, Zod schemas, backup/rollback) ✅ 2026-03-21
 - [ ] 04-02-PLAN.md — Hook integration with compatibility wrappers and tests
 
 ---
@@ -80,13 +80,13 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Data Model & Migration | 0/2 | Planned | - |
+| 4. Data Model & Migration | 1/2 | In progress | - |
 | 5. Quantity UI & Statistics | 0/0 | Not started | - |
 | 6. Testing & Validation | 0/0 | Not started | - |
 
-**Next:** Run `/gsd-execute-phase 4` to implement Phase 4 plans.
+**Next:** Continue Phase 4 with `/gsd-execute-phase 4` (plan 04-02) to integrate migration into collection hook.
 
 ---
 
 *Roadmap created: 2026-03-21*  
-*Last updated: 2026-03-21*
+*Last updated: 2026-03-21 (Plan 04-01 complete)*
