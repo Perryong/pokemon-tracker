@@ -54,11 +54,14 @@ Plans:
   5. User can identify completed sets at a glance with a distinct 100% completion indicator
   6. User can click a set to navigate to the Cards Album View
 
-**Plans**: TBD
+**Plans**: 1 plan (1 wave)
+
+Plans:
+- [ ] 02-01-PLAN.md — Series filter, live search, and completion badge enhancements
 
 ---
 
-### Phase 02.1: Build a Pokemon TCG Collection Tracker application using React.js, shadcn/ui components, and the TCGdex JavaScript SDK (@tcgdex/sdk). (INSERTED)
+### Phase 02.1:Build a Pokemon TCG Collection Tracker application using React.js, shadcn/ui components, and the TCGdex JavaScript SDK (@tcgdex/sdk). (INSERTED)
 
 **Goal:** [Urgent work - to be planned]
 **Requirements**: TBD
