@@ -24,17 +24,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Cards Album View
 
-- [ ] **ALBM-01**: User can open a selected set in a responsive card album grid.
-- [ ] **ALBM-02**: User sees real card images for all cards in the selected set.
-- [ ] **ALBM-03**: User can click a card to toggle ownership status.
-- [ ] **ALBM-04**: User sees a clear owned-state indicator (green checkmark) on owned cards.
+- [x] **ALBM-01**: User can open a selected set in a responsive card album grid.
+- [x] **ALBM-02**: User sees real card images for all cards in the selected set.
+- [x] **ALBM-03**: User can click a card to toggle ownership status.
+- [x] **ALBM-04**: User sees a clear owned-state indicator (green checkmark) on owned cards.
 - [x] **ALBM-05**: User can switch album card display between small and medium sizes.
 - [x] **ALBM-06**: User can filter album cards by all, owned, or missing states.
 - [x] **ALBM-07**: User can search cards by name within the selected set.
 
 ### Collection Stats and Persistence
 
-- [ ] **STAT-01**: User sees a fixed bottom footer with real-time owned count, missing count, and completion percentage.
+- [x] **STAT-01**: User sees a fixed bottom footer with real-time owned count, missing count, and completion percentage.
 - [x] **PERS-01**: Card ownership changes are automatically persisted to localStorage.
 - [x] **PERS-02**: Persisted collection data reloads correctly on future browser sessions.
 - [x] **PERS-03**: Set-level and album-level statistics remain consistent after reload.
@@ -83,20 +83,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETS-03 | Phase 2 | Complete |
 | SETS-04 | Phase 2 | Complete |
 | SETS-05 | Phase 2 | Complete |
-| ALBM-01 | Phase 3 | Pending |
-| ALBM-02 | Phase 3 | Pending |
-| ALBM-03 | Phase 3 | Pending |
-| ALBM-04 | Phase 3 | Pending |
+| ALBM-01 | Phase 3 | Complete |
+| ALBM-02 | Phase 3 | Complete |
+| ALBM-03 | Phase 3 | Complete |
+| ALBM-04 | Phase 3 | Complete |
 | ALBM-05 | Phase 3 | Complete |
 | ALBM-06 | Phase 3 | Complete |
 | ALBM-07 | Phase 3 | Complete |
-| STAT-01 | Phase 3 | Pending |
+| STAT-01 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
 - Mapped to phases: 20
 - Unmapped: 0 ✓
+- Completed: 20/20 (100%) ✅
 
 ---
 *Requirements defined: 2026-03-20*
-*Last updated: 2026-03-20 after roadmap creation*
+*Last updated: 2026-03-21 - All v1 requirements complete*
