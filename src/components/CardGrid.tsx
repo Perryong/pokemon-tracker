@@ -89,6 +89,15 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
     return filtered;
   }, [cards, ownershipFilter, nameSearch, isInCollection]);
 
+  // Compute stats from FILTERED dataset for consistency with visible cards
+  const stats = useMemo(() => {
+    const total = filteredCards.length;
+    const owned = filteredCards.filter(card => isInCollection(card.id)).length;
+    const missing = total - owned;
+    const percentage = total > 0 ? (owned / total) * 100 : 0;
+    return { owned, missing, total, percentage };
+  }, [filteredCards, isInCollection]);
+
   // Track if any client-side filters are active (for hiding pagination)
   const hasClientFilters = ownershipFilter !== 'all' || nameSearch.trim() !== '';
 
@@ -188,7 +197,7 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="container mx-auto px-4 py-6 max-w-7xl pb-24">
       <div className="sticky top-14 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="outline" size="icon" onClick={onBackClick}>
@@ -488,6 +497,29 @@ const CardGrid: React.FC<CardGridProps> = ({ selectedSet, onBackClick, onCardSel
           )}
         </>
       )}
+
+      {/* Fixed Stats Footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t z-40">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between max-w-7xl">
+          <div className="flex gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Owned:</span>
+              <Badge className="bg-green-500 hover:bg-green-500">{stats.owned}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Missing:</span>
+              <Badge variant="secondary">{stats.missing}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Completion:</span>
+              <Badge className="bg-blue-500 hover:bg-blue-500">{stats.percentage.toFixed(1)}%</Badge>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {stats.total} cards shown
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
