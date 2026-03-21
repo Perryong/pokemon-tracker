@@ -28,9 +28,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **ALBM-02**: User sees real card images for all cards in the selected set.
 - [ ] **ALBM-03**: User can click a card to toggle ownership status.
 - [ ] **ALBM-04**: User sees a clear owned-state indicator (green checkmark) on owned cards.
-- [ ] **ALBM-05**: User can switch album card display between small and medium sizes.
-- [ ] **ALBM-06**: User can filter album cards by all, owned, or missing states.
-- [ ] **ALBM-07**: User can search cards by name within the selected set.
+- [x] **ALBM-05**: User can switch album card display between small and medium sizes.
+- [x] **ALBM-06**: User can filter album cards by all, owned, or missing states.
+- [x] **ALBM-07**: User can search cards by name within the selected set.
 
 ### Collection Stats and Persistence
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALBM-02 | Phase 3 | Pending |
 | ALBM-03 | Phase 3 | Pending |
 | ALBM-04 | Phase 3 | Pending |
-| ALBM-05 | Phase 3 | Pending |
-| ALBM-06 | Phase 3 | Pending |
-| ALBM-07 | Phase 3 | Pending |
+| ALBM-05 | Phase 3 | Complete |
+| ALBM-06 | Phase 3 | Complete |
+| ALBM-07 | Phase 3 | Complete |
 | STAT-01 | Phase 3 | Pending |
 
 **Coverage:**

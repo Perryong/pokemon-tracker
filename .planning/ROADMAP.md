@@ -101,7 +101,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Persistence | 4/4 | Complete | 2026-03-21 |
 | 2. Sets View & Navigation | 1/1 | Complete | 2026-03-21 |
-| 3. Cards Album & Ownership Tracking | 0/? | Not started | - |
+| 3. Cards Album & Ownership Tracking | 1/2 | In Progress|  |
 
 **Overall Progress**: 2/3 phases complete (67%)
 
