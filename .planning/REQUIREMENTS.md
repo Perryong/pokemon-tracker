@@ -11,7 +11,7 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 
 - [x] **QTY-01**: User's existing ownership data migrates safely from boolean storage to quantity storage with no data loss. ✅ 04-01
 - [x] **QTY-02**: App stores collection quantities sparsely (only cards with quantity > 0) to keep localStorage usage efficient. ✅ 04-01
-- [ ] **QTY-03**: App derives owned-state from quantity (`quantity > 0`) so ownership and quantity cannot diverge.
+- [x] **QTY-03**: App derives owned-state from quantity (`quantity > 0`) so ownership and quantity cannot diverge.
 - [x] **QTY-04**: User can rely on migration fallback/backup behavior if quantity migration fails. ✅ 04-01
 
 ### Quantity Controls

@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: milestone
+status: executing
+last_updated: "2026-03-21T14:15:05.831Z"
+progress:
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 100
+---
+
 # State: Pokemon TCG Collection Tracker
 
 **Last updated:** 2026-03-21
@@ -19,14 +33,16 @@
 **Status:** In progress (1/2 plans complete)
 
 **Progress:**
-```
+[██████████] 100%
 v1.1 Milestone: [████░░░░░░░░░░░░░░░░] 17% (1/3 phases started, 1/6 estimated plans)
 Phase 4:        [██████████░░░░░░░░░░] 50% (1/2 plans complete)
+
 ```
 
 ## Performance Metrics
 
 **Milestone v1.1 Quantity Tracking:**
+
 - Phases: 3 total, 1 in progress
 - Plans: 6 estimated, 1 complete
 - Tasks: 2 complete (04-01)
@@ -34,6 +50,7 @@ Phase 4:        [██████████░░░░░░░░░░] 5
 - Duration: Started 2026-03-21
 
 **Phase 4: Data Model & Migration:**
+
 - Plans: 1/2 complete
 - Status: In progress
 - Blockers: None
@@ -52,6 +69,11 @@ Phase 4:        [██████████░░░░░░░░░░] 5
 | Use sparse storage for quantities | Only persist qty > 0 to optimize localStorage | 2026-03-21 | 04-01 |
 | Skip version 2, use version 3 | Avoid confusion with storage key name | 2026-03-21 | 04-01 |
 | In-place migration with backup | Reuse storage key, backup to separate key | 2026-03-21 | 04-01 |
+| Phase 04 P02 | 54 | 3 tasks | 2 files |
+
+- [Phase 04]: Derive ownedCards from cardQuantities for single source of truth
+- [Phase 04]: Use useCallback for all operations to prevent re-renders
+- [Phase 04]: Idempotent addToCollection preserves existing quantities
 
 ### Open Questions
 
@@ -97,6 +119,7 @@ Phase 4:        [██████████░░░░░░░░░░] 5
 ### Context for Next Session
 
 **If continuing Phase 4 (plan 04-02):**
+
 - Use `getInitialState()` from migration.ts to replace existing loader
 - Update `useCollection` to work with `cardQuantities` (v3 schema)
 - Preserve compatibility APIs: `isOwned`, `toggleOwnership`, `addToCollection`, `removeFromCollection`
@@ -105,6 +128,7 @@ Phase 4:        [██████████░░░░░░░░░░] 5
 - Verify existing collection tests still pass
 
 **If blocked/pivoting:**
+
 - Check research/SUMMARY.md for architecture patterns
 - Review v1.0 collection.ts implementation for migration baseline
 - Validate localStorage quota testing approach
