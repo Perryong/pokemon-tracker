@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useCollection } from '../collection';
 import { STORAGE_KEY } from '../collection-types';
 
@@ -186,6 +186,20 @@ describe('Quantity Operations', () => {
     act(() => result.current.incrementQuantity('card-1'));
     expect(result.current.getQuantity('card-1')).toBe(999); // Capped
   });
+
+  it('incrementQuantity from 0 creates ownership and persists quantity', async () => {
+    const { result } = renderHook(() => useCollection());
+
+    act(() => result.current.incrementQuantity('card-inc'));
+
+    expect(result.current.getQuantity('card-inc')).toBe(1);
+    expect(result.current.isOwned('card-inc')).toBe(true);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(stored.cardQuantities['card-inc']).toBe(1);
+    });
+  });
   
   it('decrementQuantity subtracts 1 down to 0', () => {
     const { result } = renderHook(() => useCollection());
@@ -195,6 +209,19 @@ describe('Quantity Operations', () => {
     act(() => result.current.decrementQuantity('card-1'));
     expect(result.current.getQuantity('card-1')).toBe(0);
     expect(result.current.isOwned('card-1')).toBe(false);
+  });
+
+  it('decrementQuantity enforces zero-floor and does not go negative', async () => {
+    const { result } = renderHook(() => useCollection());
+
+    act(() => result.current.decrementQuantity('card-floor'));
+    expect(result.current.getQuantity('card-floor')).toBe(0);
+    expect(result.current.isOwned('card-floor')).toBe(false);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(stored.cardQuantities['card-floor']).toBeUndefined();
+    });
   });
 
   it('ownedCards derived from cardQuantities', () => {
@@ -213,6 +240,83 @@ describe('Quantity Operations', () => {
     act(() => result.current.setQuantity('card-1', 5));
     act(() => result.current.addToCollection('card-1'));
     expect(result.current.getQuantity('card-1')).toBe(5); // Unchanged
+  });
+
+  it('setQuantity persists and respects 0 and 999 boundaries', async () => {
+    const { result } = renderHook(() => useCollection());
+
+    act(() => result.current.setQuantity('card-boundary', 0));
+    expect(result.current.getQuantity('card-boundary')).toBe(0);
+
+    await waitFor(() => {
+      const storedAtZero = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(storedAtZero.cardQuantities['card-boundary']).toBeUndefined();
+    });
+
+    act(() => result.current.setQuantity('card-boundary', 999));
+    expect(result.current.getQuantity('card-boundary')).toBe(999);
+
+    await waitFor(() => {
+      const storedAtMax = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(storedAtMax.cardQuantities['card-boundary']).toBe(999);
+    });
+  });
+
+  it('incrementQuantity does not exceed 999 and persists capped value', async () => {
+    const { result } = renderHook(() => useCollection());
+    act(() => result.current.setQuantity('card-cap', 999));
+    act(() => result.current.incrementQuantity('card-cap'));
+
+    expect(result.current.getQuantity('card-cap')).toBe(999);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(stored.cardQuantities['card-cap']).toBe(999);
+    });
+  });
+
+  it('fast toggle preserves 0 ↔ 1 and clears >1 to 0 ownership semantics', async () => {
+    const { result } = renderHook(() => useCollection());
+
+    // 0 -> 1
+    act(() => result.current.toggleOwnership('card-toggle'));
+    expect(result.current.getQuantity('card-toggle')).toBe(1);
+    expect(result.current.isOwned('card-toggle')).toBe(true);
+
+    // 1 -> 0
+    act(() => result.current.toggleOwnership('card-toggle'));
+    expect(result.current.getQuantity('card-toggle')).toBe(0);
+    expect(result.current.isOwned('card-toggle')).toBe(false);
+
+    // >1 -> 0
+    act(() => result.current.setQuantity('card-toggle', 5));
+    expect(result.current.getQuantity('card-toggle')).toBe(5);
+    act(() => result.current.toggleOwnership('card-toggle'));
+    expect(result.current.getQuantity('card-toggle')).toBe(0);
+    expect(result.current.isOwned('card-toggle')).toBe(false);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(stored.cardQuantities['card-toggle']).toBeUndefined();
+    });
+  });
+
+  it('set/increment/decrement operations persist final sparse state to localStorage', async () => {
+    const { result } = renderHook(() => useCollection());
+
+    act(() => result.current.setQuantity('card-persist', 2));
+    act(() => result.current.incrementQuantity('card-persist')); // 3
+    act(() => result.current.decrementQuantity('card-persist')); // 2
+    act(() => result.current.decrementQuantity('card-persist')); // 1
+    act(() => result.current.decrementQuantity('card-persist')); // 0 => removed
+
+    expect(result.current.getQuantity('card-persist')).toBe(0);
+    expect(result.current.isOwned('card-persist')).toBe(false);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      expect(stored.cardQuantities['card-persist']).toBeUndefined();
+    });
   });
 });
 
