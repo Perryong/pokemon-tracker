@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 4: Data Model & Migration** - Convert boolean ownership to quantity storage with safe migration
+- [x] **Phase 4: Data Model & Migration** - Convert boolean ownership to quantity storage with safe migration ✅
 - [ ] **Phase 5: Quantity UI & Statistics** - Add quantity controls and quantity-aware progress tracking
 - [ ] **Phase 6: Testing & Validation** - Verify quantity features and preserve v1.0 behavior
 
@@ -33,7 +33,7 @@
 
 Plans:
 - [x] 04-01-PLAN.md — Core migration infrastructure (types, Zod schemas, backup/rollback) ✅ 2026-03-21
-- [ ] 04-02-PLAN.md — Hook integration with compatibility wrappers and tests
+- [x] 04-02-PLAN.md — Hook integration with compatibility wrappers and tests ✅ 2026-03-21
 
 ---
 
@@ -57,7 +57,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Stats helper + CardGrid quantity controls and enhanced footer
+- [x] 05-01-PLAN.md — Stats helper + CardGrid quantity controls and enhanced footer ✅ 2026-03-21
 - [ ] 05-02-PLAN.md — SetGrid, CollectionView, CollectionStats quantity-aware updates
 
 ---

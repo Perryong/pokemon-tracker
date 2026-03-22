@@ -16,15 +16,15 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 
 ### Quantity Controls
 
-- [ ] **CTRL-01**: User can increment a card quantity from the album view.
-- [ ] **CTRL-02**: User can decrement a card quantity and never go below zero.
-- [ ] **CTRL-03**: User can still use single-click card toggle for fast `0 ↔ 1` ownership changes.
-- [ ] **CTRL-04**: User sees clear quantity badges/indicators for cards with duplicates.
+- [x] **CTRL-01**: User can increment a card quantity from the album view. ✅ 05-01
+- [x] **CTRL-02**: User can decrement a card quantity and never go below zero. ✅ 05-01
+- [x] **CTRL-03**: User can still use single-click card toggle for fast `0 ↔ 1` ownership changes. ✅ 05-01
+- [x] **CTRL-04**: User sees clear quantity badges/indicators for cards with duplicates. ✅ 05-01
 
 ### Statistics & Progress Semantics
 
-- [ ] **STATQ-01**: User sees set completion based on unique owned cards, not total duplicate count.
-- [ ] **STATQ-02**: User sees separate unique-owned and total-quantity metrics where stats are shown.
+- [x] **STATQ-01**: User sees set completion based on unique owned cards, not total duplicate count. ✅ 05-01
+- [x] **STATQ-02**: User sees separate unique-owned and total-quantity metrics where stats are shown. ✅ 05-01
 - [ ] **STATQ-03**: User gets consistent stats across SetGrid, CardGrid, and collection summary views after quantity updates.
 
 ### Validation & Regression
