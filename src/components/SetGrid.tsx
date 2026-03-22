@@ -69,7 +69,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   }
 
   const { sets, totalSets, loading, error } = useSets(currentPage, pageSize, filters);
-  const { ownedCards, cardQuantities } = useCollection();
+  const { cardQuantities } = useCollection();
   const { series } = useSeries();
   const totalPages = Math.ceil(totalSets / pageSize);
 

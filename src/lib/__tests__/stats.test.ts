@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeQuantityStats, type QuantityStats } from '../stats';
+import { computeQuantityStats } from '../stats';
 
 describe('computeQuantityStats', () => {
   it('returns zero stats for empty card list', () => {
