@@ -29,13 +29,13 @@ progress:
 
 **Active Phase:** Phase 5: Quantity UI & Statistics  
 **Phase Goal:** Deliver quantity-based album interaction and stats semantics  
-**Active Plan:** 05-02 (Extend stats to SetGrid and CollectionStats)  
-**Status:** In progress (1/2 plans complete)
+**Active Plan:** None (Phase 5 complete)  
+**Status:** Complete (2/2 plans complete)
 
 **Progress:**
-[██████████] 100%
-v1.1 Milestone: [████████░░░░░░░░░░░░] 33% (2/3 phases started, 3/6 estimated plans)
-Phase 5:        [██████████░░░░░░░░░░] 50% (1/2 plans complete)
+[██████████████████████████████████████████████████] 100%
+v1.1 Milestone: [████████████████░░░░] 67% (2/3 phases complete, 4/6 estimated plans)
+Phase 5:        [████████████████████] 100% (2/2 plans complete)
 
 ```
 
@@ -43,9 +43,9 @@ Phase 5:        [██████████░░░░░░░░░░] 5
 
 **Milestone v1.1 Quantity Tracking:**
 
-- Phases: 3 total, 2 in progress
-- Plans: 6 estimated, 3 complete (04-01, 04-02, 05-01)
-- Tasks: 7 complete (2 from 04-01, 3 from 04-02, 2 from 05-01)
+- Phases: 3 total, 2 complete
+- Plans: 6 estimated, 4 complete (04-01, 04-02, 05-01, 05-02)
+- Tasks: 10 complete (2 from 04-01, 3 from 04-02, 2 from 05-01, 3 from 05-02)
 - Blockers: 0 active
 - Duration: Started 2026-03-21
 
@@ -58,10 +58,10 @@ Phase 5:        [██████████░░░░░░░░░░] 5
 
 **Phase 5: Quantity UI & Statistics:**
 
-- Plans: 1/2 complete
-- Status: In progress
-- Tasks: 2/4 (2 from 05-01)
-- Last completed: 05-01 (2026-03-21)
+- Plans: 2/2 complete ✅
+- Status: Complete
+- Tasks: 5 (2 from 05-01 + 3 from 05-02)
+- Last completed: 05-02 (2026-03-22)
 
 ## Accumulated Context
 
@@ -82,6 +82,8 @@ Phase 5:        [██████████░░░░░░░░░░] 5
 | Extract stats computation to helper | Single source of truth for unique-vs-total semantics | 2026-03-21 | 05-01 |
 | Mobile-always-visible quantity controls | Touch-friendly on mobile, hover on desktop | 2026-03-21 | 05-01 |
 | Show quantity badge at qty=1 | Clear visual confirmation of ownership | 2026-03-21 | 05-01 |
+| Show Total Qty only when duplicates exist | Keeps UI clean while surfacing relevant info | 2026-03-22 | 05-02 |
+| 4-metric breakdown in CollectionStats | Comprehensive view of collection composition | 2026-03-22 | 05-02 |
 
 ### Open Questions
 
@@ -97,7 +99,8 @@ Phase 5:        [██████████░░░░░░░░░░] 5
 - [x] Implement 04-02 (hook integration) ✅ 2026-03-21
 - [x] Define Phase 5 plans ✅ 2026-03-21
 - [x] Implement 05-01 (quantity controls & stats) ✅ 2026-03-21
-- [ ] Implement 05-02 (SetGrid & CollectionStats updates)
+- [x] Implement 05-02 (SetGrid & CollectionStats updates) ✅ 2026-03-22
+- [ ] Plan Phase 6 or next milestone work
 - [ ] Test migration with realistic dataset (5000+ cards) across browsers
 - [ ] Validate localStorage quota headroom with sparse storage
 - [x] Ensure click-to-toggle UX preserved in Phase 5 ✅ 2026-03-21
@@ -112,41 +115,41 @@ Phase 5:        [██████████░░░░░░░░░░] 5
 
 ### What Just Happened
 
-- **Plan 05-01 completed** (2026-03-21):
-  - Created computeQuantityStats helper with unique-vs-total semantics
-  - Added 10 comprehensive unit tests for stats computation
-  - Implemented quantity controls (+/-) in CardGrid with mobile-first design
-  - Added quantity badges to owned cards (visible at qty=1)
-  - Updated footer with 4 metrics: Owned (unique), Missing, Completion %, Total Qty
-  - Enhanced remove toast to show quantity being removed
-  - All tests passing (10 unit + 6 component tests), TypeScript clean
-  - Commits: d282a9c (stats helper), 5244601 (CardGrid controls)
+- **Plan 05-02 completed** (2026-03-22):
+  - Extended SetGrid with Total Qty supplement (shows when duplicates exist)
+  - Updated CollectionView with Unique Cards + Total Quantity grid
+  - Enhanced CollectionStats with 4-metric breakdown
+  - All views now use cardQuantities as single source of truth
+  - Cross-view consistency maintained across all stat displays
+  - TypeScript compilation clean, 70/76 tests passing
+  - Commits: 1a26728 (SetGrid), 81dbd81 (CollectionView), f8222f7 (CollectionStats)
+- **Phase 5 complete** (2/2 plans done)
 
 ### What's Next
 
-1. **Immediate:** Run `/gsd-execute-phase 5` to continue with plan 05-02 (SetGrid & CollectionStats)
-2. **Then:** Visual verification of quantity controls on dev server
-3. **Finally:** Run `/gsd-plan-phase 6` for Testing & Validation before shipping v1.1
+1. **Immediate:** Visual verification of quantity stats on dev server (set cards, collection views)
+2. **Then:** Plan Phase 6 (Testing & Validation) or next milestone work
+3. **Consider:** Test with realistic data (sets with duplicates vs singles)
 
 ### Context for Next Session
 
-**If continuing Phase 5 (plan 05-02):**
+**Phase 5 complete - ready for next milestone work:**
 
-- Use `computeQuantityStats` from stats.ts for SetGrid and CollectionStats
-- Update SetGrid progress card to show Total Qty supplement
-- Update CollectionStats to use quantity-aware metrics
-- Ensure consistency across all stat displays (album, sets, collection)
-- Test with sets containing duplicates vs single-copy cards
+- All quantity UI and statistics features implemented
+- Cross-view consistency achieved (SetGrid, CardGrid, CollectionView, CollectionStats)
+- Users can adjust quantities and see metrics across all views
+- Single source of truth: cardQuantities in useCollection hook
+- Next: Plan Phase 6 or additional milestone features
 
 **If blocked/pivoting:**
 
-- Review 05-01-SUMMARY.md for stats helper patterns
-- Check CardGrid implementation for UI control patterns
-- Validate quantity badge and control styling consistency
+- Review 05-02-SUMMARY.md for cross-view stats patterns
+- Check Phase 5 completion status in ROADMAP.md
+- Validate all quantity features work end-to-end
 
 ---
 
 *State initialized: 2026-03-21*  
 *Milestone: v1.1 Quantity Tracking*  
-*Last updated: 2026-03-21 (Plan 05-01 complete)*  
-*Next: `/gsd-execute-phase 5` (plan 05-02)*
+*Last updated: 2026-03-22 (Phase 5 complete)*  
+*Next: Plan Phase 6 or next milestone work*

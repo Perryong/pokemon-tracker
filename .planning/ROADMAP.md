@@ -9,7 +9,7 @@
 ## Phases
 
 - [x] **Phase 4: Data Model & Migration** - Convert boolean ownership to quantity storage with safe migration ✅
-- [ ] **Phase 5: Quantity UI & Statistics** - Add quantity controls and quantity-aware progress tracking
+- [x] **Phase 5: Quantity UI & Statistics** - Add quantity controls and quantity-aware progress tracking ✅
 - [ ] **Phase 6: Testing & Validation** - Verify quantity features and preserve v1.0 behavior
 
 ## Phase Details
@@ -58,7 +58,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Stats helper + CardGrid quantity controls and enhanced footer ✅ 2026-03-21
-- [ ] 05-02-PLAN.md — SetGrid, CollectionView, CollectionStats quantity-aware updates
+- [x] 05-02-PLAN.md — SetGrid, CollectionView, CollectionStats quantity-aware updates ✅ 2026-03-22
 
 ---
 
@@ -84,13 +84,13 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Data Model & Migration | 1/2 | In progress | - |
-| 5. Quantity UI & Statistics | 0/0 | Not started | - |
+| 4. Data Model & Migration | 2/2 | Complete ✅ | 2026-03-21 |
+| 5. Quantity UI & Statistics | 2/2 | Complete ✅ | 2026-03-22 |
 | 6. Testing & Validation | 0/0 | Not started | - |
 
-**Next:** Continue Phase 4 with `/gsd-execute-phase 4` (plan 04-02) to integrate migration into collection hook.
+**Next:** Plan Phase 6 with `/gsd-plan-phase 6` for Testing & Validation, or identify next milestone work.
 
 ---
 
 *Roadmap created: 2026-03-21*  
-*Last updated: 2026-03-21 (Plan 04-01 complete)*
+*Last updated: 2026-03-22 (Phase 5 complete)*

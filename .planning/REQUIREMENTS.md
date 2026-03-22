@@ -24,8 +24,8 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 ### Statistics & Progress Semantics
 
 - [x] **STATQ-01**: User sees set completion based on unique owned cards, not total duplicate count. ✅ 05-01
-- [x] **STATQ-02**: User sees separate unique-owned and total-quantity metrics where stats are shown. ✅ 05-01
-- [ ] **STATQ-03**: User gets consistent stats across SetGrid, CardGrid, and collection summary views after quantity updates.
+- [x] **STATQ-02**: User sees separate unique-owned and total-quantity metrics where stats are shown. ✅ 05-02
+- [x] **STATQ-03**: User gets consistent stats across SetGrid, CardGrid, and collection summary views after quantity updates. ✅ 05-02
 
 ### Validation & Regression
 
