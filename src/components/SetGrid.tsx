@@ -69,26 +69,26 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
   }
 
   const { sets, totalSets, loading, error } = useSets(currentPage, pageSize, filters);
-  const { ownedCards } = useCollection();
+  const { ownedCards, cardQuantities } = useCollection();
   const { series } = useSeries();
   const totalPages = Math.ceil(totalSets / pageSize);
 
   const completionBySet = useMemo(() => {
     const completionMap: Record<
       string,
-      { owned: number; percentage: number; total: number }
+      { owned: number; percentage: number; total: number; totalQuantity: number }
     > = {};
 
     const ownedCountBySet: Record<string, number> = {};
-    Object.entries(ownedCards).forEach(([cardId, isOwned]) => {
-      if (!isOwned) {
-        return;
-      }
+    const quantityBySet: Record<string, number> = {};
+    
+    // Count unique owned and sum quantities per set
+    Object.entries(cardQuantities).forEach(([cardId, qty]) => {
+      if (qty <= 0) return;
       const [setId] = cardId.split('-');
-      if (!setId) {
-        return;
-      }
+      if (!setId) return;
       ownedCountBySet[setId] = (ownedCountBySet[setId] ?? 0) + 1;
+      quantityBySet[setId] = (quantityBySet[setId] ?? 0) + qty;
     });
 
     sets.forEach((set) => {
@@ -96,11 +96,12 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
       const owned = ownedCountBySet[set.id] ?? 0;
       const rawPercentage = total > 0 ? (owned / total) * 100 : 0;
       const percentage = Math.min(Math.max(rawPercentage, 0), 100);
-      completionMap[set.id] = { owned, percentage, total };
+      const totalQuantity = quantityBySet[set.id] ?? 0;
+      completionMap[set.id] = { owned, percentage, total, totalQuantity };
     });
 
     return completionMap;
-  }, [sets, ownedCards]);
+  }, [sets, cardQuantities]);
 
   // Filter by series (most restrictive first)
   const filteredBySeries = useMemo(() => {
@@ -123,6 +124,7 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
         owned: 0,
         percentage: 0,
         total: typeof total === 'number' ? total : 0,
+        totalQuantity: 0,
       }
     );
   };
@@ -323,6 +325,12 @@ const SetGrid: React.FC<SetGridProps> = ({ onSetSelect }) => {
                           {completion.percentage.toFixed(0)}%
                         </span>
                       </div>
+                      {/* Total quantity supplement - only show if there are duplicates */}
+                      {completion.totalQuantity > completion.owned && (
+                        <div className="text-xs text-muted-foreground">
+                          Total Qty: {completion.totalQuantity}
+                        </div>
+                      )}
                       <Progress
                         value={completion.percentage}
                         aria-label={`Owned ${completion.owned} of ${completion.total} cards in ${set.name}`}
