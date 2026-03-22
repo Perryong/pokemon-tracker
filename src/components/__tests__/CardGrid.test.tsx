@@ -1,11 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import { useSetCompletion, CompletionStats } from '@/lib/collection';
 import CardGrid from '../CardGrid';
 import { PokemonSet, PokemonCard } from '@/lib/api';
 import * as apiModule from '@/lib/api';
 import * as collectionModule from '@/lib/collection';
+
+const toastMock = vi.fn();
+
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({
+    toast: toastMock,
+  }),
+}));
 
 describe('Stats Calculation Tests', () => {
   it('useSetCompletion returns correct owned/missing/total/percentage for partial ownership', () => {
@@ -156,98 +164,52 @@ const mockCards: PokemonCard[] = [
   },
 ];
 
-describe('CardGrid Quantity Controls Tests', () => {
-  let mockIncrementQuantity: ReturnType<typeof vi.fn>;
-  let mockDecrementQuantity: ReturnType<typeof vi.fn>;
-  let mockGetQuantity: ReturnType<typeof vi.fn>;
-  let mockAddToCollection: ReturnType<typeof vi.fn>;
-  let mockRemoveFromCollection: ReturnType<typeof vi.fn>;
+const createCollectionMock = (quantities: Record<string, number>) => {
+  const getQuantity = vi.fn((cardId: string) => quantities[cardId] ?? 0);
+  const isOwned = (cardId: string) => (quantities[cardId] ?? 0) > 0;
 
+  return {
+    ownedCards: Object.fromEntries(
+      Object.entries(quantities)
+        .filter(([, qty]) => qty > 0)
+        .map(([id]) => [id, true])
+    ),
+    isOwned,
+    isInCollection: isOwned,
+    toggleOwnership: vi.fn(),
+    addToCollection: vi.fn().mockResolvedValue(undefined),
+    removeFromCollection: vi.fn().mockResolvedValue(undefined),
+    getQuantity,
+    setQuantity: vi.fn(),
+    incrementQuantity: vi.fn(),
+    decrementQuantity: vi.fn(),
+    cardQuantities: Object.fromEntries(
+      Object.entries(quantities).filter(([, qty]) => qty > 0)
+    ),
+  };
+};
+
+describe('CardGrid Quantity Controls Tests', () => {
   beforeEach(() => {
-    // Reset all mocks
     vi.clearAllMocks();
 
-    // Mock quantity functions
-    mockIncrementQuantity = vi.fn();
-    mockDecrementQuantity = vi.fn();
-    mockGetQuantity = vi.fn((cardId: string) => {
-      // Default quantities for testing
-      if (cardId === 'base1-1') return 2;
-      if (cardId === 'base1-2') return 0;
-      if (cardId === 'base1-3') return 1;
-      return 0;
-    });
-    mockAddToCollection = vi.fn();
-    mockRemoveFromCollection = vi.fn();
-
-    // Mock useCollection hook
-    vi.spyOn(collectionModule, 'useCollection').mockReturnValue({
-      ownedCards: { 'base1-1': true, 'base1-3': true },
-      isOwned: (cardId: string) => cardId === 'base1-1' || cardId === 'base1-3',
-      isInCollection: (cardId: string) => cardId === 'base1-1' || cardId === 'base1-3',
-      toggleOwnership: vi.fn(),
-      addToCollection: mockAddToCollection,
-      removeFromCollection: mockRemoveFromCollection,
-      getQuantity: mockGetQuantity,
-      setQuantity: vi.fn(),
-      incrementQuantity: mockIncrementQuantity,
-      decrementQuantity: mockDecrementQuantity,
-      cardQuantities: { 'base1-1': 2, 'base1-3': 1 },
-    });
-
-    // Mock useCards API hook
     vi.spyOn(apiModule, 'useCards').mockReturnValue({
       cards: mockCards,
       totalCards: 3,
       loading: false,
       error: null,
     });
-
-    // Mock toast
-    vi.mock('@/hooks/use-toast', () => ({
-      useToast: () => ({
-        toast: vi.fn(),
-      }),
-    }));
   });
 
-  it('clicking + button calls incrementQuantity', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
+  it('clicking + button calls incrementQuantity for the correct card', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
 
     render(
       <CardGrid
         selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
-      />
-    );
-
-    // Wait for cards to render
-    await waitFor(() => {
-      expect(screen.getByText('Alakazam')).toBeInTheDocument();
-    });
-
-    // Find all + buttons (should have aria-label="Increase quantity")
-    const plusButtons = screen.getAllByLabelText('Increase quantity');
-    expect(plusButtons.length).toBeGreaterThan(0);
-
-    // Click the first + button
-    fireEvent.click(plusButtons[0]);
-
-    // Verify incrementQuantity was called
-    expect(mockIncrementQuantity).toHaveBeenCalledTimes(1);
-  });
-
-  it('clicking - button calls decrementQuantity', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
-
-    render(
-      <CardGrid
-        selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
       />
     );
 
@@ -255,25 +217,51 @@ describe('CardGrid Quantity Controls Tests', () => {
       expect(screen.getByText('Alakazam')).toBeInTheDocument();
     });
 
-    // Find all - buttons
-    const minusButtons = screen.getAllByLabelText('Decrease quantity');
-    expect(minusButtons.length).toBeGreaterThan(0);
+    const alakazamCard = screen.getByText('Alakazam').closest('[class*="group overflow-hidden"]');
+    expect(alakazamCard).not.toBeNull();
 
-    // Click the first - button
-    fireEvent.click(minusButtons[0]);
+    const increaseButton = within(alakazamCard as HTMLElement).getByLabelText('Increase quantity');
+    fireEvent.click(increaseButton);
 
-    expect(mockDecrementQuantity).toHaveBeenCalledTimes(1);
+    expect(collectionMock.incrementQuantity).toHaveBeenCalledWith('base1-1');
+    expect(collectionMock.incrementQuantity).toHaveBeenCalledTimes(1);
   });
 
-  it('- button is disabled when quantity is 0', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
+  it('clicking - button calls decrementQuantity for the correct card', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
 
     render(
       <CardGrid
         selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Chansey')).toBeInTheDocument();
+    });
+
+    const chanseyCard = screen.getByText('Chansey').closest('[class*="group overflow-hidden"]');
+    expect(chanseyCard).not.toBeNull();
+
+    const decreaseButton = within(chanseyCard as HTMLElement).getByLabelText('Decrease quantity');
+    fireEvent.click(decreaseButton);
+
+    expect(collectionMock.decrementQuantity).toHaveBeenCalledWith('base1-3');
+    expect(collectionMock.decrementQuantity).toHaveBeenCalledTimes(1);
+  });
+
+  it('- button is disabled when quantity is 0 (zero-floor control)', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
+
+    render(
+      <CardGrid
+        selectedSet={mockSet}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
       />
     );
 
@@ -281,23 +269,22 @@ describe('CardGrid Quantity Controls Tests', () => {
       expect(screen.getByText('Blastoise')).toBeInTheDocument();
     });
 
-    // Blastoise has qty=0, so its - button should be disabled
-    const minusButtons = screen.getAllByLabelText('Decrease quantity');
-    
-    // Find the button for card with qty=0 (Blastoise is second card)
-    const blastoiseMinusButton = minusButtons[1];
-    expect(blastoiseMinusButton).toBeDisabled();
+    const blastoiseCard = screen.getByText('Blastoise').closest('[class*="group overflow-hidden"]');
+    expect(blastoiseCard).not.toBeNull();
+
+    const decreaseButton = within(blastoiseCard as HTMLElement).getByLabelText('Decrease quantity');
+    expect(decreaseButton).toBeDisabled();
   });
 
-  it('quantity badge displays current quantity', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
+  it('quantity controls enforce upper boundary by disabling + at 999', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 999, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
 
     render(
       <CardGrid
         selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
       />
     );
 
@@ -305,23 +292,78 @@ describe('CardGrid Quantity Controls Tests', () => {
       expect(screen.getByText('Alakazam')).toBeInTheDocument();
     });
 
-    // Check that badges with "2" and "1" exist (from our mock quantities)
-    const quantityBadges = screen.getAllByText('2');
-    expect(quantityBadges.length).toBeGreaterThan(0);
-    
-    const qtyOneBadges = screen.getAllByText('1');
-    expect(qtyOneBadges.length).toBeGreaterThan(0);
+    const alakazamCard = screen.getByText('Alakazam').closest('[class*="group overflow-hidden"]');
+    expect(alakazamCard).not.toBeNull();
+
+    const increaseButton = within(alakazamCard as HTMLElement).getByLabelText('Increase quantity');
+    expect(increaseButton).toBeDisabled();
   });
 
-  it('footer shows Total Qty metric', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
+  it('fast toggle add path calls addToCollection for unowned card', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
 
     render(
       <CardGrid
         selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Blastoise')).toBeInTheDocument();
+    });
+
+    const blastoiseCard = screen.getByText('Blastoise').closest('[class*="group overflow-hidden"]');
+    expect(blastoiseCard).not.toBeNull();
+
+    const addButton = within(blastoiseCard as HTMLElement).getByRole('button', { name: /Add/i });
+    fireEvent.click(addButton);
+
+    await waitFor(() => {
+      expect(collectionMock.addToCollection).toHaveBeenCalledWith('base1-2');
+      expect(collectionMock.addToCollection).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('fast toggle remove path calls removeFromCollection for owned qty > 1 card', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
+
+    render(
+      <CardGrid
+        selectedSet={mockSet}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Alakazam')).toBeInTheDocument();
+    });
+
+    const alakazamCard = screen.getByText('Alakazam').closest('[class*="group overflow-hidden"]');
+    expect(alakazamCard).not.toBeNull();
+
+    const removeButton = within(alakazamCard as HTMLElement).getByRole('button', { name: /Remove/i });
+    fireEvent.click(removeButton);
+
+    await waitFor(() => {
+      expect(collectionMock.removeFromCollection).toHaveBeenCalledWith('base1-1');
+      expect(collectionMock.removeFromCollection).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('footer shows Total Qty metric', async () => {
+    const collectionMock = createCollectionMock({ 'base1-1': 2, 'base1-2': 0, 'base1-3': 1 });
+    vi.spyOn(collectionModule, 'useCollection').mockReturnValue(collectionMock);
+
+    render(
+      <CardGrid
+        selectedSet={mockSet}
+        onBackClick={vi.fn()}
+        onCardSelect={vi.fn()}
       />
     );
 
@@ -329,32 +371,6 @@ describe('CardGrid Quantity Controls Tests', () => {
       expect(screen.getByText('Total Qty:')).toBeInTheDocument();
     });
 
-    // Verify the footer stat is visible
     expect(screen.getByText('Total Qty:')).toBeInTheDocument();
-  });
-
-  it('fast toggle still works (add sets qty to 1)', async () => {
-    const onBackClick = vi.fn();
-    const onCardSelect = vi.fn();
-
-    render(
-      <CardGrid
-        selectedSet={mockSet}
-        onBackClick={onBackClick}
-        onCardSelect={onCardSelect}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Blastoise')).toBeInTheDocument();
-    });
-
-    // Find the Add button for Blastoise (not owned)
-    const addButtons = screen.getAllByRole('button', { name: /Add/i });
-    expect(addButtons.length).toBeGreaterThan(0);
-
-    fireEvent.click(addButtons[0]);
-
-    expect(mockAddToCollection).toHaveBeenCalledTimes(1);
   });
 });
