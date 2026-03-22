@@ -198,6 +198,36 @@ describe('Migration Functions', () => {
       });
     });
 
+    it('deterministically migrates patterned large dataset (10000 cards)', () => {
+      const ownedCards: Record<string, boolean> = {};
+      for (let i = 0; i < 10000; i++) {
+        // Deterministic pattern: own card when index divisible by 4 or 7
+        ownedCards[`card-${i}`] = i % 4 === 0 || i % 7 === 0;
+      }
+
+      const v1State: CollectionStateV1 = {
+        version: 1,
+        ownedCards,
+      };
+
+      const result = migrateV1ToV3(v1State);
+
+      const expectedOwnedCount = Object.values(ownedCards).filter(Boolean).length;
+
+      expect(result.version).toBe(3);
+      expect(Object.keys(result.cardQuantities)).toHaveLength(expectedOwnedCount);
+
+      // Deterministic spot checks
+      expect(result.cardQuantities['card-0']).toBe(1); // divisible by 4 and 7
+      expect(result.cardQuantities['card-4']).toBe(1); // divisible by 4
+      expect(result.cardQuantities['card-7']).toBe(1); // divisible by 7
+      expect(result.cardQuantities['card-8']).toBe(1); // divisible by 4
+      expect(result.cardQuantities['card-11']).toBeUndefined(); // neither divisible by 4 nor 7
+      expect(result.cardQuantities['card-13']).toBeUndefined(); // neither divisible by 4 nor 7
+      expect(result.cardQuantities['card-28']).toBe(1); // divisible by both
+      expect(result.cardQuantities['card-9999']).toBeUndefined(); // neither divisible by 4 nor 7
+    });
+
     it('handles mixed truthy/falsy values', () => {
       const v1State: CollectionStateV1 = {
         version: 1,
