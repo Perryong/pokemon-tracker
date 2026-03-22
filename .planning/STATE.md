@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: completed
-last_updated: "2026-03-22T02:20:13.163Z"
+last_updated: "2026-03-22T02:42:12.655Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 # State: Pokemon TCG Collection Tracker
@@ -33,7 +33,7 @@ progress:
 **Status:** Complete (2/2 plans complete)
 
 **Progress:**
-[████████░░] 83%
+[██████████] 100%
 v1.1 Milestone: [████████████████░░░░] 67% (2/3 phases complete, 4/6 estimated plans)
 Phase 5:        [████████████████████] 100% (2/2 plans complete)
 
@@ -88,6 +88,8 @@ Phase 5:        [████████████████████] 1
 
 - [Phase 06]: Stabilized Vitest matcher runtime by wiring @testing-library/jest-dom/vitest through setupFiles.
 - [Phase 06]: Adopted deterministic divisibility-pattern large-payload migration assertions for 10k cards.
+- [Phase 06-testing-validation]: Use deterministic semantic assertions with scoped containers for cross-view unique-vs-total regression checks.
+- [Phase 06-testing-validation]: Run strict gate as CI=1 npm run test && npm run build to ensure deterministic Vitest exit in this environment.
 
 ### Open Questions
 

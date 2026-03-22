@@ -31,7 +31,7 @@ Requirements for this milestone (quantity tracking). Each maps to roadmap phases
 
 - [x] **TESTQ-01**: Quantity migration logic is covered by automated tests for normal and edge-case payloads. ✅ 04-01
 - [x] **TESTQ-02**: Quantity controls are covered by automated tests (increment, decrement, 0-floor, fast toggle behavior).
-- [ ] **TESTQ-03**: Existing v1.0 core behaviors (set browsing, filters, persistence) remain verified after quantity changes.
+- [x] **TESTQ-03**: Existing v1.0 core behaviors (set browsing, filters, persistence) remain verified after quantity changes.
 
 ## Future Requirements (Deferred)
 
@@ -77,7 +77,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STATQ-03 | Phase 5 | Pending |
 | TESTQ-01 | Phase 4/6 | ✅ Complete (04-01) |
 | TESTQ-02 | Phase 6 | Complete |
-| TESTQ-03 | Phase 6 | Pending |
+| TESTQ-03 | Phase 6 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 14 total
