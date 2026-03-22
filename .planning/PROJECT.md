@@ -11,21 +11,22 @@ Let me reliably track my Pokemon TCG collection progress by set, with fast card-
 ## Current State
 
 - ✅ **Shipped milestone**: v1.0 (2026-03-21)
+- ✅ **Shipped milestone**: v1.1 Quantity Tracking (2026-03-22)
 - ✅ **Feature scope complete**: 20/20 v1 requirements
 - ✅ **Hardening complete**: 6/6 hardening requirements
-- ✅ **Quality gates**: 14 automated tests passing, 27 smoke checks passed, production build verified
+- ✅ **v1.1 quality gates**: strict `npm run test` + `npm run build` passing
 - ✅ **Architecture**: React + TypeScript + Vite + shadcn/ui + TCGdex SDK + localStorage persistence
 
-## Current Milestone: v1.1 Quantity Tracking
+## Current Milestone: v1.2 (TBD)
 
-**Goal:** Add quantity-based collection tracking so users can track duplicates per card while preserving fast local-first workflows.
+**Goal:** Define and prioritize the next set of collection workflow improvements after quantity tracking.
 
 **Target features:**
-- Per-card quantity controls (increment/decrement/manual update)
-- Quantity-aware set and album statistics
-- Persistence and migration for quantity data in localStorage
+- Prioritize deferred quantity UX (manual input, keyboard shortcuts, duplicates filter)
+- Evaluate next highest-impact collection workflows (wishlist, import/export, analytics)
+- Preserve local-first reliability and regression safety bar established in v1.1
 
-## Next Milestone Goals (v1.1 candidate scope)
+## Next Milestone Goals (v1.2 candidate scope)
 
 - Define and prioritize next milestone requirements via `/gsd-new-milestone`
 - Evaluate deferred/advanced features:
@@ -40,13 +41,14 @@ Let me reliably track my Pokemon TCG collection progress by set, with fast card-
 ### Validated
 
 - ✓ v1.0 shipped and validated via archived requirements (`.planning/milestones/v1.0-REQUIREMENTS.md`)
+- ✓ v1.1 quantity tracking shipped and validated via archived requirements (`.planning/milestones/v1.1-REQUIREMENTS.md`)
 - ✓ Existing React + TypeScript + Vite single-page app foundation is in place
 - ✓ Existing shadcn/ui + Radix component system and styling pipeline is in place
 - ✓ Existing localStorage-backed collection persistence pattern remains core architecture
 
 ### Active
 
-- [ ] Ship quantity tracking for duplicates in album and set progress workflows
+- [ ] Define v1.2 scope and requirements based on deferred backlog and user priority
 
 ### Out of Scope
 
@@ -56,7 +58,7 @@ Let me reliably track my Pokemon TCG collection progress by set, with fast card-
 
 ## Context
 
-This is a brownfield React codebase with established component architecture and persisted planning history in `.planning/`. v1.0 execution artifacts are archived for traceability; next milestone should start with fresh requirements and roadmap definition.
+This is a brownfield React codebase with established component architecture and persisted planning history in `.planning/`. v1.0 and v1.1 execution artifacts are archived for traceability; next milestone should start with fresh requirements and roadmap definition.
 
 ## Constraints
 
@@ -73,6 +75,8 @@ This is a brownfield React codebase with established component architecture and 
 | Use TCGdex SDK as canonical data client | Consistent domain model and maintainability | ✓ Good |
 | Ship hardening as inserted Phase 02.1 | Reduced release risk with explicit regression/build/smoke gates | ✓ Good |
 | Enforce zero blocker/critical defects at release gate | Raised confidence in v1.0 production readiness | ✓ Good |
+| Adopt quantity-as-source-of-truth model in v1.1 | Prevent ownership/quantity divergence and simplify stats semantics | ✓ Good |
+| Enforce strict automated release gate in v1.1 (`test + build`) | Protect v1.0 behavior while expanding model/UI complexity | ✓ Good |
 
 ---
-*Last updated: 2026-03-21 after starting v1.1 Quantity Tracking*
+*Last updated: 2026-03-22 after shipping v1.1 Quantity Tracking*
