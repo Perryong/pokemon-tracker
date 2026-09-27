@@ -37,16 +37,17 @@ function App() {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
         <Navbar view={view} onSetSelectView={handleSetView} />
         
-        <main>
+        <main className="app-main">
+          <div className="context-bar"><span>Your collecting companion</span><span className="context-note">A little progress, one card at a time.</span></div>
           {view === 'sets' && (
             <SetGrid onSetSelect={handleSetSelect} />
           )}
           
           {view === 'cards' && selectedSet && (
-            <CardGrid 
+            <CardGrid key={selectedSet.id}
               selectedSet={selectedSet}
               onBackClick={handleBackToSets}
               onCardSelect={handleCardSelect}
@@ -54,7 +55,7 @@ function App() {
           )}
           
           {view === 'collection' && (
-            <CollectionView />
+            <CollectionView onCardSelect={handleCardSelect} />
           )}
         </main>
         

@@ -1,58 +1,42 @@
-import React, { useMemo } from "react";
-import { useCollection } from "@/lib/collection";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { BookOpen, Search } from 'lucide-react';
+import { useCollection } from '@/lib/collection';
+import { PokemonCard, normalizeTCGCard } from '@/lib/types';
+import { fetchSetWithCards } from '@/lib/tcgdex';
+import { Button } from '@/components/ui/button';
+import CardTile from './CardTile';
 
-const CollectionView: React.FC = () => {
+export default function CollectionView({ onCardSelect }: { onCardSelect?: (card: PokemonCard) => void }) {
+  const [search, setSearch] = useState('');
   const { cardQuantities } = useCollection();
-  
-  // Calculate stats - unique cards vs total quantity
-  const stats = useMemo(() => {
-    const uniqueCards = Object.keys(cardQuantities).length;
-    const totalQuantity = Object.values(cardQuantities).reduce((sum, qty) => sum + qty, 0);
-    return { uniqueCards, totalQuantity };
-  }, [cardQuantities]);
-  
-  return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      <h1 className="text-3xl font-bold mb-6">My Collection</h1>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Collection View</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Unique Cards</p>
-                <p className="text-3xl font-bold">{stats.uniqueCards}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Quantity</p>
-                <p className="text-3xl font-bold">{stats.totalQuantity}</p>
-                {stats.totalQuantity > stats.uniqueCards && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ({stats.totalQuantity - stats.uniqueCards} duplicates)
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <AlertCircle className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-              <p className="text-center text-blue-700">
-                Collection view with cards display, filtering, and sorting coming in v2
-              </p>
-              <p className="text-center text-sm text-blue-600 mt-2">
-                For now, use the Sets view to browse and add cards to your collection
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-export default CollectionView;
+  const [cards, setCards] = useState<PokemonCard[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [failedSets, setFailedSets] = useState<string[]>([]);
+  const setIdsKey = JSON.stringify([...new Set(Object.keys(cardQuantities).map(id => id.slice(0, id.lastIndexOf('-'))))].sort());
+  useEffect(() => {
+    let cancelled = false;
+    const setIds: string[] = JSON.parse(setIdsKey);
+    setLoading(setIds.length > 0);
+    setFailedSets([]);
+    Promise.allSettled(setIds.map(id => fetchSetWithCards(id))).then(results => {
+      if (cancelled) return;
+      setCards(results.flatMap(result => result.status === 'fulfilled' ? (result.value.cards || []).map(card => normalizeTCGCard(card, result.value)) : []));
+      setFailedSets(results.flatMap((result, index) => result.status === 'rejected' ? [setIds[index]] : []));
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [setIdsKey]);
+  const uniqueCards = Object.keys(cardQuantities).length;
+  const totalQuantity = Object.values(cardQuantities).reduce((sum, quantity) => sum + quantity, 0);
+  const visible = cards.filter(card => cardQuantities[card.id] > 0 && card.name.toLowerCase().includes(search.toLowerCase().trim()));
+  return <section className="page">
+    <header className="page-heading"><div><h1>My Collection</h1><p className="page-description">The cards you’ve found. The stories you’re keeping.</p></div><span className="save-indicator"><span />Saved on this device</span></header>
+    <section aria-label="Collection View" className="collection-inventory">
+      <h2 className="sr-only">Collection View</h2>
+      <div className="collection-summary"><div><p>Unique Cards</p><strong>{uniqueCards}</strong></div><div><p>Total Quantity</p><strong>{totalQuantity}</strong></div>{totalQuantity > uniqueCards && <div><p>Extra copies</p><strong>{totalQuantity - uniqueCards}</strong></div>}</div>
+      {uniqueCards > 0 && <div className="filter-tray"><div className="filter-field grow"><label htmlFor="collection-search">Find a card in your collection</label><div className="search-control"><Search size={16} /><input id="collection-search" type="search" className="control" placeholder="Search your collection..." value={search} onChange={e => setSearch(e.target.value)} /></div></div></div>}
+      {failedSets.length > 0 && <p role="alert" className="alert-message">Could not load cards for {failedSets.join(', ')}. Your quantities are still saved.</p>}
+      {loading ? <div className="card-grid" aria-label="Loading collection cards" aria-busy="true">{Array.from({ length: 5 }, (_, i) => <div className="card-specimen skeleton-art h-64" key={i} />)}</div> : uniqueCards === 0 ? <div className="empty-state"><BookOpen size={34} /><h2>Your collection starts with one card.</h2><p>Explore a set and select Add beneath any card.<br />Your cards will be waiting here when you return.</p></div> : visible.length === 0 ? <div className="empty-state"><h2>No matching cards</h2><p>Try a different name, or clear your search.</p><Button onClick={() => setSearch('')}>Clear search</Button></div> : <div className="card-grid">{visible.map(card => <div key={card.id}><CardTile card={card} onSelect={onCardSelect} /><p className="card-number mt-2">Quantity: {cardQuantities[card.id]}</p></div>)}</div>}
+    </section>
+  </section>;
+}

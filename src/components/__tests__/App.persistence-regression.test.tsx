@@ -1,5 +1,6 @@
+import * as client from '@/lib/tcgdex';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import App from '@/App';
 import { STORAGE_KEY } from '@/lib/collection-types';
 import * as apiModule from '@/lib/api';
@@ -14,6 +15,7 @@ vi.mock('@/lib/api', async () => {
 });
 
 beforeEach(() => {
+  vi.spyOn(client, 'fetchSetWithCards').mockResolvedValue({ id: 'base1', name: 'Base', serie: { id: 'base', name: 'Base' }, releaseDate: '1999-01-09', legal: { standard: false, expanded: false }, cardCount: { official: 102, total: 102, normal: 86, reverse: 0, holo: 16 }, cards: [] } as Awaited<ReturnType<typeof client.fetchSetWithCards>>);
   localStorage.clear();
 
   vi.spyOn(apiModule, 'useSets').mockReturnValue({
@@ -59,7 +61,7 @@ describe('App persistence regression', () => {
     expect(screen.getByRole('heading', { name: 'My Collection' })).toBeInTheDocument();
     expect(screen.getByText('Unique Cards')).toBeInTheDocument();
     expect(screen.getByText('Total Quantity')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Collection View' })).getByText('2')).toBeInTheDocument();
 
     unmount();
 
@@ -71,6 +73,6 @@ describe('App persistence regression', () => {
 
     expect(screen.getAllByText('1').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText('My Collection'));
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Collection View' })).getByText('2')).toBeInTheDocument();
   });
 });

@@ -1,3 +1,4 @@
+import * as client from '@/lib/tcgdex';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import CardGrid from '../CardGrid';
@@ -79,6 +80,7 @@ const cardsForSet: PokemonCard[] = [
 
 describe('Cross-view quantity semantics regression', () => {
   beforeEach(() => {
+  vi.spyOn(client, 'fetchSetWithCards').mockResolvedValue({ id: 'base1', name: 'Base', serie: { id: 'base', name: 'Base' }, releaseDate: '1999-01-09', legal: { standard: false, expanded: false }, cardCount: { official: 102, total: 102, normal: 86, reverse: 0, holo: 16 }, cards: [] } as Awaited<ReturnType<typeof client.fetchSetWithCards>>);
     vi.clearAllMocks();
 
     const cardQuantities = {
@@ -152,12 +154,12 @@ describe('Cross-view quantity semantics regression', () => {
     expect(screen.getByText('Total Qty:')).toBeInTheDocument();
 
     render(<CollectionView />);
-    const collectionViewCard = screen.getByRole('heading', { name: 'Collection View' }).closest('[class*="rounded-xl"]');
+    const collectionViewCard = screen.getByRole('region', { name: 'Collection View' });
     expect(collectionViewCard).not.toBeNull();
     const collectionViewScope = within(collectionViewCard as HTMLElement);
     expect(collectionViewScope.getByText('Unique Cards')).toBeInTheDocument();
     expect(collectionViewScope.getByText('Total Quantity')).toBeInTheDocument();
-    expect(collectionViewScope.getByText('3')).toBeInTheDocument();
+    expect(collectionViewScope.getAllByText('3')[0]).toBeInTheDocument();
     expect(collectionViewScope.getByText('6')).toBeInTheDocument();
 
     render(<CollectionStats />);

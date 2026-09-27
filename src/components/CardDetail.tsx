@@ -1,399 +1,48 @@
-/* --- src/components/CardDetail.tsx ---------------------------------------- */
+import { useEffect, useState } from 'react';
+import { PokemonCard, useCard } from '@/lib/api';
+import { useCardmarketExchangeRate } from '@/lib/exchange-rate';
+import { useCollection } from '@/lib/collection';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Check, BookOpen } from 'lucide-react';
 
-import React, { useState } from "react";
-import { PokemonCard } from "@/lib/api";
-import { useCollection } from "@/lib/collection";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DollarSign,
-  Star,
-  AlertCircle,
-} from "lucide-react";
-
-/* ------------------------------------------------------------------ */
-
-interface CardDetailProps {
-  card: PokemonCard | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-const CONDITIONS = [
-  "Mint",
-  "Near Mint",
-  "Excellent",
-  "Good",
-  "Light Played",
-  "Played",
-  "Poor",
-];
-
-const CardDetail: React.FC<CardDetailProps> = ({ card, open, onOpenChange }) => {
-  const {
-    isInCollection,
-    getCollectionCard,
-    addToCollection,
-    updateCollectionCard,
-    removeFromCollection,
-  } = useCollection();
-
-  const collectionCard = card ? getCollectionCard(card.id) : null;
-  const [quantity, setQuantity] = useState<number>(collectionCard?.quantity ?? 1);
-  const [condition, setCondition] = useState<string>(
-    collectionCard?.condition ?? "Near Mint",
-  );
-  const [purchasePrice, setPurchasePrice] = useState<number>(
-    collectionCard?.purchasePrice ?? 0,
-  );
-  const [notes, setNotes] = useState<string>(collectionCard?.notes ?? "");
-
-  /* ------------------- helpers ------------------- */
-
-  const getCardPrice = (
-    c: PokemonCard,
-  ): { type: string; price: number } | null => {
-    const prices = c.tcgplayer?.prices;
-    if (!prices) return null;
-
-    if (prices.holofoil?.market != null)
-      return { type: "Holofoil", price: Number(prices.holofoil.market) };
-    if (prices.reverseHolofoil?.market != null)
-      return {
-        type: "Reverse Holofoil",
-        price: Number(prices.reverseHolofoil.market),
-      };
-    if (prices.normal?.market != null)
-      return { type: "Normal", price: Number(prices.normal.market) };
-
-    for (const [k, p] of Object.entries(prices)) {
-      if (p?.market != null) {
-        return { type: k.charAt(0).toUpperCase() + k.slice(1), price: Number(p.market) };
-      }
-    }
-    return null;
-  };
-
-  /* ------------------- actions ------------------- */
-
-  const handleAddToCollection = () =>
-    card &&
-    addToCollection(card, quantity, condition, purchasePrice, notes);
-
-  const handleUpdateCollection = () =>
-    card &&
-    updateCollectionCard(card.id, { quantity, condition, purchasePrice, notes });
-
-  const handleRemoveFromCollection = () => card && removeFromCollection(card.id);
-
-  /* ------------------- render guard ------------------- */
-
+interface CardDetailProps { card: PokemonCard | null; open: boolean; onOpenChange: (open: boolean) => void; }
+const priceLabels: Record<string, string> = { lowPrice: 'Low', midPrice: 'Median', highPrice: 'High', marketPrice: 'Market price', directLowPrice: 'Direct low', avg: 'Average', low: 'Low', trend: 'Trend', avg1: '1-day average', avg7: '7-day average', avg30: '30-day average', 'avg-holo': 'Holo average', 'low-holo': 'Holo low', 'trend-holo': 'Holo trend', 'avg1-holo': 'Holo 1-day average', 'avg7-holo': 'Holo 7-day average', 'avg30-holo': 'Holo 30-day average' };
+export default function CardDetail({ card: summary, open, onOpenChange }: CardDetailProps) {
+  const { card: details, loading, error } = useCard(open ? summary?.id || null : null);
+  const card = details?.id === summary?.id ? details : summary;
+  const { isInCollection, getQuantity, setQuantity, removeFromCollection } = useCollection();
+  const { rate: exchangeRate, error: exchangeError } = useCardmarketExchangeRate(open && !!card?.marketPrices?.some(quote => quote.provider === 'cardmarket' && quote.currency === 'EUR'));
+  const [quantity, setDraftQuantity] = useState(1);
+  const [saveError, setSaveError] = useState('');
+  const cardId = summary?.id;
+  useEffect(() => { if (open && cardId) { setDraftQuantity(getQuantity(cardId) || 1); setSaveError(''); } }, [cardId, open, getQuantity]);
   if (!card) return null;
-
   const owned = isInCollection(card.id);
-  const priceInfo = getCardPrice(card);
-
-  /* ------------------------------------------------------------------ */
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            {card.name}
-            {owned && <Badge className="ml-2 bg-green-500">In Collection</Badge>}
-          </DialogTitle>
-          <DialogDescription>
-            {card.set.name} · {card.number}/{card.set.printedTotal} · {card.rarity}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* ---------------- image ---------------- */}
-          <div className="flex justify-center">
-            <img
-              src={card.images.large}
-              alt={card.name}
-              className="max-w-full rounded-lg shadow-lg"
-            />
-          </div>
-
-          {/* ---------------- tabs ---------------- */}
-          <div>
-            <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="info">Card Info</TabsTrigger>
-                <TabsTrigger value="market">Market Data</TabsTrigger>
-                <TabsTrigger value="collection">Collection</TabsTrigger>
-              </TabsList>
-
-              {/* ========== INFO TAB (unchanged) ========== */}
-              {/* keep all your existing “info” tab markup here */}
-
-              {/* ========== MARKET TAB ========== */}
-              <TabsContent value="market">
-                {card.tcgplayer ? (
-                  <div className="space-y-4">
-                    {/* headline price */}
-                    <div>
-                      <h3 className="text-sm font-semibold mb-1">Market Price</h3>
-                      {priceInfo ? (
-                        <p className="text-2xl font-bold flex items-center">
-                          <DollarSign className="h-5 w-5" />
-                          {priceInfo.price.toFixed(2)}
-                          <span className="text-sm font-normal ml-2">
-                            ({priceInfo.type})
-                          </span>
-                        </p>
-                      ) : (
-                        <p>No price data available</p>
-                      )}
-                    </div>
-
-                    {/* price breakdown */}
-                    <div>
-                      <h3 className="text-sm font-semibold mb-2">Price Details</h3>
-                      <div className="space-y-2">
-                        {Object.entries(card.tcgplayer.prices ?? {})
-                          .filter(([, p]) => p != null)
-                          .map(([priceType, priceData]) => {
-                            const data = priceData!; // now definitely defined
-                            return (
-                              <Card key={priceType}>
-                                <CardHeader className="py-2 px-3">
-                                  <CardTitle className="text-sm">
-                                    {priceType.charAt(0).toUpperCase() +
-                                      priceType.slice(1)}
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="py-2 px-3">
-                                  <div className="grid grid-cols-2 gap-2 text-sm">
-                                    {data.low != null && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Low:
-                                        </span>{" "}
-                                        ${data.low.toFixed(2)}
-                                      </div>
-                                    )}
-                                    {data.mid != null && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Mid:
-                                        </span>{" "}
-                                        ${data.mid.toFixed(2)}
-                                      </div>
-                                    )}
-                                    {data.high != null && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          High:
-                                        </span>{" "}
-                                        ${data.high.toFixed(2)}
-                                      </div>
-                                    )}
-                                    {data.market != null && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Market:
-                                        </span>{" "}
-                                        ${data.market.toFixed(2)}
-                                      </div>
-                                    )}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <a
-                        href={card.tcgplayer.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm flex items-center"
-                      >
-                        View on TCGPlayer
-                      </a>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center p-4">
-                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p>No market data available for this card</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* ========== COLLECTION TAB ========== */}
-              <TabsContent value="collection">
-                {owned ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quantity">Quantity</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min={1}
-                          value={quantity}
-                          onChange={(e) =>
-                            setQuantity(parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="condition">Condition</Label>
-                        <Select value={condition} onValueChange={setCondition}>
-                          <SelectTrigger id="condition">
-                            <SelectValue placeholder="Select condition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CONDITIONS.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
-                      <Input
-                        id="purchasePrice"
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={purchasePrice}
-                        onChange={(e) =>
-                          setPurchasePrice(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Add notes about this card..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="flex justify-between pt-2">
-                      <Button variant="destructive" onClick={handleRemoveFromCollection}>
-                        Remove from Collection
-                      </Button>
-                      <Button onClick={handleUpdateCollection}>Update</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center p-4 mb-2">
-                      <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-                      <p>Add this card to your collection</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quantity">Quantity</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min={1}
-                          value={quantity}
-                          onChange={(e) =>
-                            setQuantity(parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="condition">Condition</Label>
-                        <Select value={condition} onValueChange={setCondition}>
-                          <SelectTrigger id="condition">
-                            <SelectValue placeholder="Select condition" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CONDITIONS.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
-                      <Input
-                        id="purchasePrice"
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={purchasePrice}
-                        onChange={(e) =>
-                          setPurchasePrice(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Add notes about this card..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
-
-                    <Button className="w-full" onClick={handleAddToCollection}>
-                      Add to Collection
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default CardDetail;
+  const save = (remove = false) => {
+    try { if (remove) removeFromCollection(card.id); else setQuantity(card.id, quantity); setSaveError(''); }
+    catch { setSaveError('Your browser could not save this change. Free up device storage and try again.'); }
+  };
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-[850px] max-h-[92vh] overflow-y-auto p-6 sm:p-8">
+      <DialogHeader className="text-left mb-2"><DialogTitle className="detail-title flex items-center gap-3">{card.name}{owned && <span className="text-xs font-sans text-primary flex items-center gap-1"><Check size={13} />Owned</span>}</DialogTitle><DialogDescription>{card.set.name || 'Pokémon TCG'} · {card.number} / {card.set.printedTotal || '—'}</DialogDescription></DialogHeader>
+      <div className="detail-layout">
+        <div className="detail-art">{card.images.large ? <img src={card.images.large} alt={card.name} decoding="async" /> : <p className="page-description">Image unavailable</p>}</div>
+        <Tabs defaultValue="info" className="min-w-0"><TabsList className="grid w-full grid-cols-3 h-11"><TabsTrigger value="info" className="text-xs">Card Info</TabsTrigger><TabsTrigger value="market" className="text-xs">Market Data</TabsTrigger><TabsTrigger value="collection" className="text-xs">Collection</TabsTrigger></TabsList>
+          <TabsContent value="info">
+            {loading && <p role="status" className="page-description">Loading card details…</p>}
+            {error && <p role="alert" className="alert-message">Could not load card details: {error.message}. Close and reopen to retry.</p>}
+            <dl className="detail-facts"><div><dt>Category</dt><dd>{card.supertype} {card.subtypes.join(', ')}</dd></div><div><dt>Rarity</dt><dd>{card.rarity || '—'}</dd></div>{card.hp && <div><dt>HP</dt><dd>{card.hp}</dd></div>}{card.types && <div><dt>Type</dt><dd>{card.types.join(', ')}</dd></div>}{card.evolvesFrom && <div><dt>Evolves from</dt><dd>{card.evolvesFrom}</dd></div>}<div><dt>Artist</dt><dd>{card.artist || '—'}</dd></div></dl>
+            {card.abilities?.map(ability => <div key={ability.name} className="detail-ability"><h3>{ability.name}</h3><p>{ability.effect}</p></div>)}
+            {card.attacks?.map(attack => <div key={attack.name} className="detail-ability"><div className="flex justify-between gap-2"><h3>{attack.name}</h3><span className="text-sm font-semibold">{attack.damage}</span></div>{attack.cost.length > 0 && <p>{attack.cost.join(' · ')}</p>}<p>{attack.text}</p></div>)}
+            <dl className="detail-facts">{card.weaknesses?.length ? <div><dt>Weakness</dt><dd>{card.weaknesses.map(w => `${w.type} ${w.value}`).join(', ')}</dd></div> : null}{card.resistances?.length ? <div><dt>Resistance</dt><dd>{card.resistances.map(w => `${w.type} ${w.value}`).join(', ')}</dd></div> : null}{card.convertedRetreatCost !== undefined && <div><dt>Retreat cost</dt><dd>{card.convertedRetreatCost}</dd></div>}</dl>
+            {card.rules?.map(rule => <p key={rule} className="page-description">{rule}</p>)}{card.flavorText && <p className="page-description italic">{card.flavorText}</p>}
+          </TabsContent>
+          <TabsContent value="market">{loading ? <p role="status" className="page-description">Loading market data…</p> : error ? <p role="alert" className="alert-message">Could not load market data. Close and reopen to retry.</p> : !card.marketPrices?.length ? <div className="py-8"><h3>No prices available yet.</h3><p className="page-description">The marketplaces don’t currently provide prices for this card.</p></div> : card.marketPrices.map(quote => { const convert = quote.provider === 'cardmarket' && quote.currency === 'EUR'; const currency = convert && exchangeRate ? 'SGD' : quote.currency; return <section className="market-provider" key={`${quote.provider}-${quote.variant}-${quote.updated}`}><h3>{quote.provider === 'tcgplayer' ? 'TCGplayer' : 'Cardmarket'}</h3>{quote.provider === 'cardmarket' && <p className="text-xs text-muted-foreground mb-2">Source: {quote.source || 'TCGdex (fallback)'}</p>}<p className="text-xs text-muted-foreground mb-2">{quote.variant === 'All printings' ? 'Card pricing' : quote.variant.replace(/-/g, ' ')} · {currency}</p>{convert && <p className="text-xs text-muted-foreground mb-3">{exchangeRate ? <>Estimated SGD · 1 EUR = {exchangeRate.rate.toFixed(4)} SGD · Rate date {exchangeRate.date} · <a href="https://frankfurter.dev/" target="_blank" rel="noreferrer" className="underline">ECB via Frankfurter</a></> : exchangeError ? 'SGD conversion unavailable. Showing original EUR prices; reopen to retry.' : 'Converting EUR prices to SGD…'}</p>}<table className="market-table"><caption className="sr-only">{quote.provider} prices in {currency}</caption><tbody>{Object.entries(quote.values).map(([label, value]) => <tr key={label}><th scope="row">{priceLabels[label] || label}</th><td>{currency} {(convert && exchangeRate ? value * exchangeRate.rate : value).toFixed(2)}</td></tr>)}</tbody></table>{quote.updated && <p className="updated">Updated {new Date(quote.updated).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>}</section>; })}</TabsContent>
+          <TabsContent value="collection" className="space-y-5 pt-5"><BookOpen size={25} className="text-primary" /><div><h3 className="font-semibold">{owned ? 'A part of your collection.' : 'Make room in your binder.'}</h3><p className="page-description">Record how many copies you own. Changes are saved on this device.</p></div><div className="filter-field"><label htmlFor="quantity">Quantity</label><input id="quantity" className="control max-w-[140px]" type="number" min={1} max={999} value={quantity} onChange={e => setDraftQuantity(Math.max(1, Math.min(999, Math.floor(Number(e.target.value) || 1))))} /></div>{saveError && <p role="alert" className="alert-message">{saveError}</p>}<div className="flex flex-wrap gap-2"><Button onClick={() => save()}>{owned ? 'Update' : 'Add to Collection'}</Button>{owned && <Button variant="outline" onClick={() => save(true)}>Remove from Collection</Button>}</div></TabsContent>
+        </Tabs>
+      </div>
+    </DialogContent>
+  </Dialog>;
+}

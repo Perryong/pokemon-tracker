@@ -1,11 +1,36 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSyncExternalStore, useEffect, useMemo, useCallback } from 'react';
 import { PokemonCard } from './api';
 import { CollectionStateV3, STORAGE_KEY } from './collection-types';
 import { getInitialState, clearBackup } from './migration';
 
+const COLLECTION_CHANGE = 'pokemon-collection-change';
+let cachedRaw: string | null | undefined;
+let cachedState: CollectionStateV3 | undefined;
+function getSnapshot(): CollectionStateV3 {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!cachedState || raw !== cachedRaw) {
+    cachedState = getInitialState();
+    cachedRaw = raw;
+  }
+  return cachedState;
+}
+function subscribe(listener: () => void) {
+  window.addEventListener(COLLECTION_CHANGE, listener);
+  window.addEventListener('storage', listener);
+  return () => {
+    window.removeEventListener(COLLECTION_CHANGE, listener);
+    window.removeEventListener('storage', listener);
+  };
+}
+
 // Hook for managing the collection
 export const useCollection = () => {
-  const [collection, setCollection] = useState<CollectionStateV3>(getInitialState);
+  const collection = useSyncExternalStore(subscribe, getSnapshot);
+  const setCollection = useCallback((update: (prev: CollectionStateV3) => CollectionStateV3) => {
+    const next = update(getSnapshot());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event(COLLECTION_CHANGE));
+  }, []);
 
   // Persist to localStorage whenever collection changes
   useEffect(() => {
@@ -26,6 +51,7 @@ export const useCollection = () => {
   const setQuantity = useCallback((cardId: string, quantity: number): void => {
     setCollection(prev => {
       const newQuantities = { ...prev.cardQuantities };
+      if (!Number.isFinite(quantity)) return prev;
       const clamped = Math.max(0, Math.min(999, Math.floor(quantity)));
       
       if (clamped === 0) {
@@ -36,7 +62,7 @@ export const useCollection = () => {
       
       return { ...prev, cardQuantities: newQuantities };
     });
-  }, []);
+  }, [setCollection]);
 
   const getQuantity = useCallback((cardId: string): number => {
     return collection.cardQuantities[cardId] || 0;
@@ -68,7 +94,7 @@ export const useCollection = () => {
       }
       return { ...prev, cardQuantities: newQuantities };
     });
-  }, []);
+  }, [setCollection]);
 
   const addToCollection = useCallback((cardOrId: string | PokemonCard | { id: string }): void => {
     const cardId = typeof cardOrId === 'string' ? cardOrId : cardOrId.id;
@@ -79,14 +105,15 @@ export const useCollection = () => {
         cardQuantities: { ...prev.cardQuantities, [cardId]: 1 }
       };
     });
-  }, []);
+  }, [setCollection]);
 
   const removeFromCollection = useCallback((cardId: string): void => {
     setCollection(prev => {
-      const { [cardId]: _, ...rest } = prev.cardQuantities;
+      const rest = { ...prev.cardQuantities };
+      delete rest[cardId];
       return { ...prev, cardQuantities: rest };
     });
-  }, []);
+  }, [setCollection]);
 
   // New quantity APIs for Phase 5
   const incrementQuantity = useCallback((cardId: string): void => {
@@ -98,7 +125,7 @@ export const useCollection = () => {
         cardQuantities: { ...prev.cardQuantities, [cardId]: current + 1 }
       };
     });
-  }, []);
+  }, [setCollection]);
 
   const decrementQuantity = useCallback((cardId: string): void => {
     setCollection(prev => {
@@ -113,7 +140,7 @@ export const useCollection = () => {
       }
       return { ...prev, cardQuantities: newQuantities };
     });
-  }, []);
+  }, [setCollection]);
 
   return {
     // Backward-compatible API

@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-27T07:46:10.797464+00:00",
+  "title": "Design System: Pokémon Tracker",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(15% 0.0065 106.52)",
+          "oklch(26% 0.0065 106.52)",
+          "oklch(38% 0.0065 106.52)",
+          "oklch(49% 0.0065 106.52)",
+          "oklch(61% 0.0065 106.52)",
+          "oklch(72% 0.0065 106.52)",
+          "oklch(84% 0.0065 106.52)",
+          "oklch(95% 0.0065 106.52)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0237 155.48)",
+          "oklch(26% 0.0237 155.48)",
+          "oklch(38% 0.0237 155.48)",
+          "oklch(49% 0.0237 155.48)",
+          "oklch(61% 0.0237 155.48)",
+          "oklch(72% 0.0237 155.48)",
+          "oklch(84% 0.0237 155.48)",
+          "oklch(95% 0.0237 155.48)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "card-foreground": {
+        "role": "neutral",
+        "displayName": "Card Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0237 155.48)",
+          "oklch(26% 0.0237 155.48)",
+          "oklch(38% 0.0237 155.48)",
+          "oklch(49% 0.0237 155.48)",
+          "oklch(61% 0.0237 155.48)",
+          "oklch(72% 0.0237 155.48)",
+          "oklch(84% 0.0237 155.48)",
+          "oklch(95% 0.0237 155.48)"
+        ]
+      },
+      "popover": {
+        "role": "neutral",
+        "displayName": "Popover",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "popover-foreground": {
+        "role": "neutral",
+        "displayName": "Popover Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0237 155.48)",
+          "oklch(26% 0.0237 155.48)",
+          "oklch(38% 0.0237 155.48)",
+          "oklch(49% 0.0237 155.48)",
+          "oklch(61% 0.0237 155.48)",
+          "oklch(72% 0.0237 155.48)",
+          "oklch(84% 0.0237 155.48)",
+          "oklch(95% 0.0237 155.48)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(15% 0.0735 159.83)",
+          "oklch(26% 0.0735 159.83)",
+          "oklch(38% 0.0735 159.83)",
+          "oklch(49% 0.0735 159.83)",
+          "oklch(61% 0.0735 159.83)",
+          "oklch(72% 0.0735 159.83)",
+          "oklch(84% 0.0735 159.83)",
+          "oklch(95% 0.0735 159.83)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "Primary Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0065 106.52)",
+          "oklch(26% 0.0065 106.52)",
+          "oklch(38% 0.0065 106.52)",
+          "oklch(49% 0.0065 106.52)",
+          "oklch(61% 0.0065 106.52)",
+          "oklch(72% 0.0065 106.52)",
+          "oklch(84% 0.0065 106.52)",
+          "oklch(95% 0.0065 106.52)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Secondary",
+        "tonalRamp": [
+          "oklch(15% 0.0137 127.29)",
+          "oklch(26% 0.0137 127.29)",
+          "oklch(38% 0.0137 127.29)",
+          "oklch(49% 0.0137 127.29)",
+          "oklch(61% 0.0137 127.29)",
+          "oklch(72% 0.0137 127.29)",
+          "oklch(84% 0.0137 127.29)",
+          "oklch(95% 0.0137 127.29)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "secondary",
+        "displayName": "Secondary Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0237 155.48)",
+          "oklch(26% 0.0237 155.48)",
+          "oklch(38% 0.0237 155.48)",
+          "oklch(49% 0.0237 155.48)",
+          "oklch(61% 0.0237 155.48)",
+          "oklch(72% 0.0237 155.48)",
+          "oklch(84% 0.0237 155.48)",
+          "oklch(95% 0.0237 155.48)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0122 106.63)",
+          "oklch(26% 0.0122 106.63)",
+          "oklch(38% 0.0122 106.63)",
+          "oklch(49% 0.0122 106.63)",
+          "oklch(61% 0.0122 106.63)",
+          "oklch(72% 0.0122 106.63)",
+          "oklch(84% 0.0122 106.63)",
+          "oklch(95% 0.0122 106.63)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0199 151.38)",
+          "oklch(26% 0.0199 151.38)",
+          "oklch(38% 0.0199 151.38)",
+          "oklch(49% 0.0199 151.38)",
+          "oklch(61% 0.0199 151.38)",
+          "oklch(72% 0.0199 151.38)",
+          "oklch(84% 0.0199 151.38)",
+          "oklch(95% 0.0199 151.38)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15% 0.0165 142.56)",
+          "oklch(26% 0.0165 142.56)",
+          "oklch(38% 0.0165 142.56)",
+          "oklch(49% 0.0165 142.56)",
+          "oklch(61% 0.0165 142.56)",
+          "oklch(72% 0.0165 142.56)",
+          "oklch(84% 0.0165 142.56)",
+          "oklch(95% 0.0165 142.56)"
+        ]
+      },
+      "accent-foreground": {
+        "role": "secondary",
+        "displayName": "Accent Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0735 159.83)",
+          "oklch(26% 0.0735 159.83)",
+          "oklch(38% 0.0735 159.83)",
+          "oklch(49% 0.0735 159.83)",
+          "oklch(61% 0.0735 159.83)",
+          "oklch(72% 0.0735 159.83)",
+          "oklch(84% 0.0735 159.83)",
+          "oklch(95% 0.0735 159.83)"
+        ]
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Destructive",
+        "tonalRamp": [
+          "oklch(15% 0.1558 25.61)",
+          "oklch(26% 0.1558 25.61)",
+          "oklch(38% 0.1558 25.61)",
+          "oklch(49% 0.1558 25.61)",
+          "oklch(61% 0.1558 25.61)",
+          "oklch(72% 0.1558 25.61)",
+          "oklch(84% 0.1558 25.61)",
+          "oklch(95% 0.1558 25.61)"
+        ]
+      },
+      "destructive-foreground": {
+        "role": "neutral",
+        "displayName": "Destructive Foreground",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15% 0.0175 127.36)",
+          "oklch(26% 0.0175 127.36)",
+          "oklch(38% 0.0175 127.36)",
+          "oklch(49% 0.0175 127.36)",
+          "oklch(61% 0.0175 127.36)",
+          "oklch(72% 0.0175 127.36)",
+          "oklch(84% 0.0175 127.36)",
+          "oklch(95% 0.0175 127.36)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Input",
+        "tonalRamp": [
+          "oklch(15% 0.0229 127.45)",
+          "oklch(26% 0.0229 127.45)",
+          "oklch(38% 0.0229 127.45)",
+          "oklch(49% 0.0229 127.45)",
+          "oklch(61% 0.0229 127.45)",
+          "oklch(72% 0.0229 127.45)",
+          "oklch(84% 0.0229 127.45)",
+          "oklch(95% 0.0229 127.45)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Ring",
+        "tonalRamp": [
+          "oklch(15% 0.0735 159.83)",
+          "oklch(26% 0.0735 159.83)",
+          "oklch(38% 0.0735 159.83)",
+          "oklch(49% 0.0735 159.83)",
+          "oklch(61% 0.0735 159.83)",
+          "oklch(72% 0.0735 159.83)",
+          "oklch(84% 0.0735 159.83)",
+          "oklch(95% 0.0735 159.83)"
+        ]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Well",
+        "tonalRamp": [
+          "oklch(15% 0.0133 106.65)",
+          "oklch(26% 0.0133 106.65)",
+          "oklch(38% 0.0133 106.65)",
+          "oklch(49% 0.0133 106.65)",
+          "oklch(61% 0.0133 106.65)",
+          "oklch(72% 0.0133 106.65)",
+          "oklch(84% 0.0133 106.65)",
+          "oklch(95% 0.0133 106.65)"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Rail",
+        "tonalRamp": [
+          "oklch(15% 0.0106 106.60)",
+          "oklch(26% 0.0106 106.60)",
+          "oklch(38% 0.0106 106.60)",
+          "oklch(49% 0.0106 106.60)",
+          "oklch(61% 0.0106 106.60)",
+          "oklch(72% 0.0106 106.60)",
+          "oklch(84% 0.0106 106.60)",
+          "oklch(95% 0.0106 106.60)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page subject headings."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card detail subject."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Set names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions and supporting prose."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Native field labels."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Inventory controls."
+      }
+    },
+    "shadows": [
+      {
+        "name": "button",
+        "value": "0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1)",
+        "purpose": "Primary action."
+      },
+      {
+        "name": "button-outline",
+        "value": "0 1px 2px 0 rgb(0 0 0 / .05)",
+        "purpose": "Outline action."
+      },
+      {
+        "name": "dialog",
+        "value": "0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1)",
+        "purpose": "Detail overlay."
+      }
+    ],
+    "motion": [
+      {
+        "name": "specimen-hover",
+        "value": "180ms ease-out",
+        "purpose": "Border and card artwork lift."
+      },
+      {
+        "name": "skeleton",
+        "value": "1500ms ease-in-out infinite alternate",
+        "purpose": "Loading opacity to .45; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1250px"
+      },
+      {
+        "name": "rail-narrow",
+        "value": "1050px"
+      },
+      {
+        "name": "mobile",
+        "value": "760px"
+      },
+      {
+        "name": "small",
+        "value": "480px"
+      }
+    ],
+    "themes": {
+      "dark": {
+        "background": "hsl(137 13% 10%)",
+        "foreground": "hsl(87 23% 93%)",
+        "card": "hsl(132 14% 14%)",
+        "card-foreground": "hsl(87 23% 93%)",
+        "popover": "hsl(132 14% 14%)",
+        "popover-foreground": "hsl(87 23% 93%)",
+        "primary": "hsl(109 34% 73%)",
+        "primary-foreground": "hsl(137 22% 12%)",
+        "secondary": "hsl(132 14% 21%)",
+        "secondary-foreground": "hsl(87 23% 93%)",
+        "muted": "hsl(132 14% 19%)",
+        "muted-foreground": "hsl(103 10% 71%)",
+        "accent": "hsl(132 20% 23%)",
+        "accent-foreground": "hsl(109 34% 73%)",
+        "destructive": "hsl(0 50% 65%)",
+        "destructive-foreground": "hsl(0 0% 10%)",
+        "border": "hsl(123 10% 27%)",
+        "input": "hsl(123 10% 36%)",
+        "ring": "hsl(109 34% 73%)",
+        "well": "#2b362b",
+        "rail": "#1c251e"
+      }
+    },
+    "accessibility": {
+      "focus": "2px solid hsl(var(--ring)), 3px offset; controls use 2px offset",
+      "touchTarget": "42px intended floor; generic 36px buttons and 30px back button remain drift",
+      "reducedMotion": "Disable animation, transitions, and smooth scrolling."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Existing generic action variant; touch height is pending alignment.",
+      "html": "<button class=\"ds-button-primary\">Add to Collection</button>",
+      "css": ".ds-button-primary { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;border-radius:calc(var(--radius,.75rem) - 2px);height:36px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .15s;background:hsl(var(--primary,151 43% 25%));color:hsl(var(--primary-foreground,60 24% 96%));border:0;box-shadow:0 1px 3px rgb(0 0 0 / .1),0 1px 2px -1px rgb(0 0 0 / .1);} .ds-button-primary:hover {background:hsl(var(--primary,151 43% 25%) / .9);} .ds-button-primary:disabled {opacity:.5;pointer-events:none;} .ds-button-primary:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Outline button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Existing generic action variant; touch height is pending alignment.",
+      "html": "<button class=\"ds-button-outline\">Release Date Range</button>",
+      "css": ".ds-button-outline { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;border-radius:calc(var(--radius,.75rem) - 2px);height:36px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .15s;background:hsl(var(--background,60 24% 96%));color:hsl(var(--foreground,140 16% 16%));border:1px solid hsl(var(--input,88 14% 78%));box-shadow:0 1px 2px 0 rgb(0 0 0 / .05);} .ds-button-outline:hover {background:hsl(var(--accent,114 22% 91%));color:hsl(var(--primary,151 43% 25%));} .ds-button-outline:disabled {opacity:.5;pointer-events:none;} .ds-button-outline:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Ghost button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Existing generic action variant; touch height is pending alignment.",
+      "html": "<button class=\"ds-button-ghost\">Clear Filters</button>",
+      "css": ".ds-button-ghost { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;border-radius:calc(var(--radius,.75rem) - 2px);height:36px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .15s;background:transparent;color:hsl(var(--foreground,140 16% 16%));border:0;} .ds-button-ghost:hover {background:hsl(var(--accent,114 22% 91%));color:hsl(var(--primary,151 43% 25%));} .ds-button-ghost:disabled {opacity:.5;pointer-events:none;} .ds-button-ghost:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Native search",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled inventory search.",
+      "html": "<label class=\"ds-field\">Find a set<input class=\"ds-control\" type=\"search\" placeholder=\"Search sets...\"></label>",
+      "css": ".ds-field {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:grid;gap:7px;font-size:11px;font-weight:600;color:hsl(var(--muted-foreground,132 6% 37%));} .ds-control {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;height:42px;padding:0 12px;border:1px solid hsl(var(--input,88 14% 78%));border-radius:7px;background:hsl(var(--background,60 24% 96%));color:hsl(var(--foreground,140 16% 16%));font-size:12px;} .ds-control::placeholder {color:hsl(var(--muted-foreground,132 6% 37%));opacity:1;} .ds-control:hover {border-color:hsl(var(--primary,151 43% 25%));} .ds-control:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Series chip",
+      "kind": "chip",
+      "refersTo": "series-chip",
+      "description": "Quick era selection with explicit pressed state.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">All eras</button>",
+      "css": ".ds-chip {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;min-height:42px;padding:0 13px;font-size:11px;border:1px solid hsl(var(--border,88 14% 83%));border-radius:6px;background:transparent;color:hsl(var(--muted-foreground,132 6% 37%));} .ds-chip:hover,.ds-chip[aria-pressed=\"true\"] {background:hsl(var(--accent,114 22% 91%));border-color:hsl(var(--primary,151 43% 25%));color:hsl(var(--primary,151 43% 25%));} .ds-chip:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Library navigation",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Forest marks the active inventory destination.",
+      "html": "<nav aria-label=\"Main\"><button class=\"ds-nav\" aria-current=\"page\">Sets</button><button class=\"ds-nav\">My Collection</button></nav>",
+      "css": ".ds-nav {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:block;min-height:46px;width:100%;padding:0 12px;text-align:left;border:0;border-radius:8px;background:transparent;color:hsl(var(--foreground,140 16% 16%));font-size:13px;font-weight:550;} .ds-nav:hover {background:hsl(var(--muted,60 20% 91%));} .ds-nav[aria-current=\"page\"] {background:hsl(var(--primary,151 43% 25%));color:hsl(var(--primary-foreground,60 24% 96%));} .ds-nav:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Set specimen",
+      "kind": "card",
+      "refersTo": "specimen",
+      "description": "Contained official imagery, truthful counts, and flat borders.",
+      "html": "<article class=\"ds-specimen\"><button class=\"ds-open\"><div class=\"ds-well\">No image</div><div class=\"ds-info\"><h3>Set name</h3><p>Card total unavailable</p></div></button></article>",
+      "css": ".ds-specimen {border:1px solid hsl(var(--border,88 14% 83%));border-radius:12px;overflow:hidden;background:hsl(var(--card,0 0% 100%));transition:border-color .18s ease-out;} .ds-specimen:hover {border-color:hsl(var(--primary,151 43% 25%));} .ds-open {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;padding:0;width:100%;border:0;background:transparent;text-align:left;color:hsl(var(--foreground,140 16% 16%));} .ds-well {height:174px;display:grid;place-items:center;background:var(--well,#eeeee4);font:24px Georgia,serif;} .ds-info {padding:20px 19px 13px;} .ds-info h3 {margin:0;font-size:16px;font-weight:650;line-height:1.35;} .ds-info p {font-size:11px;color:hsl(var(--muted-foreground,132 6% 37%));margin-top:7px;} .ds-open:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    },
+    {
+      "name": "Quantity stepper",
+      "kind": "custom",
+      "refersTo": "quantity-stepper",
+      "description": "Visible direct copy adjustment with tabular quantity.",
+      "html": "<div class=\"ds-stepper\"><button class=\"ds-step\" aria-label=\"Decrease quantity\" disabled>−</button><output aria-label=\"Quantity: 0\">0</output><button class=\"ds-step\" aria-label=\"Increase quantity\">+</button></div>",
+      "css": ".ds-stepper {font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;display:flex;align-items:center;gap:2px;font-variant-numeric:tabular-nums;color:hsl(var(--foreground,140 16% 16%));} .ds-step {height:42px;width:42px;border:0;border-radius:5px;background:transparent;color:inherit;cursor:pointer;} .ds-step:hover:not(:disabled) {background:hsl(var(--accent,114 22% 91%));} .ds-step:disabled {opacity:.35;} .ds-stepper output {min-width:19px;text-align:center;font-size:11px;} .ds-step:focus-visible { outline:2px solid hsl(var(--ring,151 43% 25%));outline-offset:3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Collector's archive",
+    "overview": "A museum’s field catalogue translated into a collector’s binder: quiet cream paper, forest selection states, and carefully separated card specimens. Serif subject headings give the collection character while sans controls keep inventory work clear.\n\nArtwork is evidence. Real logos and cards occupy neutral wells; counts and prices remain factual, and ownership is visible beside the controls that change it. The collection is local to this device and retains the existing version 3 storage format.",
+    "keyCharacteristics": [
+      "Cream paper and forest green",
+      "Serif subjects, sans inventory controls",
+      "Contained artwork and visible ownership"
+    ],
+    "rules": [
+      {
+        "name": "The Ownership Rule",
+        "body": "Use forest to identify active navigation, selected filters, owned cards, and collection actions.",
+        "section": "colors"
+      },
+      {
+        "name": "The Subject Rule",
+        "body": "Use Georgia for subject headings; keep controls, metadata, quantities, and prices in system sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Specimen Rule",
+        "body": "Keep inventory cards flat; separate artwork wells from information with tone and borders.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Visible Quantity Rule",
+        "body": "Keep Add/Remove and quantity controls visible beneath artwork, never available only on hover.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do preserve contained card artwork and honest missing-data states.",
+      "Do keep focus visible and respect reduced motion.",
+      "Do keep quantity updates consistent across the set, collection, and detail views."
+    ],
+    "donts": [
+      "Don't invent card counts, prices, release dates, or ownership.",
+      "Don't hide collection controls behind hover.",
+      "Don't add accounts, cloud synchronization, or replace version 3 saved quantities as part of visual work."
+    ]
+  }
+}

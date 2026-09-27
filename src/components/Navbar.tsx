@@ -1,162 +1,28 @@
-import { useState, useEffect } from "react";
-import { useCollection } from "@/lib/collection";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuList,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
-import { CreditCard, LayoutGrid } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-/* ------------------------------------------------------------------ */
+import { useTheme } from 'next-themes';
+import { useCollection } from '@/lib/collection';
+import { BookOpen, Layers, Moon, Sun, CircleDot, ArrowUpRight } from 'lucide-react';
 
 interface NavbarProps {
-  view: "sets" | "cards" | "collection";
-  onSetSelectView: (view: "sets" | "cards" | "collection") => void;
+  view: 'sets' | 'cards' | 'collection';
+  onSetSelectView: (view: 'sets' | 'cards' | 'collection') => void;
 }
-
-const Navbar: React.FC<NavbarProps> = ({ view, onSetSelectView }) => {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const { getCollectionCards } = useCollection();
-
-  /* --------------- theme toggle --------------- */
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    document.documentElement.classList.toggle("dark");
-    localStorage.setItem("theme", newTheme);
-  };
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
-
-    setTheme(shouldBeDark ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", shouldBeDark);
-  }, []);
-
-  const collectionSize = getCollectionCards().length;
-
-  /* ------------------------------------------------------------------ */
-
-  return (
-    <div className="border-b sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        {/* ---------------- desktop nav ---------------- */}
-        <div className="mr-4 hidden md:flex">
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem className="mr-2">
-                <Button
-                  asChild
-                  variant="link"
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    view === "sets" && "text-primary font-semibold",
-                  )}
-                  onClick={() => onSetSelectView("sets")}
-                >
-                  <div className="flex items-center">
-                    <LayoutGrid className="mr-2 h-4 w-4" />
-                    Sets
-                  </div>
-                </Button>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <Button
-                  asChild
-                  variant="link"
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    view === "collection" && "text-primary font-semibold",
-                  )}
-                  onClick={() => onSetSelectView("collection")}
-                >
-                  <div className="flex items-center">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    My Collection
-                    {collectionSize > 0 && (
-                      <Badge className="ml-2 bg-primary">{collectionSize}</Badge>
-                    )}
-                  </div>
-                </Button>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
-
-        {/* ---------------- mobile nav & misc ---------------- */}
-        <div className="flex items-center justify-between flex-1 md:justify-end">
-          <div className="flex items-center md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mr-2"
-              asChild
-              onClick={() => onSetSelectView("sets")}
-            >
-              <div className={cn("p-2 rounded-md", view === "sets" && "bg-muted")}>
-                <LayoutGrid className="h-5 w-5" />
-              </div>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              asChild
-              onClick={() => onSetSelectView("collection")}
-            >
-              <div
-                className={cn(
-                  "p-2 rounded-md",
-                  view === "collection" && "bg-muted",
-                )}
-              >
-                <CreditCard className="h-5 w-5" />
-                {collectionSize > 0 && (
-                  <Badge className="absolute -top-1 -right-1 text-xs w-5 h-5 flex items-center justify-center p-0 rounded-full">
-                    {collectionSize}
-                  </Badge>
-                )}
-              </div>
-            </Button>
-          </div>
-
-          {/* theme switch + attribution */}
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {theme === "light" ? (
-                <MoonIcon className="h-5 w-5" />
-              ) : (
-                <SunIcon className="h-5 w-5" />
-              )}
-            </Button>
-
-            <a
-              href="https://pokemontcg.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors ml-2 hidden sm:block"
-            >
-              Powered by Pokémon&nbsp;TCG&nbsp;API
-            </a>
-          </div>
-        </div>
-      </div>
+export default function Navbar({ view, onSetSelectView }: NavbarProps) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const { cardQuantities } = useCollection();
+  const unique = Object.keys(cardQuantities).length;
+  const quantity = Object.values(cardQuantities).reduce((sum, value) => sum + value, 0);
+  return <aside className="library-rail">
+    <button type="button" className="wordmark" onClick={() => onSetSelectView('sets')} aria-label="Pokémon tracker home">
+      <CircleDot size={31} strokeWidth={1.6} /><span>Pokémon<span className="wordmark-caption">Collection tracker</span></span>
+    </button>
+    <nav aria-label="Main" className="library-nav">
+      <button type="button" className={view !== 'collection' ? 'nav-item is-active' : 'nav-item'} aria-current={view !== 'collection' ? 'page' : undefined} onClick={() => onSetSelectView('sets')}><Layers size={19} /><span>Sets</span><span className="nav-hint">Explore</span></button>
+      <button type="button" className={view === 'collection' ? 'nav-item is-active' : 'nav-item'} aria-current={view === 'collection' ? 'page' : undefined} onClick={() => onSetSelectView('collection')}><BookOpen size={19} /><span>My Collection</span>{unique > 0 && <span className="nav-count">{unique}</span>}</button>
+    </nav>
+    <div className="binder-note"><BookOpen size={23} strokeWidth={1.5} /><h2>Your binder, at a glance.</h2><p><strong>{unique}</strong> unique cards<br /><strong>{quantity}</strong> total copies</p><span className="save-indicator"><span />Saved on this device</span></div>
+    <div className="rail-bottom">
+      <button type="button" className="theme-button" aria-label="Toggle theme" onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>{resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}<span>{resolvedTheme === 'dark' ? 'Light appearance' : 'Dark appearance'}</span></button>
+      <a className="source-link" href="https://tcgdex.dev" target="_blank" rel="noreferrer">Card data by TCGdex <ArrowUpRight size={14} /></a>
     </div>
-  );
-};
-
-export default Navbar;
+  </aside>;
+}

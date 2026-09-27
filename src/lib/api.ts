@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchAllSets, fetchAllSeries, fetchSetWithCards } from './tcgdex';
+import { fetchAllSets, fetchAllSeries, fetchSetWithCards, fetchCardDetails, fetchSeriesWithSets } from './tcgdex';
 import { 
   PokemonSet, 
   PokemonCard, 
@@ -16,6 +16,7 @@ export type { PokemonSet, PokemonCard, CardImage, Series };
 // Helper function to apply client-side filters to sets
 const applySetFilters = (sets: PokemonSet[], filters: Record<string, string>): PokemonSet[] => {
   return sets.filter(set => {
+    if (filters.name && !set.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
     // Handle legality filters
     if (filters['legalities.standard'] === 'legal' && set.legalities.standard !== 'legal') {
       return false;
@@ -56,8 +57,8 @@ const applySetFilters = (sets: PokemonSet[], filters: Record<string, string>): P
 
 // Hook for fetching sets with pagination and filtering
 export const useSets = (page: number, pageSize: number, filters: Record<string, string> = {}) => {
+  const seriesId = filters.series;
   const [sets, setSets] = useState<PokemonSet[]>([]);
-  const [totalSets, setTotalSets] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -70,31 +71,26 @@ export const useSets = (page: number, pageSize: number, filters: Record<string, 
       
       try {
         // Fetch all sets from TCGdex
-        const allSets = await fetchAllSets();
+        const selectedSeries = seriesId ? await fetchSeriesWithSets(seriesId) : null;
+        const allSets = selectedSeries ? selectedSeries.sets : await fetchAllSets();
         
         if (cancelled) return;
         
         // Normalize to app types
-        const normalizedSets = allSets.map(normalizeTCGSet);
-        
-        // Apply filters
-        const filteredSets = applySetFilters(normalizedSets, filters);
+        const normalizedSets = allSets.map(set => ({
+          ...normalizeTCGSet(set),
+          ...(selectedSeries ? { series: selectedSeries.name } : {}),
+        }));
         
         // Sort by release date (newest first)
-        filteredSets.sort((a, b) => {
+        normalizedSets.sort((a, b) => {
           const dateA = new Date(a.releaseDate || '1900-01-01');
           const dateB = new Date(b.releaseDate || '1900-01-01');
           return dateB.getTime() - dateA.getTime();
         });
         
-        // Apply pagination
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const paginatedSets = filteredSets.slice(startIndex, endIndex);
-        
         if (!cancelled) {
-          setSets(paginatedSets);
-          setTotalSets(filteredSets.length);
+          setSets(normalizedSets);
         }
       } catch (error) {
         if (!cancelled) {
@@ -112,9 +108,10 @@ export const useSets = (page: number, pageSize: number, filters: Record<string, 
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, JSON.stringify(filters)]);
+  }, [seriesId]);
   
-  return { sets, totalSets, loading, error };
+  const filteredSets = applySetFilters(sets, filters);
+  return { sets: filteredSets.slice((page - 1) * pageSize, page * pageSize), totalSets: filteredSets.length, loading, error };
 };
 
 // Helper function to apply client-side filters to cards
@@ -142,14 +139,14 @@ const applyCardFilters = (cards: PokemonCard[], filters: Record<string, string>)
 // Hook for fetching cards from a specific set with filtering
 export const useCards = (setId: string | null, page: number, pageSize: number, filters: Record<string, string> = {}) => {
   const [cards, setCards] = useState<PokemonCard[]>([]);
-  const [totalCards, setTotalCards] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!setId) {
       setCards([]);
-      setTotalCards(0);
+      setLoading(false);
+      setError(null);
       return;
     }
     
@@ -170,24 +167,15 @@ export const useCards = (setId: string | null, page: number, pageSize: number, f
           normalizeTCGCard(card, setData)
         );
         
-        // Apply filters
-        const filteredCards = applyCardFilters(normalizedCards, filters);
-        
         // Sort by card number
-        filteredCards.sort((a, b) => {
+        normalizedCards.sort((a, b) => {
           const numA = parseInt(a.number) || 0;
           const numB = parseInt(b.number) || 0;
           return numA - numB;
         });
         
-        // Apply pagination
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const paginatedCards = filteredCards.slice(startIndex, endIndex);
-        
         if (!cancelled) {
-          setCards(paginatedCards);
-          setTotalCards(filteredCards.length);
+          setCards(normalizedCards);
         }
       } catch (error) {
         if (!cancelled) {
@@ -205,9 +193,10 @@ export const useCards = (setId: string | null, page: number, pageSize: number, f
     return () => {
       cancelled = true;
     };
-  }, [setId, page, pageSize, JSON.stringify(filters)]);
+  }, [setId]);
   
-  return { cards, totalCards, loading, error };
+  const filteredCards = applyCardFilters(cards, filters);
+  return { cards: filteredCards.slice((page - 1) * pageSize, page * pageSize), totalCards: filteredCards.length, loading, error };
 };
 
 // Hook for fetching a single card by ID
@@ -219,37 +208,31 @@ export const useCard = (cardId: string | null) => {
   useEffect(() => {
     if (!cardId) {
       setCard(null);
+      setLoading(false);
+      setError(null);
       return;
     }
     
     let cancelled = false;
     
     const fetchCard = async () => {
+      setCard(null);
       setLoading(true);
       setError(null);
       
       try {
-        // Extract set ID from card ID (format: setId-cardNumber)
-        const setId = cardId.split('-')[0];
-        
-        // Fetch the full set with cards
-        const setData = await fetchSetWithCards(setId);
-        
-        if (cancelled) return;
-        
-        // Find the specific card
-        const tcgCard = setData.cards?.find(c => c.id === cardId);
-        
-        if (tcgCard) {
-          const normalizedCard = normalizeTCGCard(tcgCard, setData);
-          if (!cancelled) {
-            setCard(normalizedCard);
+        const tcgCard = await fetchCardDetails(cardId);
+        const normalized = normalizeTCGCard(tcgCard);
+        if (!cancelled) { setCard(normalized); setLoading(false); }
+        // Enrich prices without blocking card information or discarding TCGdex fallback.
+        try {
+          const response = await fetch(`/api/cardmarket/${encodeURIComponent(cardId)}`, { signal: AbortSignal.timeout(10000) });
+          if (response.ok) {
+            const data = await response.json();
+            const quotes = Array.isArray(data.quotes) ? data.quotes.filter((quote: NonNullable<PokemonCard['marketPrices']>[number]) => quote?.provider === 'cardmarket' && quote.currency === 'EUR' && quote.source === 'pokemontcgapi.com' && typeof quote.values === 'object' && quote.values !== null && Object.values(quote.values).every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)) : [];
+            if (!cancelled && quotes.length) setCard({ ...normalized, marketPrices: [...(normalized.marketPrices || []).filter(quote => quote.provider !== 'cardmarket'), ...quotes] });
           }
-        } else {
-          if (!cancelled) {
-            setError(new Error('Card not found'));
-          }
-        }
+        } catch { /* Keep the existing prices when the additional source is unavailable. */ }
       } catch (error) {
         if (!cancelled) {
           setError(error instanceof Error ? error : new Error('Unknown error occurred'));

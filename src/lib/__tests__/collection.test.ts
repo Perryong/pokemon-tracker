@@ -379,3 +379,14 @@ describe('Migration Integration', () => {
     expect(stored.cardQuantities).toBeDefined();
   });
 });
+
+describe('Live collection consistency', () => {
+  it('keeps two mounted consumers synchronized', () => {
+    localStorage.clear();
+    const first = renderHook(() => useCollection());
+    const second = renderHook(() => useCollection());
+    act(() => first.result.current.setQuantity('base1-1', 3));
+    expect(second.result.current.getQuantity('base1-1')).toBe(3);
+    first.unmount(); second.unmount(); localStorage.clear();
+  });
+});
