@@ -73,6 +73,8 @@ The repository currently has pre-existing lint findings outside the updated appl
 
 ## Deployment
 
+GitHub Pages deployment is handled by `.github/workflows/deploy-pages.yml` on every push to `main`, or manually from the Actions tab. Set **Settings → Pages → Source** to **GitHub Actions**. The workflow builds with the Pages URL base path and publishes `dist/` to https://perryong.github.io/pokemon-tracker/.
+
 `npm run build` creates the frontend in `dist/`. The authenticated Cardmarket integration also needs a server endpoint: deploying only those static files does **not** deploy `/api/cardmarket/:cardId`.
 
 For production, host an equivalent server or serverless handler based on `server/cardmarket.ts`, configure `PTCG_API_KEY` in its secret environment, and route the frontend’s same-origin pricing requests to it. Apply access controls and shared request limits appropriate to the deployment. Vite preview is for local verification, not a production server.
