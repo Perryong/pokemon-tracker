@@ -9,6 +9,7 @@ SPEC = importlib.util.spec_from_file_location("issue_claim", Path(__file__).with
 c = importlib.util.module_from_spec(SPEC)
 if SPEC.loader and Path(SPEC.origin).exists():
     SPEC.loader.exec_module(c)
+c.LEDGER_KEY = "test-only-ledger-signing-key-not-a-credential"
 
 
 def request(**changes):
@@ -59,7 +60,7 @@ class Claims(unittest.TestCase):
         api = FakeAPI(); api.fail_assignment = True
         with self.assertRaises(c.ClaimError): c.run(request(), api)
         self.assertEqual(api.events()[-1]["event"], "reserved")
-        other = request(); other["session"] = "agent-2"
+        other = request(); other.update(session="agent-2", run_id="102")
         with self.assertRaises(c.ClaimError): c.run(other, api)
         api.fail_assignment = False
         result = c.run(request(), api)
@@ -74,7 +75,7 @@ class Claims(unittest.TestCase):
         self.assertEqual(result["project_sync"], "pending")
         api.comments.append(dict(id=1000, user=dict(login="mallory", type="User"),
                                  body=c.MARKER + json.dumps(dict(event="released", claim_id="100", run_id="100"))))
-        other = request(); other["session"] = "agent-2"
+        other = request(); other.update(session="agent-2", run_id="102")
         with self.assertRaises(c.ClaimError): c.run(other, api)
         self.assertEqual(api.issue["assignees"], [dict(login="alice")])
 
@@ -94,15 +95,49 @@ class Claims(unittest.TestCase):
         api = FakeAPI()
         api.comments = [dict(id=i, user=dict(login="human", type="User"), body="Progress") for i in range(100)]
         c.run(request(), api)
-        other = request(); other["session"] = "agent-2"
+        other = request(); other.update(session="agent-2", run_id="102")
         with self.assertRaises(c.ClaimError): c.run(other, api)
-        release = request(); release.update(operation="release", handoff="Branch saved; tests passed; no blockers.")
+        release = request(); release.update(operation="release", run_id="101", handoff="Branch saved; tests passed; no blockers.")
         api.fail_removal = True
         with self.assertRaises(c.ClaimError): c.run(release, api)
         with self.assertRaises(c.ClaimError): c.run(other, api)
         api.fail_removal = False
         self.assertEqual(c.run(release, api)["outcome"], "released")
         self.assertEqual(c.run(other, api)["outcome"], "accepted")
+
+    def test_bot_forgery_and_cross_issue_replay(self):
+        self.assertTrue(hasattr(c, "sign_event"), "ledger payload authentication is not implemented")
+        api = FakeAPI(); c.run(request(), api)
+        forged = copy.deepcopy(api.comments[-1])
+        event = json.loads(forged["body"][len(c.MARKER):]); event["session"] = "agent-2"
+        forged["body"] = c.MARKER + json.dumps(event); api.comments.append(forged)
+        other = request(); other.update(session="agent-2", run_id="102")
+        with self.assertRaises(c.ClaimError): c.run(other, api)
+        api.comments.pop()
+        # A correctly signed event for another issue is not valid for this issue.
+        event = dict(api.events()[-1]); event["issue"] = "2"
+        forged["body"] = c.MARKER + json.dumps(c.sign_event(event)); api.comments.append(forged)
+        with self.assertRaises(c.ClaimError): c.run(request(), api)
+
+    def test_completed_requests_cannot_affect_new_lifecycle(self):
+        api = FakeAPI(); c.run(request(), api)
+        release = request(); release.update(operation="release", run_id="101", handoff="Saved; no remaining work.")
+        c.run(release, api)
+        replay = request(); replay["run_attempt"] = "2"
+        with self.assertRaises(c.ClaimError): c.run(replay, api)
+        fresh = request(); fresh["run_id"] = "102"
+        c.run(fresh, api)
+        release["run_attempt"] = "2"
+        with self.assertRaises(c.ClaimError): c.run(release, api)
+        self.assertEqual(api.events()[-1]["claim_id"], "102")
+
+    def test_new_dispatch_gets_matching_acknowledgement(self):
+        api = FakeAPI(); original = c.run(request(), api)
+        fresh = request(); fresh["run_id"] = "102"
+        self.assertEqual(c.run(fresh, api)["claim_id"], original["claim_id"])
+        self.assertEqual(api.events()[-1]["run_id"], "102")
+        count = len(api.events()); c.run(fresh, api)
+        self.assertEqual(len(api.events()), count)
 
     def test_resume_honors_new_block_and_run_provenance(self):
         api = FakeAPI(); c.run(request(), api)
@@ -114,7 +149,7 @@ class Claims(unittest.TestCase):
     def test_unknown_comment_write_retains_reservation(self):
         api = FakeAPI(); api.unknown_comment = True
         with self.assertRaises(c.ClaimError): c.run(request(), api)
-        other = request(); other["session"] = "agent-2"
+        other = request(); other.update(session="agent-2", run_id="102")
         with self.assertRaises(c.ClaimError): c.run(other, api)
         api.unknown_comment = False
         self.assertEqual(c.run(request(), api)["outcome"], "accepted")
@@ -146,7 +181,7 @@ class FakeAPI:
                     [{"id": s, "name": s} for s in ["Backlog", "Ready", "In progress", "Blocked", "In review", "Done"]]}}}],
                 "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}
         if "/collaborators/" in path: return {"permission": self.permission}
-        if path.endswith("/actions/runs/100"):
+        if "/actions/runs/" in path:
             return dict(path=".github/workflows/issue-claim.yml", head_branch="untrusted" if self.bad_run else "main", event="workflow_dispatch",
                         actor=dict(login="alice"), triggering_actor=dict(login="alice"))
         if path == "/repos/ChouBokYann/pokemon-reselling": return dict(default_branch="main")
@@ -188,4 +223,5 @@ class FakeAPI:
 
 if __name__ == "__main__":
     unittest.main()
+
 

@@ -1,5 +1,7 @@
 """Serialized GitHub issue claims. Dispatch only through issue-claim.yml."""
 import json
+import hashlib
+import hmac
 import os
 import re
 import sys
@@ -11,6 +13,7 @@ REPOS = {"ChouBokYann/pokemon-reselling", "Perryong/pokemon-tracker"}
 PROJECT = "PVT_kwHOBwH5gM4BlVDy"
 MARKER = "<!-- pokemon-coordination/v1 -->\n"
 WORKFLOW = ".github/workflows/issue-claim.yml"
+LEDGER_KEY = os.environ.get("COORDINATION_LEDGER_KEY", "")
 
 
 class ClaimError(Exception):
@@ -22,6 +25,7 @@ def validate_request(r):
             or not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", r.get("session", ""))
             or r.get("operation") not in {"claim", "release"}
             or not re.fullmatch(r"[1-9][0-9]*", str(r.get("run_id", "")))
+            or not re.fullmatch(r"[1-9][0-9]*", str(r.get("run_attempt", "")))
             or not re.fullmatch(r"[A-Za-z0-9-]{1,39}", r.get("actor", ""))
             or not isinstance(r.get("override"), bool)):
         raise ClaimError("Invalid request. Use a canonical issue number and a non-secret session identifier.")
@@ -58,16 +62,35 @@ def pages(api, path, credential="local"):
     raise ClaimError("Pagination safety limit reached; maintainer review required.")
 
 
-def active_claim(api, base, default_branch):
+def sign_event(value):
+    if not LEDGER_KEY: raise ClaimError("Protected ledger signing key is not configured.")
+    unsigned = {k: v for k, v in value.items() if k != "signature"}
+    data = json.dumps(unsigned, sort_keys=True, separators=(",", ":")).encode()
+    return dict(unsigned, signature=hmac.new(LEDGER_KEY.encode(), data, hashlib.sha256).hexdigest())
+
+
+def read_ledger(api, base, default_branch):
     active = None
     verified_runs = {}
+    events, seen = [], {}
     for comment in pages(api, base + "/comments"):
         body = comment.get("body", "")
         if not body.startswith(MARKER) or comment.get("user", {}).get("login") != "github-actions[bot]": continue
         if comment["user"].get("type") != "Bot": continue
         try: event = json.loads(body[len(MARKER):])
         except (ValueError, TypeError): raise ClaimError("Malformed trusted ledger event; maintainer reconciliation required.")
+        if not isinstance(event, dict): raise ClaimError("Malformed ledger event.")
+        signature = event.get("signature", "")
+        if not isinstance(signature, str) or not hmac.compare_digest(signature, sign_event(event)["signature"]):
+            raise ClaimError("Unauthenticated bot event; maintainers must reconcile the invalid comment.")
+        if base != f"/repos/{event.get('repo')}/issues/{event.get('issue')}":
+            raise ClaimError("Ledger event belongs to another repository or issue.")
         if event.get("event") not in {"reserved", "accepted", "releasing", "released"}: continue
+        event_key = (event.get("run_id"), event.get("run_attempt"), event["event"])
+        if event_key in seen:
+            if seen[event_key] != event: raise ClaimError("Conflicting duplicate ledger event.")
+            continue
+        seen[event_key] = event
         run_id = str(event.get("run_id", ""))
         if not re.fullmatch(r"[1-9][0-9]*", run_id): raise ClaimError("Invalid ledger provenance.")
         if run_id not in verified_runs:
@@ -85,10 +108,13 @@ def active_claim(api, base, default_branch):
                 raise ClaimError("Conflicting ledger reservations; maintainer reconciliation required.")
             active = event
         elif active and active["claim_id"] == event["claim_id"]:
+            if (active["actor"], active["session"]) != (event["actor"], event["session"]):
+                raise ClaimError("Ledger transition changes the claimed session.")
             active = None if event["event"] == "released" else event
         else:
             raise ClaimError("Ledger transition without matching reservation.")
-    return active
+        events.append(event)
+    return active, events
 
 
 def section(body, name):
@@ -171,7 +197,13 @@ def run(r, api):
     base = repo_base + "/issues/" + r["issue"]
     issue = api("GET", base)
     if "pull_request" in issue: raise ClaimError("Claims apply to issues, not pull requests.")
-    active = active_claim(api, base, default_branch)
+    active, history = read_ledger(api, base, default_branch)
+    previous_request = [e for e in history if e["run_id"] == r["run_id"]]
+    if previous_request:
+        if (not active or any(e["claim_id"] != active["claim_id"] for e in previous_request)
+                or any(e.get("operation") != r["operation"] for e in previous_request)
+                or any(e["event"] == "released" for e in previous_request)):
+            raise ClaimError("This workflow request already ended or belongs to an earlier claim; use a new dispatch.")
     item = None
     if r["operation"] == "claim":
         dependencies_ok(api, r["repo"], r["issue"])
@@ -187,18 +219,19 @@ def run(r, api):
 
     def event(kind):
         value = dict(claim, event=kind, executor=r["actor"], run_id=r["run_id"], run_attempt=r["run_attempt"],
-                     utc=datetime.now(timezone.utc).isoformat())
+                     utc=datetime.now(timezone.utc).isoformat(), repo=r["repo"], issue=r["issue"], operation=r["operation"])
         if kind in {"reserved", "accepted"}: value["dependencies"] = "verified"
         if kind in {"releasing", "released"}: value.update(reason=r["reason"], handoff=r["handoff"])
-        api("POST", base + "/comments", {"body": MARKER + json.dumps(value, sort_keys=True)})
+        api("POST", base + "/comments", {"body": MARKER + json.dumps(sign_event(value), sort_keys=True)})
 
     if decision == "accept": event("reserved")
     if decision in {"accept", "resume"}:
         if not active or active["event"] != "accepted":
             api("POST", base + "/assignees", {"assignees": [r["actor"]]})
+        if not any(e["event"] == "accepted" and e["run_attempt"] == r["run_attempt"] for e in previous_request):
             event("accepted")
         current = api("GET", base)
-        verified = active_claim(api, base, default_branch)
+        verified, _ = read_ledger(api, base, default_branch)
         if (not verified or verified["claim_id"] != claim["claim_id"] or verified["event"] != "accepted"
                 or [a["login"] for a in current["assignees"]] != [r["actor"]]):
             raise ClaimError("Ownership verification failed; reservation remains until reconciliation.")
@@ -210,7 +243,7 @@ def run(r, api):
         api("DELETE", base + "/assignees", {"assignees": [claim["actor"]]})
         if api("GET", base)["assignees"]: raise ClaimError("Assignment removal not verified; release remains pending.")
         event("released")
-        if active_claim(api, base, default_branch): raise ClaimError("Release not verified; reconcile ledger.")
+        if read_ledger(api, base, default_branch)[0]: raise ClaimError("Release not verified; reconcile ledger.")
         outcome = "released"
         status = "Blocked"
         if issue["state"] == "open":

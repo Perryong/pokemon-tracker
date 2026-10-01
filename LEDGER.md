@@ -4,14 +4,14 @@ The authoritative work ledger is each GitHub issue's timeline and linked PR evid
 
 ## Ownership events
 
-The trusted `issue-claim.yml` workflow writes comments prefixed with `<!-- pokemon-coordination/v1 -->`. Only verified GitHub Actions bot events count as ownership controls. Their JSON records UTC time, accountable actor, session, claim ID, executing actor, workflow run/attempt, and result.
+The trusted `issue-claim.yml` workflow writes comments prefixed with `<!-- pokemon-coordination/v1 -->`. Ownership controls require both verified workflow provenance and an HMAC signature from the protected environment's ledger key. The signed JSON binds the repository, issue, UTC time, accountable actor, session, claim ID, executing actor, operation, workflow run/attempt, and result. A bot name or copied run ID alone is insufficient.
 
 - `reserved`: exclusive acquisition started; it blocks competing sessions even if a later write fails.
 - `accepted`: assignment and ledger ownership are recorded. Work starts only after this event AND its workflow run succeed.
 - `releasing`: release started; ownership remains reserved until removal is verified.
 - `released`: ownership ended, with handoff and optional override reason.
 
-Rejections are recorded in the failed workflow run's safe error output, not as changes to the issue's control history. Link that run from a human progress comment when context is needed. Human-authored lookalike control comments cannot release a claim. This is an operational ledger, not a tamper-proof audit system; maintainers must reconcile unexpected manual changes.
+Rejections are recorded in the failed workflow run's safe error output, not as changes to the issue's control history. Link that run from a human progress comment when context is needed. Human-authored lookalike control comments cannot release a claim. Invalid bot signatures stop processing for maintainer investigation; a confirmed unauthenticated comment may be removed after preserving incident evidence. This is an operational ledger, not a tamper-proof audit system; maintainers must reconcile unexpected manual changes.
 
 ## Progress entries
 
@@ -34,6 +34,8 @@ Corrections append new entries; do not rewrite history to imply a test passed or
 GitHub concurrency does not promise FIFO order. A pending request may be cancelled when another request arrives. Cancelled, skipped, queued, or failed runs never grant permission to start.
 
 After an unknown API outcome, inspect the issue and run before retrying. A reserved claim stays with its recorded user/session. That session may retry the claim; competing sessions must wait. A half-finished release remains reserved and can be retried. Maintainers may explicitly release abandoned work with a reason and handoff using the workflow. Never automatically expire ownership.
+
+Completed workflow request IDs cannot be reused to acquire or release a later claim. Start a new dispatch for a new ownership lifecycle. Fresh resume requests append a matching signed acknowledgement while keeping the original claim ID; repeated acknowledgements in the same run attempt are idempotent. Copied signed events are ignored as duplicates, not applied again.
 
 A recorded accepted/released event may exist after a later run failure. It still affects exclusivity, but a worker must reconcile and obtain a successful acknowledgement before starting. Project-sync warnings do not erase ownership: repair the Project view using AGENTS.md. A repeated release after an already completed release may be rejected because there is no active claim; inspect the released event and repair status rather than creating a new claim.
 
