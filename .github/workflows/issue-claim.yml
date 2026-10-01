@@ -1,0 +1,63 @@
+name: Claim or release an issue
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Canonical issue number (e.g. 12, not 012)
+        required: true
+        type: string
+      operation:
+        description: Ownership operation
+        required: true
+        type: choice
+        options: [claim, release]
+      session:
+        description: Non-secret human/agent session ID (letters, digits, dot, dash, underscore)
+        required: true
+        type: string
+      override:
+        description: Maintainer release of an abandoned claim (reason required)
+        type: boolean
+        default: false
+      reason:
+        description: Public-safe reason for maintainer override
+        type: string
+      handoff:
+        description: Public-safe branch/PR, checks, remaining work and blockers; required for release
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: issue-claim-${{ github.repository }}-${{ inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  coordinate:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INPUT_ISSUE: ${{ inputs.issue }}
+      INPUT_OPERATION: ${{ inputs.operation }}
+      INPUT_SESSION: ${{ inputs.session }}
+      INPUT_OVERRIDE: ${{ inputs.override }}
+      INPUT_REASON: ${{ inputs.reason }}
+      INPUT_HANDOFF: ${{ inputs.handoff }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify caller and request before using coordination credentials
+        run: python3 .github/scripts/issue_claim.py --authorize
+      - name: Record ownership and update project
+        env:
+          COORDINATION_READ_TOKEN: ${{ secrets.COORDINATION_READ_TOKEN }}
+          COORDINATION_PROJECT_TOKEN: ${{ secrets.COORDINATION_PROJECT_TOKEN }}
+        run: python3 .github/scripts/issue_claim.py
