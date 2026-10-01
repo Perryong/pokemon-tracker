@@ -14,6 +14,9 @@ progress:
 
 # State: Pokemon TCG Collection Tracker
 
+> Historical planning snapshot: some progress summaries below conflict. Use [CONTRIBUTING.md](../CONTRIBUTING.md) and the live issue ledger for current work; verify old TODOs against shipped code before creating new issues.
+
+
 **Last updated:** 2026-03-21
 
 ## Project Reference

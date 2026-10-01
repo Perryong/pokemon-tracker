@@ -1,5 +1,10 @@
 # Pokémon Collection Tracker
 
+## Development coordination
+
+Use the [Pokemon Reseller Agent project](https://github.com/users/ChouBokYann/projects/1) for the shared backlog and current work. Read [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), and [LEDGER.md](LEDGER.md) before starting an issue. Project and repository access are granted separately.
+
+
 A responsive Pokémon TCG collection tracker for exploring sets, inspecting cards, checking market prices, and recording how many copies you own. The interface uses a collector’s archive style with cream backgrounds, forest-green controls, and artwork-led browsing.
 
 ![Set browser](.impeccable/review/desktop.png)
