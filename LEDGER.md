@@ -37,6 +37,8 @@ After an unknown API outcome, inspect the issue and run before retrying. A reser
 
 Completed workflow request IDs cannot be reused to acquire or release a later claim. Start a new dispatch for a new ownership lifecycle. Fresh resume requests append a matching signed acknowledgement while keeping the original claim ID; repeated acknowledgements in the same run attempt are idempotent. Copied signed events are ignored as duplicates, not applied again.
 
+If a failed request never recorded an event, a re-run is rejected because it has no recorded target claim. Inspect current ownership and submit a fresh dispatch instead. This prevents an old failed release from releasing a newer claim by the same session.
+
 A recorded accepted/released event may exist after a later run failure. It still affects exclusivity, but a worker must reconcile and obtain a successful acknowledgement before starting. Project-sync warnings do not erase ownership: repair the Project view using AGENTS.md. A repeated release after an already completed release may be rejected because there is no active claim; inspect the released event and repair status rather than creating a new claim.
 
 Set Done only after acceptance evidence and the required merge/integration work are complete. A cancelled issue or abandoned PR is not completed work. Record the disposition and release the claim explicitly.

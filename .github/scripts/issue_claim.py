@@ -199,6 +199,8 @@ def run(r, api):
     if "pull_request" in issue: raise ClaimError("Claims apply to issues, not pull requests.")
     active, history = read_ledger(api, base, default_branch)
     previous_request = [e for e in history if e["run_id"] == r["run_id"]]
+    if int(r["run_attempt"]) > 1 and not previous_request:
+        raise ClaimError("This rerun has no recorded target claim. Inspect state and start a new dispatch.")
     if previous_request:
         if (not active or any(e["claim_id"] != active["claim_id"] for e in previous_request)
                 or any(e.get("operation") != r["operation"] for e in previous_request)

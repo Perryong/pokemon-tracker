@@ -139,6 +139,20 @@ class Claims(unittest.TestCase):
         count = len(api.events()); c.run(fresh, api)
         self.assertEqual(len(api.events()), count)
 
+    def test_history_free_rerun_cannot_release_later_claim(self):
+        api = FakeAPI(); c.run(request(), api)
+        old_release = request(); old_release.update(operation="release", run_id="101", handoff="Saved.")
+        api.permission = "read"
+        with self.assertRaises(c.ClaimError): c.run(old_release, api)
+        api.permission = "write"
+        another_release = dict(old_release, run_id="102")
+        c.run(another_release, api)
+        fresh = request(); fresh["run_id"] = "103"
+        c.run(fresh, api)
+        old_release["run_attempt"] = "2"
+        with self.assertRaises(c.ClaimError): c.run(old_release, api)
+        self.assertEqual(api.events()[-1]["claim_id"], "103")
+
     def test_resume_honors_new_block_and_run_provenance(self):
         api = FakeAPI(); c.run(request(), api)
         api.status = "Blocked"
@@ -223,5 +237,3 @@ class FakeAPI:
 
 if __name__ == "__main__":
     unittest.main()
-
-
