@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: completed
-last_updated: "2026-03-22T03:27:16.563Z"
+last_updated: "2026-10-26T16:15:00.022Z"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -17,7 +17,7 @@ progress:
 > Historical planning snapshot: some progress summaries below conflict. Use [CONTRIBUTING.md](../CONTRIBUTING.md) and the live issue ledger for current work; verify old TODOs against shipped code before creating new issues.
 
 
-**Last updated:** 2026-03-21
+**Last updated:** 2026-10-26
 
 ## Project Reference
 
@@ -26,29 +26,31 @@ progress:
 **Current Milestone:** v1.1 Quantity Tracking  
 **Milestone Goal:** Add quantity-based collection tracking for duplicates while preserving fast local-first workflows.
 
-**Current Focus:** Starting Phase 4 (Data Model & Migration)
+**Current Focus:** v1.1 is shipped; use the issue ledger to define and track post-v1.1 work.
 
 ## Current Position
 
-**Active Phase:** Phase 5: Quantity UI & Statistics  
-**Phase Goal:** Deliver quantity-based album interaction and stats semantics  
-**Active Plan:** None (Phase 5 complete)  
-**Status:** v1.1 milestone complete
+**Status:** v1.1 milestone complete (Phases 4-6 shipped 2026-03-22)
+**Active Plan:** None (milestone closed)
 
 **Progress:**
 [██████████] 100%
-v1.1 Milestone: [████████████████░░░░] 67% (2/3 phases complete, 4/6 estimated plans)
-Phase 5:        [████████████████████] 100% (2/2 plans complete)
+v1.1 Milestone: [████████████████████] 100% (3/3 phases complete, 6/6 plans complete)
+Phase 6:        [████████████████████] 100% (2/2 plans complete)
 
-```
+Evidence:
+- [Roadmap](./ROADMAP.md) marks v1.1 Phases 4-6 as shipped.
+- [v1.1 milestone roadmap](./milestones/v1.1-ROADMAP.md) records all six plans complete.
+- [Phase 6 summary 01](./phases/06-testing-validation/06-01-SUMMARY.md) and [summary 02](./phases/06-testing-validation/06-02-SUMMARY.md) record TESTQ-01/02/03 completion and final `test + build` gate pass.
+- Current work ownership/progress is tracked in issue comments and claim events per [LEDGER.md](../LEDGER.md), not in this file.
 
 ## Performance Metrics
 
 **Milestone v1.1 Quantity Tracking:**
 
-- Phases: 3 total, 2 complete
-- Plans: 6 estimated, 4 complete (04-01, 04-02, 05-01, 05-02)
-- Tasks: 10 complete (2 from 04-01, 3 from 04-02, 2 from 05-01, 3 from 05-02)
+- Phases: 3 total, 3 complete (04, 05, 06)
+- Plans: 6 total, 6 complete (04-01, 04-02, 05-01, 05-02, 06-01, 06-02)
+- Tasks: 16 complete (5 in Phase 4, 5 in Phase 5, 6 in Phase 6)
 - Blockers: 0 active
 - Duration: Started 2026-03-21
 
@@ -65,6 +67,13 @@ Phase 5:        [████████████████████] 1
 - Status: Complete
 - Tasks: 5 (2 from 05-01 + 3 from 05-02)
 - Last completed: 05-02 (2026-03-22)
+
+**Phase 6: Testing & Validation:**
+
+- Plans: 2/2 complete ✅
+- Status: Complete
+- Tasks: 6 (3 from 06-01 + 3 from 06-02)
+- Last completed: 06-02 (2026-03-22)
 
 ## Accumulated Context
 
@@ -87,12 +96,10 @@ Phase 5:        [████████████████████] 1
 | Show quantity badge at qty=1 | Clear visual confirmation of ownership | 2026-03-21 | 05-01 |
 | Show Total Qty only when duplicates exist | Keeps UI clean while surfacing relevant info | 2026-03-22 | 05-02 |
 | 4-metric breakdown in CollectionStats | Comprehensive view of collection composition | 2026-03-22 | 05-02 |
-| Phase 06 P01 | 10m | 3 tasks | 7 files |
-
-- [Phase 06]: Stabilized Vitest matcher runtime by wiring @testing-library/jest-dom/vitest through setupFiles.
-- [Phase 06]: Adopted deterministic divisibility-pattern large-payload migration assertions for 10k cards.
-- [Phase 06-testing-validation]: Use deterministic semantic assertions with scoped containers for cross-view unique-vs-total regression checks.
-- [Phase 06-testing-validation]: Run strict gate as CI=1 npm run test && npm run build to ensure deterministic Vitest exit in this environment.
+| Stabilize Vitest matchers via shared setupFiles | Preserve semantic RTL assertions and deterministic runtime | 2026-03-22 | 06-01 |
+| Use deterministic 10k-card migration fixture | Avoid flaky randomized migration assertions | 2026-03-22 | 06-01 |
+| Use shared semantic cross-view regression assertions | Keep unique-vs-total semantics aligned across all views | 2026-03-22 | 06-02 |
+| Run strict release gate under CI=1 (`npm run test && npm run build`) | Ensure deterministic Vitest exit in this environment | 2026-03-22 | 06-02 |
 
 ### Open Questions
 
@@ -101,64 +108,27 @@ Phase 5:        [████████████████████] 1
 | Should manual quantity input be v1.1 or defer to v1.2? | Research suggests defer until usage validates need | Phase 5 |
 | What's the max quantity upper bound? | 999 proposed but needs validation with competitive players | Phase 4 |
 
-### TODOs (Cross-Phase)
+### Remaining Checks (Post-v1.1, no reopen)
 
-- [x] Define Phase 4 plans via `/gsd-plan-phase 4` ✅ 2026-03-21
-- [x] Implement 04-01 (migration infrastructure) ✅ 2026-03-21
-- [x] Implement 04-02 (hook integration) ✅ 2026-03-21
-- [x] Define Phase 5 plans ✅ 2026-03-21
-- [x] Implement 05-01 (quantity controls & stats) ✅ 2026-03-21
-- [x] Implement 05-02 (SetGrid & CollectionStats updates) ✅ 2026-03-22
-- [ ] Plan Phase 6 or next milestone work
-- [ ] Test migration with realistic dataset (5000+ cards) across browsers
-- [ ] Validate localStorage quota headroom with sparse storage
-- [x] Ensure click-to-toggle UX preserved in Phase 5 ✅ 2026-03-21
+- [ ] Start a new issue (or update existing Ready issue) for v1.2 requirements before any implementation.
+- [ ] Use issue ledger entries + linked PR/test evidence as the only active status source; do not add new live progress tables here.
 
 ### Blockers
 
 **Active blockers:** None
 
-**Resolved blockers:** None yet
+**Resolved blockers:** None recorded in this milestone snapshot.
 
 ## Session Continuity
 
-### What Just Happened
-
-- **Plan 05-02 completed** (2026-03-22):
-  - Extended SetGrid with Total Qty supplement (shows when duplicates exist)
-  - Updated CollectionView with Unique Cards + Total Quantity grid
-  - Enhanced CollectionStats with 4-metric breakdown
-  - All views now use cardQuantities as single source of truth
-  - Cross-view consistency maintained across all stat displays
-  - TypeScript compilation clean, 70/76 tests passing
-  - Commits: 1a26728 (SetGrid), 81dbd81 (CollectionView), f8222f7 (CollectionStats)
-- **Phase 5 complete** (2/2 plans done)
-
-### What's Next
-
-1. **Immediate:** Visual verification of quantity stats on dev server (set cards, collection views)
-2. **Then:** Plan Phase 6 (Testing & Validation) or next milestone work
-3. **Consider:** Test with realistic data (sets with duplicates vs singles)
-
-### Context for Next Session
-
-**Phase 5 complete - ready for next milestone work:**
-
-- All quantity UI and statistics features implemented
-- Cross-view consistency achieved (SetGrid, CardGrid, CollectionView, CollectionStats)
-- Users can adjust quantities and see metrics across all views
-- Single source of truth: cardQuantities in useCollection hook
-- Next: Plan Phase 6 or additional milestone features
-
-**If blocked/pivoting:**
-
-- Review 05-02-SUMMARY.md for cross-view stats patterns
-- Check Phase 5 completion status in ROADMAP.md
-- Validate all quantity features work end-to-end
+v1.1 execution is complete and archived in phase summaries. For any new work, resume from:
+- [CONTRIBUTING.md](../CONTRIBUTING.md) project views (Ready/Active/Blocked/Review/Done)
+- [LEDGER.md](../LEDGER.md) ownership and progress event format
+- issue timeline + linked PR evidence (authoritative status source)
 
 ---
 
 *State initialized: 2026-03-21*  
 *Milestone: v1.1 Quantity Tracking*  
-*Last updated: 2026-03-22 (Phase 5 complete)*  
-*Next: Plan Phase 6 or next milestone work*
+*Last updated: 2026-10-26 (reconciled with shipped Phase 6 evidence)*
+*Next: define v1.2 in the issue ledger/project workflow*
