@@ -1,0 +1,48 @@
+name: Bug
+description: Propose a concrete bug with acceptance criteria and dependencies
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected outcome
+      description: Include reproduction steps for a bug. Keep private evidence out of public issues.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable conditions that must hold before this issue is Done.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Commands, scenarios, or evidence that prove the criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Full issue URLs; also add native blocked-by relationships. Write None when empty.
+      value: None
+    validations:
+      required: true
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Non-code blockers
+      description: Missing access, undecided contracts, or external prerequisites. Write None when empty; use Resolved only after recording evidence.
+      value: None
+    validations:
+      required: true
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Exclusions
+      description: What this issue does not include.
+    validations:
+      required: true
