@@ -1,0 +1,41 @@
+{
+  "lead": {
+    "lead_id": "lead-1",
+    "conversation_id": "thread-1",
+    "seller_id": "seller-1",
+    "listing_id": "listing-1",
+    "card": {
+      "name": "Pikachu",
+      "set_code": "SV1",
+      "number": "025",
+      "language": "en",
+      "printing": "reverse-holo"
+    },
+    "condition": "near-mint",
+    "evidence": [
+      "fixture:front-photo"
+    ],
+    "currency": "SGD"
+  },
+  "mandate": {
+    "mandate_id": "mandate-1",
+    "lead_id": "lead-1",
+    "conversation_id": "thread-1",
+    "currency": "SGD",
+    "ceiling_minor": 5000,
+    "max_rounds": 3,
+    "policy_version": 1,
+    "state_version": 1,
+    "expires_at": "2026-10-29T13:00:00Z"
+  },
+  "seller_replies": [
+    {
+      "text": "Condition and printing confirmed. Asking SGD 45.",
+      "facts_reviewed": true
+    }
+  ],
+  "current": {
+    "policy_version": 1,
+    "state_version": 1
+  }
+}
