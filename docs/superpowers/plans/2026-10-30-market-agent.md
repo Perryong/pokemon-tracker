@@ -35,7 +35,7 @@
 
 ## Execution gate and current evidence
 
-Design and Native execution approved on 30 October 2026. All six implementation tasks are complete locally, with 117 passing tests, six installed-wheel demos, and the independent review findings fixed. See [verification](../../../market_agent/VERIFICATION.md). The user explicitly approved a one-time local build/test exception to the Project/claim gate; that exception does not authorize publishing, merging or deployment.
+Design and Native execution approved on 30 October 2026. All six implementation tasks are complete locally, with 117 passing tests, six installed-wheel demos, and the independent review findings fixed. See [verification](../../../market_agent/VERIFICATION.md). The user explicitly approved a one-time local build/test exception to the Project/claim gate; the operator subsequently extended it to branch publication and a draft PR only. Merging and deployment remain unauthorized.
 
 The planning check found no open Market implementation issue in the two repositories, and tracker Sales PR #23 remains open. This is a point-in-time scope check, not ownership. The Project read failed with missing `read:project` scope. No claim or Ready status has been established. No product scaffolding or dependency installation belongs in this planning step.
 

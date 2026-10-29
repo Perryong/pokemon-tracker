@@ -4,7 +4,7 @@ Date: 30 October 2026 (Asia/Singapore). Local branch: `feature/market-agent`.
 
 ## Authorization and scope
 
-The user approved the design, implementation plan and Native execution. They explicitly answered “Yes—build and test locally under this exception” to a one-time exception naming the AGENTS.md Project/claim gate. Issue #24 exists, but Project access is still missing and the coordination environment is absent. No signed claim, push, merge or deployment is asserted.
+The user approved the design, implementation plan and Native execution. They explicitly answered “Yes—build and test locally under this exception” to a one-time exception naming the AGENTS.md Project/claim gate. Issue #24 exists, but Project access is still missing and the coordination environment is absent. The operator subsequently authorized pushing this feature branch and opening a draft PR on 30 October 2026 in response to the explicit publication-exception request. This extends the exception to draft publication only; no signed claim, merge or deployment approval is asserted.
 
 ## Development evidence
 
