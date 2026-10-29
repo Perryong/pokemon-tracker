@@ -125,3 +125,29 @@ def test_fulfilled_available_unit_needs_return_evidence(stock_raw):
     stock_raw["units"][1]["status"] = "available"
     with pytest.raises(ValidationError):
         InventoryBundle.model_validate(stock_raw)
+
+
+@pytest.mark.parametrize("status", ["reserved", "available"])
+def test_inspected_stock_valuation_independent_of_availability(
+    bundle, stock_raw, now, qualified_request, status
+):
+    stock_raw["units"][0]["status"] = status
+    s = MarketSession(
+        bundle, clock=lambda: now, inventory=InventoryBundle.model_validate(stock_raw)
+    )
+    data = qualified_request.model_dump(mode="json") | {
+        "operation": "assess_owned_unit",
+        "correlation_id": "available",
+    }
+    result = s.handle(Request.model_validate(data))
+    assert result.assessment.decision == "qualified"
+    assert result.assessment.item_ceiling == Decimal("85")
+    assert result.inventory.units[0].sale_eligible == (status == "available")
+    resale = Request.model_validate(
+        data | {"operation": "prepare_resale", "request_id": "resale"}
+    )
+    if status == "reserved":
+        with pytest.raises(MarketError, match="stock_unavailable"):
+            s.handle(resale)
+    else:
+        assert s.handle(resale).assessment.decision == "qualified"

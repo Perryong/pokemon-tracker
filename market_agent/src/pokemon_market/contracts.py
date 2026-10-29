@@ -299,6 +299,7 @@ class InventoryBundle(Contract):
             self.outcomes
         ):
             raise ValueError("duplicate inventory record")
+        # shortcut: one lifecycle per unit; use an authoritative ledger for resale/return cycles.
         if len({o.unit_id for o in self.outcomes}) != len(self.outcomes):
             raise ValueError("one reconciled lifecycle per unit in this slice")
         for o in self.outcomes:

@@ -197,6 +197,11 @@ def build_agent(session, model):
         if request_id not in ctx.results:
             raise MarketError("invalid_output")
         result = ctx.results[request_id]
+        if (
+            ctx.request.operation == "assess_opportunity"
+            and result.operation != "issue_mandate"
+        ):
+            raise MarketError("incomplete_workflow")
         if result.mandate:
             result = result.model_copy(
                 update={"mandate": session.current_mandate(result.mandate.id)}

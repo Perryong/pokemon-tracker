@@ -192,3 +192,32 @@ def test_final_output_cannot_add_price(session, qualified_request):
             ),
             qualified_request,
         )
+
+
+@pytest.mark.parametrize("issue_first", [False, True])
+def test_acquisition_cannot_finalize_pre_exposure_assessment(
+    raw, now, qualified_request, issue_first
+):
+    from uuid import NAMESPACE_URL, uuid5
+
+    raw["policy"]["available_capital"] = "5.00"
+    s = MarketSession(FixtureBundle.model_validate(raw), clock=lambda: now)
+    assessment_id = uuid5(
+        NAMESPACE_URL, qualified_request.request_id + ":assess_opportunity"
+    ).hex
+    responses = [call("assess_opportunity")]
+    if issue_first:
+        responses.append(call("issue_mandate"))
+    responses.append(call("FinalReference", {"request_id": assessment_id}))
+    with pytest.raises(MarketError, match="incomplete_workflow"):
+        run_agent(s, ScriptModel(responses=responses), qualified_request)
+    assert s.reserved_exposure == 0
+
+
+def test_acquisition_finalizes_exposure_rejection(raw, now, qualified_request):
+    raw["policy"]["available_capital"] = "5.00"
+    s = MarketSession(FixtureBundle.model_validate(raw), clock=lambda: now)
+    result = run_agent(s, ControlledModel(), qualified_request)
+    assert result.operation == "issue_mandate"
+    assert result.assessment.reasons == ("exposure_exhausted",)
+    assert result.mandate is None

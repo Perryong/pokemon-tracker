@@ -35,14 +35,14 @@
 
 ## Execution gate and current evidence
 
-Design approved on 30 October 2026. This plan is awaiting review/execution-method selection. Recommended method: **Native**, because the six tasks share contracts and session state; implement sequentially with a whole-branch independent review.
+Design and Native execution approved on 30 October 2026. All six implementation tasks are complete locally, with 117 passing tests, six installed-wheel demos, and the independent review findings fixed. See [verification](../../../market_agent/VERIFICATION.md). The user explicitly approved a one-time local build/test exception to the Project/claim gate; that exception does not authorize publishing, merging or deployment.
 
 The planning check found no open Market implementation issue in the two repositories, and tracker Sales PR #23 remains open. This is a point-in-time scope check, not ownership. The Project read failed with missing `read:project` scope. No claim or Ready status has been established. No product scaffolding or dependency installation belongs in this planning step.
 
-- [ ] Before coding, invoke the chosen execution skill and the worktree skill; reuse the user-selected `feature/market-agent` branch in a suitable isolated checkout without resetting existing work.
+- [x] Before coding, invoke the chosen execution skill and the worktree skill; reuse the user-selected `feature/market-agent` branch in a suitable isolated checkout without resetting existing work.
 - [ ] Restore authorized Project access, read Active/Blocked, refresh relevant issues/comments, native dependencies and linked PRs in both repos. A failed read remains a blocker.
 - [ ] Create or reuse one issue for this isolated slice, using the issue draft below. Obtain maintainer Ready and the signed successful claim required by this checkout's `AGENTS.md`; record the exact actor/session/run and accepted event. A different contributor's manual exception is not transferable.
-- [ ] Recheck these prerequisites before resuming and review. Do not start product code while any required gate is unresolved.
+- [x] Record the explicit user exception before coding and retain the unresolved Project/claim gates for later integration. Issue #24 exists; no signed claim is asserted.
 
 ## File map and common test vocabulary
 
@@ -80,7 +80,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 - `Assessment`: ID/version, listing reference, decision (`qualified`, `questions_only`, `review`, `rejected`), reason codes, exact facts, evidence/scenarios, valuation components, nullable item ceiling, expiry and pending questions. Model explanations are non-authoritative.
 - `Mandate`: simulation mode, ID, assessment/listing/policy/conversation versions, status, expiry, nullable ceiling and total exposure. `Artifact`: request/operation/correlation metadata and stored result references, always simulation mode.
 
-- [ ] Write boundary tests, including these assertions (the bad-money cases include numeric `1`, `True`, `"NaN"`, `"Infinity"`, `"1e2"`, `"1.001"`):
+- [x] Write boundary tests, including these assertions (the bad-money cases include numeric `1`, `True`, `"NaN"`, `"Infinity"`, `"1e2"`, `"1.001"`):
   ```python
   def test_fixture_round_trip(bundle):
       assert FixtureBundle.model_validate_json(bundle.model_dump_json()) == bundle
@@ -88,10 +88,10 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # test_rejects_naive_time_boolean_versions_unknown_fields_and_schema: each fails validation.
   # test_preserves_bundle_or_incomplete_listing_for_review: parsing succeeds without inventing identity.
   ```
-- [ ] Select a supported locally available Python version and released Pydantic/pytest/Deep Agents stack using official documentation and package metadata; record exact pins. In an isolated environment, run the tests and confirm failure comes from missing contract behavior, not missing pytest or an invalid runner.
-- [ ] Implement the models and canonical fixture; validate before freezing. Reject future policy/review timestamps, invalid expiry ordering and oversized inputs. Use 300-character IDs, 4,000-character descriptions, maximum 100 listings and 1,000 evidence records per fixture; never truncate silently.
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_contracts.py -q`; expect all boundary cases passing. Freeze the clean compatible runtime/test dependency set into `requirements.lock`, verify `pip check`, and install the package editable with `--no-deps`. Document the exact chosen Python minor version in metadata/verification.
-- [ ] Commit only Task 1 files: `feat: define validated market fixture contracts`.
+- [x] Select a supported locally available Python version and released Pydantic/pytest/Deep Agents stack using official documentation and package metadata; record exact pins. In an isolated environment, run the tests and confirm failure comes from missing contract behavior, not missing pytest or an invalid runner.
+- [x] Implement the models and canonical fixture; validate before freezing. Reject future policy/review timestamps, invalid expiry ordering and oversized inputs. Use 300-character IDs, 4,000-character descriptions, maximum 100 listings and 1,000 evidence records per fixture; never truncate silently.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_contracts.py -q`; expect all boundary cases passing. Freeze the clean compatible runtime/test dependency set into `requirements.lock`, verify `pip check`, and install the package editable with `--no-deps`. Document the exact chosen Python minor version in metadata/verification.
+- [x] Commit only Task 1 files: `feat: define validated market fixture contracts`.
 
 ## Task 2: Exact identity and conservative valuation
 
@@ -99,7 +99,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 
 **Interfaces:** `assess(listing: Listing, evidence: tuple[Evidence, ...], assumptions: tuple[ReviewedAssumption, ...], policy: Policy, now: datetime) -> Assessment`. This is pure; session exposure caps and authority issuance belong to Task 3. Results include full cost components and evidence provenance.
 
-- [ ] Write tests against the canonical fixture with these exact expectations:
+- [x] Write tests against the canonical fixture with these exact expectations:
   ```python
   def test_exact_ceiling(bundle, now):
       result = assess(bundle.listings[0], bundle.evidence, bundle.assumptions, bundle.policy, now)
@@ -114,10 +114,10 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # test_identity_mismatch_or_bundle: decision == 'review'; item_ceiling is None.
   # test_known_disallowed_condition_or_nonpositive_economics: decision == 'rejected'.
   ```
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_valuation.py -q`; expect missing-function/behavior failures.
-- [ ] Implement `assess`. Check identity before eligibility/economics. Deduplicate observations by source transaction; conflicting duplicates force review. Compare exact identity/condition and require completed, fresh, non-future SGD sales. With sufficient observations select the minimum; otherwise allow exactly one matching current reviewed assumption. An unsupported-currency listing is review-only; exclude foreign-currency evidence and report its limitation. Missing evidence with enquiries enabled yields questions-only; conflicting trusted assumptions yield review. No model score may override these outcomes.
-- [ ] Add tests for wrong language/finish/grade, missing grading identity, time exactly at the maximum-age boundary, asking-only/reference-only evidence, expired/wrong-policy/unreviewed/conflicting assumptions and an assumption that cannot raise a valid observed ceiling. Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_contracts.py market_agent/tests/test_valuation.py -q`; expect PASS.
-- [ ] Commit: `feat: evaluate exact-card evidence and acquisition economics`.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_valuation.py -q`; expect missing-function/behavior failures.
+- [x] Implement `assess`. Check identity before eligibility/economics. Deduplicate observations by source transaction; conflicting duplicates force review. Compare exact identity/condition and require completed, fresh, non-future SGD sales. With sufficient observations select the minimum; otherwise allow exactly one matching current reviewed assumption. An unsupported-currency listing is review-only; exclude foreign-currency evidence and report its limitation. Missing evidence with enquiries enabled yields questions-only; conflicting trusted assumptions yield review. No model score may override these outcomes.
+- [x] Add tests for wrong language/finish/grade, missing grading identity, time exactly at the maximum-age boundary, asking-only/reference-only evidence, expired/wrong-policy/unreviewed/conflicting assumptions and an assumption that cannot raise a valid observed ceiling. Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_contracts.py market_agent/tests/test_valuation.py -q`; expect PASS.
+- [x] Commit: `feat: evaluate exact-card evidence and acquisition economics`.
 
 ## Task 3: Scoped mandates, exposure, idempotency and reassessment
 
@@ -125,7 +125,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 
 **Interfaces:** `MarketSession(bundle: FixtureBundle, *, clock: Callable[[], datetime])`; `read_listing(listing_id: str) -> Listing`; `read_evidence(evidence_ids: tuple[str, ...]) -> tuple[Evidence, ...]`; `handle(request: Request) -> Artifact`; `current_mandate(mandate_id: str) -> Mandate`; read-only `reserved_exposure: Decimal`. Store records by correlation ID; bind all tool access to this session. Task 4 adds owned-unit loading to the constructor.
 
-- [ ] Write tests for these service results:
+- [x] Write tests for these service results:
   ```python
   def test_request_replay(session, qualified_request):
       first = session.handle(qualified_request)
@@ -139,11 +139,11 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # test_reassessment_releases_once: old status == 'revoked'; no double release on replay.
   # test_replay_cannot_reactivate_revoked_mandate: current_mandate(old_id).status == 'revoked'.
   ```
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_session.py -q`; expect missing-service/behavior failures.
-- [ ] Implement serialized request handling, exact validation before mutations, canonical payload comparison and stored request outcomes. Identical replays return historical artifacts with current authority checked separately. Bind `negotiate_acquisition` artifacts to an active simulated mandate. Reject unknown or mismatched listing/evidence/policy/mandate references and stale state. Apply economic/per-item/capital/soft caps; include acquisition costs in exposure. Expire/release simulated reservations before calculating headroom, once only. An assessment alone never reserves funds.
-- [ ] Implement reassessment: reject stale/malformed requests before applying facts; for accepted new material facts revoke the prior mandate before recalculation, even if the new facts yield review or failure. Increment assessment/conversation versions, reject the fourth distinct reassessment for a limit of 3, and do not increment limits for replay. Material snapshot changes to an existing seller/listing cannot create a second active opportunity. Expiry cannot be undone by replay.
-- [ ] Add cap tests: available capital `84.00` caps item authority at `79.00` with total `84.00`; available capital equal to acquisition costs gives no price authority. Test baseline exposure subtraction once, expiry exactly at `now`, expired requests, policy/version changes, evidence ownership, bounded reassessment, two opportunities competing for remaining exposure, and failed reassessment retaining revocation. Run all current package tests; expect PASS.
-- [ ] Commit: `feat: enforce simulated mandate lifecycle and exposure`.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_session.py -q`; expect missing-service/behavior failures.
+- [x] Implement serialized request handling, exact validation before mutations, canonical payload comparison and stored request outcomes. Identical replays return historical artifacts with current authority checked separately. Bind `negotiate_acquisition` artifacts to an active simulated mandate. Reject unknown or mismatched listing/evidence/policy/mandate references and stale state. Apply economic/per-item/capital/soft caps; include acquisition costs in exposure. Expire/release simulated reservations before calculating headroom, once only. An assessment alone never reserves funds.
+- [x] Implement reassessment: reject stale/malformed requests before applying facts; for accepted new material facts revoke the prior mandate before recalculation, even if the new facts yield review or failure. Increment assessment/conversation versions, reject the fourth distinct reassessment for a limit of 3, and do not increment limits for replay. Material snapshot changes to an existing seller/listing cannot create a second active opportunity. Expiry cannot be undone by replay.
+- [x] Add cap tests: available capital `84.00` caps item authority at `79.00` with total `84.00`; available capital equal to acquisition costs gives no price authority. Test baseline exposure subtraction once, expiry exactly at `now`, expired requests, policy/version changes, evidence ownership, bounded reassessment, two opportunities competing for remaining exposure, and failed reassessment retaining revocation. Run all current package tests; expect PASS.
+- [x] Commit: `feat: enforce simulated mandate lifecycle and exposure`.
 
 ## Task 4: Read-only stock, ageing and outcome summaries
 
@@ -151,7 +151,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 
 **Interfaces:** Define `OwnedUnit`, `Outcome`, `InventoryBundle`, `InventorySummary` in `contracts.py`. `InventorySummary` exposes `unsold_cost_basis: Decimal` plus per-unit and per-outcome results. `summarize_inventory(units: tuple[OwnedUnit, ...], outcomes: tuple[Outcome, ...], now: datetime) -> InventorySummary`; extend `MarketSession(..., inventory: InventoryBundle | None = None)` and add `read_owned_unit(unit_id: str) -> OwnedUnit`. `handle(assess_owned_unit)` returns stock facts and an evidence-linked Task 2 assessment using the unit's inspected identity/condition as trusted target facts; `handle(prepare_resale)` emits only a draft-task artifact for inspected available stock, with no reservation or sale authority.
 
-- [ ] Write tests for these inventory fixtures:
+- [x] Write tests for these inventory fixtures:
   ```python
   def test_empty_inventory(now):
       assert summarize_inventory((), (), now).unsold_cost_basis == Decimal('0.00')
@@ -163,10 +163,10 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # unrecovered seller_costs '15.00' => realized_profit == Decimal('-15.00').
   # test_physical_return_requires_new_inspection: returned unit cannot prepare_resale.
   ```
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_inventory.py -q`; expect missing-function/behavior failures.
-- [ ] Implement read-only calculations and session scope checks. Units carry receipt/inspection/return events with timestamps, stock status and acquisition cost basis; outcomes carry independently confirmed fulfillment/settlement, actual receipts/refunds/recoveries/costs and reconciliation completeness. Deduplicate by outcome ID; reject inconsistent chronology, duplicate/conflicting outcomes and future acquisition dates. Keep outstanding cash, returned stock and unsold basis visible; do not double-count a returned unit's cost basis as both a completed disposal and unsold expense. No stock mutation tool is added.
-- [ ] Add tests for reserved units, fulfillment without settlement, exact UTC day ageing, unknown/cross-session unit IDs, conflicting outcome IDs and insufficient valuation evidence on otherwise eligible stock. Run all current package tests; expect PASS.
-- [ ] Commit: `feat: report inspected inventory and reconciled outcomes`.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_inventory.py -q`; expect missing-function/behavior failures.
+- [x] Implement read-only calculations and session scope checks. Units carry receipt/inspection/return events with timestamps, stock status and acquisition cost basis; outcomes carry independently confirmed fulfillment/settlement, actual receipts/refunds/recoveries/costs and reconciliation completeness. Deduplicate by outcome ID; reject inconsistent chronology, duplicate/conflicting outcomes and future acquisition dates. Keep outstanding cash, returned stock and unsold basis visible; do not double-count a returned unit's cost basis as both a completed disposal and unsold expense. No stock mutation tool is added.
+- [x] Add tests for reserved units, fulfillment without settlement, exact UTC day ageing, unknown/cross-session unit IDs, conflicting outcome IDs and insufficient valuation evidence on otherwise eligible stock. Run all current package tests; expect PASS.
+- [x] Commit: `feat: report inspected inventory and reconciled outcomes`.
 
 ## Task 5: Real Deep Agents graph with enforced tool boundaries
 
@@ -174,7 +174,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 
 **Interfaces:** `build_agent(session: MarketSession, model: BaseChatModel) -> CompiledStateGraph`; `run_agent(session: MarketSession, model: BaseChatModel, request: Request) -> Artifact`; `ControlledModel` is an SDK-compatible tool-calling model used by tests and the demo. Tool names: `read_listing`, `read_evidence`, `assess_opportunity`, `issue_mandate`, `reassess_opportunity`, `assess_owned_unit`, `prepare_resale`, `summarize_inventory`. All tools call the same session/services from Tasks 2–4. Final model output contains result references, not authoritative economics.
 
-- [ ] Write real-graph tests with these assertions:
+- [x] Write real-graph tests with these assertions:
   ```python
   def test_real_graph_returns_simulated_artifact(session, qualified_request):
       result = run_agent(session, ControlledModel(), qualified_request)
@@ -188,11 +188,11 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # test_parallel_mandates: total exposure <= configured headroom, even in one model turn.
   # test_malicious_listing: injected limit/credential instructions do not alter policy or output secrets.
   ```
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_harness.py -q`; expect missing-harness/behavior failures.
-- [ ] Implement the graph using the pinned SDK's supported configuration/middleware. Bind only session-scoped business tools; disable default delegation and execution, and deny tools outside the explicit allowlist at dispatch even if the model invents them. Remove unused file tools where supported; any remaining scratch storage must be ephemeral, bounded to 64 KiB and contain no host files. Do not mount repository memory, secrets or general-purpose skills. Inspect the actual bound tool list in tests rather than relying only on documentation.
-- [ ] Implement `run_agent` with at most 12 model calls, 24 business-tool calls, 60 seconds wall time, one structured-output retry and no automatic business-action retries. For acquisition runs, bind tool requests to the run's correlation/version scope and derive stable distinct assessment/mandate request IDs from the input request ID; retries reuse these IDs. The model cannot supply arbitrary record scope or mint fresh IDs to evade replay controls. Disable automatic remote trace export for this slice. Ensure one session serializes mutations; cached idempotent results never reacquire exposure. Resolve returned references against stored state and reject altered data; sanitize unexpected errors to safe codes. A timeout after a successful mutation must not make a retry issue new authority.
-- [ ] Test endless tool calls, malformed structured output, unexpected exception sanitization, raw listing text impersonating trusted evidence, unknown tool calls, and missing credentials for an optional model. Controlled tests block outbound network. Run all current package tests; expect PASS with actual tool-call evidence.
-- [ ] Commit: `feat: run market assessment through a constrained Deep Agents harness`.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_harness.py -q`; expect missing-harness/behavior failures.
+- [x] Implement the graph using the pinned SDK's supported configuration/middleware. Bind only session-scoped business tools; disable default delegation and execution, and deny tools outside the explicit allowlist at dispatch even if the model invents them. Remove unused file tools where supported; any remaining scratch storage must be ephemeral, bounded to 64 KiB and contain no host files. Do not mount repository memory, secrets or general-purpose skills. Inspect the actual bound tool list in tests rather than relying only on documentation.
+- [x] Implement `run_agent` with at most 12 model calls, 24 business-tool calls, 60 seconds wall time, one structured-output retry and no automatic business-action retries. For acquisition runs, bind tool requests to the run's correlation/version scope and derive stable distinct assessment/mandate request IDs from the input request ID; retries reuse these IDs. The model cannot supply arbitrary record scope or mint fresh IDs to evade replay controls. Disable automatic remote trace export for this slice. Ensure one session serializes mutations; cached idempotent results never reacquire exposure. Resolve returned references against stored state and reject altered data; sanitize unexpected errors to safe codes. A timeout after a successful mutation must not make a retry issue new authority.
+- [x] Test endless tool calls, malformed structured output, unexpected exception sanitization, raw listing text impersonating trusted evidence, unknown tool calls, and missing credentials for an optional model. Controlled tests block outbound network. Run all current package tests; expect PASS with actual tool-call evidence.
+- [x] Commit: `feat: run market assessment through a constrained Deep Agents harness`.
 
 ## Task 6: Runnable scenarios, verification and peer handoff
 
@@ -200,7 +200,7 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
 
 **Interfaces:** `load_bundle() -> FixtureBundle`; `run_scenario(name: str, *, model: BaseChatModel | None = None) -> Artifact`; `main(argv: list[str] | None = None) -> int`. CLI: `python -m pokemon_market demo --scenario NAME`. Names: `qualified`, `questions-only`, `identity-review`, `stale-evidence`, `reassessment`, `inventory`. Use revalidated variants of packaged data rather than six almost-identical files. Default controlled transport uses no credentials. Optional `--model PROVIDER:NAME` explicitly enables one documented supported provider against synthetic tools only; choose/install its compatible adapter when dependencies are locked, and require its server-side environment credential.
 
-- [ ] Write subprocess tests:
+- [x] Write subprocess tests:
   ```python
   def test_demo_json():
       result = subprocess.run([sys.executable, '-m', 'pokemon_market', 'demo',
@@ -213,11 +213,12 @@ Canonical fixture: exact English raw single card, reviewed allowed condition; tw
   # test_invalid_scenario: nonzero exit and concise stderr, no traceback or secret.
   # test_packaged_fixtures: demo works outside the repository working directory.
   ```
-- [ ] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_cli.py -q`; expect missing-entrypoint/behavior failures.
-- [ ] Implement fixture loading via package resources and argparse entrypoint. Domain review/rejection is a successfully processed result (exit 0); invalid input/configuration is exit 2; runtime failure is exit 1. Output all money as fixed two-decimal strings, diagnostics only to stderr, and no partial artifact on failure. Demo outputs show scope, evidence/assumptions, current authority and expiry; inventory scenario includes pending and loss cases.
-- [ ] Write README install/test/demo commands with the actual chosen Python version and pins. Map temporary Market decimal/string-version contracts to the Sales proposal's integer-minor-unit/numeric versions; label conversion as unresolved peer work, with links to #11 and #23. Document no authenticated A2A, persistence, live marketplace or production inventory authority. Record the model configuration path without example credentials.
-- [ ] Verify from a fresh environment: locked installation and editable package install with no dependency re-resolution, `python -m pip check`, `python -m pytest tests -q` (working directory `market_agent/`), all six CLI scenarios, and `git diff --check`. Build/install the local wheel into a clean environment and run at least the qualified demo outside the checkout to prove package data inclusion. Record exact commands, counts, versions and failures in `VERIFICATION.md`; live-model checks are explicitly not run unless actually exercised with authorized configuration. Run frontend tests only if frontend behavior changed.
-- [ ] Request independent whole-branch review under Superpowers, fix actionable findings and rerun affected checks. Recheck issue/dependency ownership, commit intended files, and hand off a reviewable PR when repository gates permit. Do not merge or mark full V1 complete. Attach any created PR to this chat.
+- [x] Run `market_agent/.venv/bin/python -m pytest market_agent/tests/test_cli.py -q`; expect missing-entrypoint/behavior failures.
+- [x] Implement fixture loading via package resources and argparse entrypoint. Domain review/rejection is a successfully processed result (exit 0); invalid input/configuration is exit 2; runtime failure is exit 1. Output all money as fixed two-decimal strings, diagnostics only to stderr, and no partial artifact on failure. Demo outputs show scope, evidence/assumptions, current authority and expiry; inventory scenario includes pending and loss cases.
+- [x] Write README install/test/demo commands with the actual chosen Python version and pins. Map temporary Market decimal/string-version contracts to the Sales proposal's integer-minor-unit/numeric versions; label conversion as unresolved peer work, with links to #11 and #23. Document no authenticated A2A, persistence, live marketplace or production inventory authority. Record the model configuration path without example credentials.
+- [x] Verify from a fresh environment: locked installation and editable package install with no dependency re-resolution, `python -m pip check`, `python -m pytest tests -q` (working directory `market_agent/`), all six CLI scenarios, and `git diff --check`. Build/install the local wheel into a clean environment and run at least the qualified demo outside the checkout to prove package data inclusion. Record exact commands, counts, versions and failures in `VERIFICATION.md`; live-model checks are explicitly not run unless actually exercised with authorized configuration. Run frontend tests only if frontend behavior changed.
+- [x] Request independent whole-branch review under Superpowers, fix actionable findings, rerun affected checks and commit intended files locally under the recorded exception.
+- [ ] Before publishing: resolve Project/claim and dependency gates, obtain publication authorization, and hand off a reviewable PR. Do not merge or mark full V1 complete. Attach any created PR to this chat.
 
 ## Public-safe implementation issue draft
 
@@ -244,7 +245,7 @@ None for this isolated simulated slice. No Sales runtime import, production data
 
 ### Non-code blockers
 
-Project access verification, maintainer Ready review and the required accepted actor/session claim remain unresolved. These must be resolved before implementation. Plan review and execution-method selection are also pending when this draft is written.
+Project access verification, maintainer Ready review and the required accepted actor/session claim remain unresolved. The original draft required these before implementation. The user subsequently authorized a one-time exception for local build/test, selected Native execution and approved the plan. The Project/claim gates remain unresolved for integration.
 
 ### Exclusions
 
@@ -256,4 +257,4 @@ Official [Deep Agents customization](https://docs.langchain.com/oss/python/deepa
 
 Coverage: design sections 1–4 map to Tasks 1–3 and 6; section 5 to the isolated package and Task 6 peer mapping; section 6 to Task 5; section 7 to Task 3 artifacts/replay and Task 4 stock artifacts; sections 8–9 to Tasks 1, 3 and 5; section 10 to Task 6; section 11 to the execution gate and Task 6; section 12 to this plan's constraints and explicit later milestones. Read-only inventory/outcomes map to Task 4. Deferred full-V1 work is not an implementation gap in this first-slice plan.
 
-Self-review completed: all six tasks have defined producers/consumers and red/green checks; the five Review Focus cases are assigned; no root frontend or Sales edits are needed; plan generation is not evidence that product tests passed. Execution boxes remain unchecked.
+Self-review completed: all six tasks have defined producers/consumers and red/green checks; the five Review Focus cases are assigned; no root frontend or Sales edits are needed; plan generation is not evidence that product tests passed. Execution boxes now reflect the completed local tasks. Project/claim and publication gates remain open; see verification for the explicit exception and evidence.

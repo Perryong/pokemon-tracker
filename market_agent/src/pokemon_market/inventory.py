@@ -13,6 +13,15 @@ from .contracts import (
 )
 
 
+def inspection_current(unit: OwnedUnit) -> bool:
+    return bool(
+        unit.received_at
+        and unit.inspected_at
+        and unit.inspection_passed
+        and (unit.returned_at is None or unit.inspected_at > unit.returned_at)
+    )
+
+
 def summarize_inventory(
     units: tuple[OwnedUnit, ...], outcomes: tuple[Outcome, ...], now: datetime
 ) -> InventorySummary:
@@ -32,13 +41,7 @@ def summarize_inventory(
         dates = (u.acquired_at, u.received_at, u.inspected_at, u.returned_at)
         if any(d and d > now for d in dates):
             raise MarketError("future_inventory")
-        eligible = bool(
-            u.status == "available"
-            and u.received_at
-            and u.inspected_at
-            and u.inspection_passed
-            and (u.returned_at is None or u.inspected_at > u.returned_at)
-        )
+        eligible = u.status == "available" and inspection_current(u)
         outcome = by_unit.get(u.id)
         recovery = (
             outcome.acquisition_recovery

@@ -244,3 +244,55 @@ def test_foreign_mandate(raw, now, qualified_request):
                 mandate_id=m.id,
             )
         )
+
+
+def test_exhausted_reassessment_revokes_and_blocks_new_authority(
+    session, qualified_request
+):
+    issue(session, qualified_request)
+    for i in range(1, 4):
+        session.handle(
+            request(
+                qualified_request,
+                request_id=f"round-{i}",
+                operation="reassess_opportunity",
+                assessment_version=i,
+                conversation_version=i - 1,
+                changes={"price": "70.00"},
+            )
+        )
+    current = request(
+        qualified_request,
+        request_id="latest-mandate",
+        operation="issue_mandate",
+        assessment_version=4,
+        conversation_version=3,
+    )
+    mandate = session.handle(current).mandate
+    change = request(
+        current,
+        request_id="over-limit",
+        operation="reassess_opportunity",
+        changes={"quantity": 2},
+    )
+    for _ in range(2):
+        with pytest.raises(MarketError, match="reassessment_limit"):
+            session.handle(change)
+    assert session.current_mandate(mandate.id).status == "revoked"
+    assert session.reserved_exposure == 0
+    assert session.read_listing("listing-1").quantity == 2
+    for operation in ("assess_opportunity", "issue_mandate", "negotiate_acquisition"):
+        with pytest.raises(MarketError, match="reassessment_limit"):
+            session.handle(
+                request(
+                    current,
+                    request_id=operation,
+                    operation=operation,
+                    conversation_version=4,
+                    **(
+                        {"mandate_id": mandate.id}
+                        if operation == "negotiate_acquisition"
+                        else {}
+                    ),
+                )
+            )

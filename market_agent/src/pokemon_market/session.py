@@ -16,7 +16,7 @@ from .contracts import (
     Request,
 )
 from .valuation import assess
-from .inventory import summarize_inventory
+from .inventory import inspection_current, summarize_inventory
 
 
 class MarketSession:
@@ -171,7 +171,7 @@ class MarketSession:
             card=u.card,
             quantity=1,
             condition=u.condition,
-            condition_reviewed=eligible,
+            condition_reviewed=inspection_current(u),
             description="",
             asking_price="0.00",
             currency="SGD",
@@ -210,6 +210,8 @@ class MarketSession:
             or r.conversation_version != conv
         ):
             raise MarketError("stale_state")
+        if self._rounds.get(r.correlation_id, 0) > self.bundle.policy.max_reassessments:
+            raise MarketError("reassessment_limit")
         out = dict(
             request_id=r.request_id,
             operation=r.operation,
@@ -233,8 +235,6 @@ class MarketSession:
             ):
                 raise MarketError("mandate_scope")
             count = self._rounds.get(r.correlation_id, 0)
-            if count >= self.bundle.policy.max_reassessments:
-                raise MarketError("reassessment_limit")
             self._revoke(r.correlation_id)
             self._dirty.add(r.correlation_id)
             self._rounds[r.correlation_id] = count + 1
@@ -249,6 +249,9 @@ class MarketSession:
             self._listings[listing.id] = Listing.model_validate(
                 listing.model_dump(mode="json") | values
             )
+            # New facts invalidate authority even when automatic reassessment is exhausted.
+            if count >= self.bundle.policy.max_reassessments:
+                raise MarketError("reassessment_limit")
             a = self._calculate(r)
             return Artifact(**out, assessment=a)
         if not a or r.correlation_id in self._dirty:
