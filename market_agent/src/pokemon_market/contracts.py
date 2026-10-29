@@ -191,6 +191,82 @@ class Mandate(Contract):
     ceiling: Amount | None
     exposure: Amount
 
+class OwnedUnit(Contract):
+    id: Text
+    card: CardIdentity
+    condition: Text
+    acquired_at: AwareDatetime
+    received_at: AwareDatetime | None
+    inspected_at: AwareDatetime | None
+    inspection_passed: StrictBool
+    returned_at: AwareDatetime | None
+    status: Literal['awaiting_receipt','quarantined','available','reserved','fulfilled','settled','returned']
+    acquisition_cost: Money
+
+    @model_validator(mode='after')
+    def chronology(self):
+        if self.received_at and self.received_at < self.acquired_at: raise ValueError('receipt before acquisition')
+        if self.inspected_at and (not self.received_at or self.inspected_at < self.received_at):
+            raise ValueError('inspection before receipt')
+        if self.returned_at and (not self.received_at or self.returned_at < self.received_at):
+            raise ValueError('return before receipt')
+        return self
+
+class Outcome(Contract):
+    id: Text
+    unit_id: Text
+    fulfilled: StrictBool
+    settled: StrictBool
+    reconciled: StrictBool
+    proceeds: Money | None
+    refunds: Money | None
+    acquisition_cost: Money | None
+    acquisition_recovery: Money | None
+    seller_costs: Money | None
+
+class InventoryBundle(Contract):
+    units: Annotated[tuple[OwnedUnit, ...], Field(max_length=1000)]
+    outcomes: Annotated[tuple[Outcome, ...], Field(max_length=1000)]
+
+    @model_validator(mode='after')
+    def consistent(self):
+        units = {u.id:u for u in self.units}
+        if len(units) != len(self.units) or len({o.id for o in self.outcomes}) != len(self.outcomes):
+            raise ValueError('duplicate inventory record')
+        if len({o.unit_id for o in self.outcomes}) != len(self.outcomes):
+            raise ValueError('one reconciled lifecycle per unit in this slice')
+        for o in self.outcomes:
+            if o.unit_id not in units: raise ValueError('unknown outcome unit')
+            if o.fulfilled and units[o.unit_id].status not in ('fulfilled','settled') and not units[o.unit_id].returned_at:
+                raise ValueError('fulfilled stock requires physical return evidence')
+            if o.acquisition_cost is not None and o.acquisition_cost != units[o.unit_id].acquisition_cost:
+                raise ValueError('inconsistent acquisition cost')
+            if o.proceeds is not None and o.refunds is not None and o.refunds > o.proceeds:
+                raise ValueError('refund exceeds receipts')
+            if o.acquisition_recovery is not None and o.acquisition_recovery > units[o.unit_id].acquisition_cost:
+                raise ValueError('recovery exceeds cost')
+        return self
+
+class UnitSummary(Contract):
+    id: Text
+    status: Text
+    age_days: Version
+    sale_eligible: bool
+    cost_basis: Amount
+
+class OutcomeSummary(Contract):
+    id: Text
+    unit_id: Text
+    realized_profit: Amount | None
+    cash_result: Amount | None
+
+class InventorySummary(Contract):
+    units: tuple[UnitSummary, ...]
+    outcomes: tuple[OutcomeSummary, ...]
+    unsold_cost_basis: Amount
+    realized_profit: Amount
+    pending_outcomes: tuple[str, ...]
+
 class Artifact(Contract):
     mode: Literal['simulation'] = 'simulation'
     schema_version: Literal['1'] = '1'
@@ -199,4 +275,4 @@ class Artifact(Contract):
     correlation_id: Text
     assessment: Assessment | None = None
     mandate: Mandate | None = None
-    inventory: dict | None = None
+    inventory: InventorySummary | None = None

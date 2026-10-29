@@ -5,15 +5,17 @@ from decimal import Decimal
 from threading import RLock
 from typing import Callable
 from uuid import NAMESPACE_URL, uuid5
-from .contracts import Artifact, FixtureBundle, Listing, Mandate, MarketError, Request
+from .contracts import Artifact, FixtureBundle, InventoryBundle, Listing, Mandate, MarketError, Request
 from .valuation import assess
+from .inventory import summarize_inventory
 
 class MarketSession:
-    def __init__(self, bundle: FixtureBundle, *, clock: Callable[[], datetime]):
+    def __init__(self, bundle: FixtureBundle, *, clock: Callable[[], datetime], inventory: InventoryBundle | None = None):
         self.bundle = FixtureBundle.model_validate_json(bundle.model_dump_json())
         self.clock = clock
         if clock().tzinfo is None: raise MarketError('naive_clock')
         if bundle.policy.created_at > clock(): raise MarketError('future_policy')
+        self.inventory = InventoryBundle.model_validate_json(inventory.model_dump_json()) if inventory else InventoryBundle(units=(),outcomes=())
         self._lock = RLock()
         self._listings = {r.id:r for r in self.bundle.listings}
         self._evidence = {r.id:r for r in self.bundle.evidence}
@@ -94,9 +96,31 @@ class MarketSession:
             self._requests[r.request_id] = (fingerprint,result.model_copy(deep=True))
             return result
 
+    def read_owned_unit(self, unit_id):
+        for unit in self.inventory.units:
+            if unit.id == unit_id: return unit
+        raise MarketError('record_not_found')
+
+    def inventory_summary(self):
+        return summarize_inventory(self.inventory.units,self.inventory.outcomes,self.clock())
+
+    def _owned(self, r):
+        if r.assessment_version != 0 or r.conversation_version != 0: raise MarketError('stale_state')
+        u=self.read_owned_unit(r.correlation_id)
+        summary=summarize_inventory((u,),tuple(o for o in self.inventory.outcomes if o.unit_id==u.id),self.clock())
+        eligible=summary.units[0].sale_eligible
+        if r.operation=='prepare_resale' and not eligible: raise MarketError('stock_unavailable')
+        listing=Listing(id=u.id,seller_id='owned',version=1,card=u.card,quantity=1,condition=u.condition,
+                        condition_reviewed=eligible,description='',asking_price='0.00',currency='SGD',
+                        delivery='0.00',fees='0.00',other_costs='0.00')
+        a=assess(listing,self.read_evidence(r.evidence_ids),self.bundle.assumptions,self.bundle.policy,self.clock())
+        return Artifact(request_id=r.request_id,operation=r.operation,correlation_id=r.correlation_id,
+                        assessment=a,inventory=summary)
+
     def _handle(self, r):
         if r.expires_at <= self.clock(): raise MarketError('expired_request')
         if r.policy_version != self.bundle.policy.version: raise MarketError('stale_policy')
+        if r.operation in ('assess_owned_unit','prepare_resale'): return self._owned(r)
         self.read_listing(r.correlation_id)
         self.read_evidence(r.evidence_ids)
         a = self._assessments.get(r.correlation_id)
