@@ -6,7 +6,7 @@ Repository: `Perryong/pokemon-tracker`
 
 Branch: `feature/market-agent`
 
-Status: Proposed design, awaiting operator approval. No implementation claim established.
+Status: Approved by the operator in chat on 30 October 2026 with “proceed the next step” in response to the design approval request. Implementation planning authorized; no implementation claim established.
 
 ## Intent and selected approach
 
