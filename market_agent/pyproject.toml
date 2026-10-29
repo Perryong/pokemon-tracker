@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pokemon-market"
+version = "0.1.0"
+description = "Simulated, bounded Pokemon market research agent"
+requires-python = ">=3.12,<3.13"
+dependencies = ["deepagents==0.7.32", "pydantic==2.14.2", "langchain-openai==1.7.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pokemon_market = ["fixtures/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

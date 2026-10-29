@@ -1,0 +1,108 @@
+{
+  "session_id": "simulation-1",
+  "listings": [
+    {
+      "id": "listing-1",
+      "seller_id": "seller-1",
+      "version": 1,
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "quantity": 1,
+      "condition": "near_mint",
+      "condition_reviewed": true,
+      "description": "Synthetic card listing.",
+      "asking_price": "75.00",
+      "currency": "SGD",
+      "delivery": "3.00",
+      "fees": "2.00",
+      "other_costs": "0.00"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e1",
+      "transaction_id": "t1",
+      "source": "synthetic-local-sales",
+      "basis": "completed_sale",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "observed_at": "2026-10-29T04:00:00Z",
+      "currency": "SGD",
+      "gross_amount": "120.00",
+      "completed": true
+    },
+    {
+      "id": "e2",
+      "transaction_id": "t2",
+      "source": "synthetic-local-sales",
+      "basis": "completed_sale",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "observed_at": "2026-10-29T04:00:00Z",
+      "currency": "SGD",
+      "gross_amount": "130.00",
+      "completed": true
+    }
+  ],
+  "assumptions": [],
+  "policy": {
+    "id": "test-policy",
+    "version": "policy-1",
+    "created_at": "2026-10-29T00:00:00Z",
+    "allowed_cards": [
+      {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      }
+    ],
+    "allowed_conditions": [
+      "near_mint"
+    ],
+    "minimum_observed_sales": 2,
+    "max_evidence_age_seconds": 604800,
+    "allow_assumptions": true,
+    "allow_questions": true,
+    "required_profit": "20.00",
+    "selling_fees": "10.00",
+    "selling_delivery": "5.00",
+    "selling_other": "0.00",
+    "per_item_limit": "100.00",
+    "available_capital": "200.00",
+    "soft_exposure_cap": "150.00",
+    "mandate_seconds": 900,
+    "max_reassessments": 3
+  },
+  "existing_soft_exposure": "0.00"
+}
