@@ -174,6 +174,7 @@ def create_arguments(image, stage, run_id):
             "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m,mode=1777",
             "--tmpfs", "/work:rw,nosuid,nodev,size=1g,mode=1777",
             "--log-driver", "local", "--log-opt", "max-size=1m", "--log-opt", "max-file=1",
+            "--log-opt", "compress=false",
             "--mount", "type=bind,source=" + stage + ",target=/input,readonly",
             "--entrypoint", "python3", image, "-I", "/input/probe.py", "--run", "/input/job.json"]
 

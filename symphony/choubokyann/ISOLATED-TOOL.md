@@ -118,7 +118,10 @@ the actual active coordinator budget before creating the test container.
 
 The mounted `coordinator.toml` adds `mcp_servers.isolated_checks`, command
 `python3 -I /runtime/isolated_tool.py --requests /checks/requests --results /checks/results`,
-60-second tool timeout. Selected project comes from `SYMPHONY_PROJECT`. Each call
+60-second tool timeout. Its `env_vars = ["SYMPHONY_PROJECT"]` explicitly forwards
+the selected non-secret registration; no credential variables are forwarded.
+Without this setting, the adapter may fail startup because its project is missing.
+Selected project comes from `SYMPHONY_PROJECT`. Each call
 waits at most 50 seconds; a durable `pending` result calls for `check_status`
 with the identical arguments, not another job. Confirm actual tools/list and
 invoke from the actual Astra run; a CLI/config declaration is not that evidence.

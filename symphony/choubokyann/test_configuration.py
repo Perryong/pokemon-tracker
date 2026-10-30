@@ -25,6 +25,8 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(tool['command'], 'python3')
         self.assertEqual(tool['tool_timeout_sec'], 60)
         self.assertIn('/runtime/isolated_tool.py', tool['args'])
+        self.assertEqual(tool.get('env_vars'), ['SYMPHONY_PROJECT'])
+        self.assertFalse(tool.get('env'))
         self.assertIn('target=/checks/results,readonly', start)
         self.assertIn('target=/checks/requests', start)
         self.assertNotIn('/var/run/docker.sock', start)

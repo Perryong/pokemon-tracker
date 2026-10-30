@@ -20,5 +20,6 @@ default_subagent_reasoning_effort = "high"
 [mcp_servers.isolated_checks]
 command = "python3"
 args = ["-I", "/runtime/isolated_tool.py", "--requests", "/checks/requests", "--results", "/checks/results"]
+env_vars = ["SYMPHONY_PROJECT"]
 startup_timeout_sec = 10
 tool_timeout_sec = 60

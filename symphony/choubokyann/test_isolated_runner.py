@@ -243,6 +243,16 @@ class BoundaryTests(unittest.TestCase):
         self.assertNotIn("--privileged", args)
         self.assertIn("/input/probe.py", " ".join(args))
 
+    def test_single_log_file_disables_compression(self):
+        args = runner.create_arguments("sha256:" + "a" * 64, "/trusted/stage", "run")
+        options = dict(args[i + 1].split("=", 1)
+                       for i, arg in enumerate(args) if arg == "--log-opt")
+        self.assertEqual(args[args.index("--log-driver") + 1], "local")
+        self.assertEqual(options["max-size"], "1m")
+        self.assertEqual(options["max-file"], "1")
+        # Docker rejects compression with max-file=1, including its default.
+        self.assertEqual(options.get("compress"), "false")
+
     def test_timeout_always_removes_and_verifies(self):
         boundary = runner.DockerBoundary.__new__(runner.DockerBoundary)
         calls = []
