@@ -110,3 +110,41 @@ it.each(['sv03.5-199', 'swsh12.5-160'])('accepts real special-set ID %s without 
   expect(result.data.card.id).toBe(id);
   expect(fetch).toHaveBeenCalledWith(`https://api.tcgdex.net/v2/en/cards/${id}`, expect.objectContaining({ redirect: 'error' }));
 });
+it('searches partial names at the fixed upstream, ranks results and caches requests', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(reply([
+    { id: 'basep-1', name: 'Pikachu', image: 'https://assets.tcgdex.net/en/base/basep/1' },
+    { id: 'xy1-1', name: 'Flying Pikachu', image: 'https://evil.test/a' },
+    { id: 'tk-hs-r-2', name: 'Pika', image: 'https://assets.tcgdex.net/en/hgss/tk-hs-r/2' },
+    { id: 'abc-2', name: 'Pikachu V' },
+  ]));
+  const middleware = marketMiddleware();
+  const result = await request(middleware, '/api/market/search?q=pika');
+  expect(result.status).toBe(200);
+  expect(result.data.cards.map((item: { name: string }) => item.name)).toEqual(['Pika', 'Pikachu', 'Pikachu V', 'Flying Pikachu']);
+  expect(result.data.cards[3].image).toBeUndefined();
+  expect(result.data.cards[0].id).toBe('tk-hs-r-2');
+  const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
+  expect(url.origin).toBe('https://api.tcgdex.net'); expect(url.searchParams.get('name')).toBe('like:pika');
+  await request(middleware, '/api/market/search?q=PIKA'); expect(fetch).toHaveBeenCalledOnce();
+});
+it.each(['', 'q=x', 'q=pika&url=https://evil.test', 'q=pika&q=char', 'q=not%3Apika', 'q=pi%7Cka', 'q='+ 'a'.repeat(61)])('rejects unsafe search query %s', async query => {
+  expect((await request(marketMiddleware(), '/api/market/search?'+query)).status).toBe(400);
+  expect(fetch).not.toHaveBeenCalled();
+});
+it('caps large search results, handles empty/malformed results and shares rate limits with card lookups', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(reply(Array.from({ length: 501 }, (_,i) => ({ id: `base1-${i}`, name: 'Pikachu' }))));
+  const data = (await request(marketMiddleware(), '/api/market/search?q=pika')).data;
+  expect(data.cards).toHaveLength(500); expect(data.truncated).toBe(true);
+  vi.mocked(fetch).mockResolvedValueOnce(reply([]));
+  expect((await request(marketMiddleware(), '/api/market/search?q=absent')).data.cards).toEqual([]);
+  vi.mocked(fetch).mockResolvedValueOnce(reply({ unexpected: true }));
+  expect((await request(marketMiddleware(), '/api/market/search?q=pika')).status).toBe(502);
+  const middleware = marketMiddleware();
+  vi.mocked(fetch).mockImplementation(async url => reply(String(url).includes('?') ? [] : card(String(url).split('/').pop())));
+  for (let i=0;i<30;i++) await request(middleware, `/api/market/cards/base1-${i}`);
+  expect((await request(middleware, '/api/market/search?q=pika')).status).toBe(429);
+});
+it('loads multi-part set IDs from search safely', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(reply(card('tk-hs-r-2')));
+  expect((await request(marketMiddleware(), '/api/market/cards/tk-hs-r-2')).status).toBe(200);
+});

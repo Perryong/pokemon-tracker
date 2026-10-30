@@ -95,3 +95,21 @@ it('loads a special-set card with a dotted set ID', async () => {
   expect(await screen.findByRole('heading', { name: /Charizard ex/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith('/api/market/cards/sv03.5-199', expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
+it('lets the independent health check settle after the first lookup is cancelled', async () => {
+  let finish!: (response: Response) => void;
+  vi.mocked(fetch).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  render(<MarketView />);
+  vi.mocked(fetch).mockImplementationOnce(() => new Promise(() => {})); submit();
+  fireEvent.change(screen.getByLabelText('TCGdex card ID'), { target: { value: 'sv03-199' } });
+  await act(async () => finish(response(health)));
+  expect(screen.getByText('Backend reachable')).toBeInTheDocument();
+});
+it('selects a searched card and takes keyboard focus to its price details', async () => {
+  render(<MarketView />); await screen.findByText('Backend reachable');
+  vi.mocked(fetch).mockImplementation(async url => response(String(url).includes('/search?') ? { schemaVersion: 1, query: 'pika', cards: [{ id: 'base1-58', name: 'Pikachu' }], truncated: false } : card('base1-58','Pikachu')));
+  fireEvent.change(screen.getByLabelText('Search card names'), { target: { value: 'pika' } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Card name search' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'View prices for Pikachu base1-58' }));
+  expect(await screen.findByRole('heading', { name: 'Pikachu base1-58' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Card price details' })).toHaveFocus();
+});

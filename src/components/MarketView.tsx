@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import PriceChart from './PriceChart';
+import MarketSearch from './MarketSearch';
 import { useSgdExchangeRates, toSgd, formatSgd } from '@/lib/exchange-rate';
 import { MarketCardSchema, MarketHealthSchema, MarketIdSchema, type MarketCard } from '@/lib/market';
 
@@ -19,21 +20,22 @@ export default function MarketView() {
   const [data, setData] = useState<MarketCard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const detailHeading = useRef<HTMLHeadingElement>(null);
   const request = useRef<AbortController>();
-  const health = useRef<AbortController>();
+  const backendSettled = useRef(false);
   const generation = useRef(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    health.current = controller;
-    const timer = setTimeout(() => { controller.abort(); setBackend('unavailable'); }, 12000);
+
+    const timer = setTimeout(() => { controller.abort(); if (!backendSettled.current) setBackend('unavailable'); }, 12000);
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
     void (async () => {
       try {
         const response = await fetch('/api/market/health', { signal: controller.signal });
         const valid = response.ok && MarketHealthSchema.safeParse(await response.json()).success;
-        if (!controller.signal.aborted) setBackend(valid ? 'reachable' : 'unavailable');
-      } catch { if (!controller.signal.aborted) setBackend('unavailable'); }
+        if (!controller.signal.aborted && !backendSettled.current) setBackend(valid ? 'reachable' : 'unavailable');
+      } catch { if (!controller.signal.aborted && !backendSettled.current) setBackend('unavailable'); }
       finally { clearTimeout(timer); }
     })();
     // Invalidate the latest request counter on unmount, not a captured DOM reference.
@@ -41,12 +43,11 @@ export default function MarketView() {
     return () => { clearTimeout(timer); controller.abort(); request.current?.abort(); generation.current++; };
   }, []);
 
-  async function load() {
+  async function load(selected = id.trim()) {
     request.current?.abort();
     const version = ++generation.current;
-    const selected = id.trim();
     if (!MarketIdSchema.safeParse(selected).success) { setLoading(false); setError('Enter a card ID such as base1-1 or sv03-199.'); return; }
-    health.current?.abort();
+    setId(selected);
     const controller = new AbortController();
     request.current = controller;
     setLoading(true); setError('');
@@ -55,6 +56,7 @@ export default function MarketView() {
       const response = await fetch(`/api/market/cards/${encodeURIComponent(selected)}`, { signal: controller.signal });
       const raw: unknown = await response.json();
       if (version !== generation.current || controller.signal.aborted) return;
+      backendSettled.current = true;
       if (!response.ok) {
         const code = raw && typeof raw === 'object' && 'error' in raw ? String(raw.error) : '';
         if (!errors[code]) throw new Error('Invalid response');
@@ -64,7 +66,7 @@ export default function MarketView() {
       if (parsed.card.id !== selected) throw new Error('Mismatched card');
       setBackend('reachable'); setData(parsed);
     } catch {
-      if (version === generation.current) { setBackend('unavailable'); setError(controller.signal.aborted ? 'Backend request timed out. Try again.' : 'Backend response unavailable. Open the Mac-hosted view and check its connection.'); }
+      if (version === generation.current) { backendSettled.current = true; setBackend('unavailable'); setError(controller.signal.aborted ? 'Backend request timed out. Try again.' : 'Backend response unavailable. Open the Mac-hosted view and check its connection.'); }
     } finally {
       clearTimeout(timer);
       if (version === generation.current) setLoading(false);
@@ -73,9 +75,11 @@ export default function MarketView() {
 
   const previous = Boolean(data && (loading || error || data.card.id !== id.trim()));
   return <section className="page market-view" aria-label="Market View">
-    <header className="page-heading"><div><h1>Market</h1><p className="page-description">Live reference prices, with their source and age. Look up a TCGdex card ID to check the latest available snapshot.</p></div></header>
+    <header className="page-heading"><div><h1>Market</h1><p className="page-description">Find a card by name, compare estimated SGD prices, and explore its average-price chart.</p></div></header>
     <div className="market-status" role="status"><span className={`backend-dot ${backend}`} />{backend === 'checking' ? 'Checking backend…' : backend === 'reachable' ? 'Backend reachable' : 'Backend unavailable'}</div>
     <p className="page-description market-limit">Market Agent remains simulated. These reference prices are not completed-sale evidence or a buy recommendation. Approved policy and exact sale evidence are required before any real qualification.</p>
+    <MarketSearch rates={rates} onSelect={selected => { void load(selected); detailHeading.current?.focus(); }} />
+    <h2 ref={detailHeading} tabIndex={-1} className="market-detail-heading">Card price details</h2>
     <form className="filter-tray" aria-label="Price lookup" onSubmit={event => { event.preventDefault(); void load(); }}>
       <div className="filter-field grow"><label htmlFor="market-id">TCGdex card ID</label><input id="market-id" className="control" value={id} maxLength={80} autoCapitalize="none" spellCheck={false} aria-describedby="market-examples" onChange={event => { request.current?.abort(); generation.current++; setLoading(false); setError(''); setId(event.target.value); }} /><span id="market-examples" className="market-meta">Examples: base1-1 · sv03-199</span></div>
       <Button type="submit" disabled={loading}>{loading ? 'Loading…' : data?.card.id === id.trim() ? 'Refresh prices' : 'Load prices'}</Button>

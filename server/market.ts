@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { MarketCardSchema, MarketDateSchema, MarketIdSchema, cardmarketMetrics, tcgplayerMetrics, type MarketCard } from '../src/lib/market';
+import { MarketBriefSchema, MarketImageSchema, MarketQuerySchema, MarketSearchSchema, type MarketSearchResult, MarketCardSchema, MarketDateSchema, MarketIdSchema, cardmarketMetrics, tcgplayerMetrics, type MarketCard } from '../src/lib/market';
 
 const MAX_BODY = 1024 * 1024;
 const TTL = 3600_000;
@@ -33,6 +33,17 @@ function normalize(raw: unknown, id: string): MarketCard {
   }
   return MarketCardSchema.parse({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id: data.id, name: data.name }, fetchedAt: new Date().toISOString(), quotes });
 }
+function normalizeSearch(raw: unknown, query: string): MarketSearchResult {
+  if (!Array.isArray(raw) || raw.length > 501) throw new Error('Invalid search data');
+  const cards = raw.map(value => {
+    const item = object(value);
+    return MarketBriefSchema.parse({ id: item.id, name: item.name, ...(MarketImageSchema.safeParse(item.image).success ? { image: item.image } : {}) });
+  });
+  const rank = (name: string) => name.toLowerCase() === query ? 0 : name.toLowerCase().startsWith(query) ? 1 : 2;
+  const matches = [...new Map(cards.filter(card => card.name.toLowerCase().includes(query)).map(card => [card.id, card])).values()];
+  matches.sort((a,b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name, 'en') || a.id.localeCompare(b.id, 'en', { numeric: true }));
+  return MarketSearchSchema.parse({ schemaVersion: 1, query, cards: matches.slice(0, 500), truncated: raw.length > 500 });
+}
 async function readJson(response: Response): Promise<unknown> {
   if (Number(response.headers.get('content-length')) > MAX_BODY || !response.body) throw new Error('Invalid body');
   const reader = response.body.getReader();
@@ -51,15 +62,17 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 export function marketMiddleware() {
-  const cache = new Map<string, { data: MarketCard; expires: number }>();
+  const cache = new Map<string, { data: MarketCard | MarketSearchResult; expires: number }>();
   const pending = new Map<string, Promise<{ status: number; data: unknown }>>();
   let windowStart = Date.now();
   let calls = 0;
-  async function load(id: string) {
+  async function load(id: string, query?: string) {
     try {
-      const response = await fetch(`https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(id)}`, { redirect: 'error', signal: AbortSignal.timeout(8000) });
+      const url = query ? `https://api.tcgdex.net/v2/en/cards?${new URLSearchParams({ name: `like:${query}`, 'pagination:page': '1', 'pagination:itemsPerPage': '501' })}` : `https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(id)}`;
+      const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(8000) });
       if (!response.ok) { await response.body?.cancel(); return { status: response.status === 404 ? 404 : 502, data: { error: response.status === 404 ? 'card_not_found' : 'provider_unavailable' } }; }
-      const data = normalize(await readJson(response), id);
+      const raw = await readJson(response);
+      const data = query ? normalizeSearch(raw, query) : normalize(raw, id);
       if (cache.size >= 256) cache.delete(cache.keys().next().value!);
       cache.set(id, { data, expires: Date.now() + TTL });
       return { status: 200, data };
@@ -79,11 +92,18 @@ export function marketMiddleware() {
     };
     if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); send(405, { error: 'method_not_allowed' }); return; }
     if (path === '/api/market/health') { send(200, { service: 'market-prices', schemaVersion: 1, mode: 'reference', source: 'TCGdex' }); return; }
-    const id = path.startsWith('/api/market/cards/') ? path.slice('/api/market/cards/'.length) : '';
-    if (!MarketIdSchema.safeParse(id).success) { send(400, { error: 'invalid_card_id' }); return; }
+    let query: string | undefined;
+    if (path.split('?')[0] === '/api/market/search') {
+      const params = new URL(path, 'http://local').searchParams;
+      const parsed = MarketQuerySchema.safeParse(params.get('q'));
+      if (!parsed.success || [...params.keys()].length !== 1 || params.has('q') === false) { send(400, { error: 'invalid_search' }); return; }
+      query = parsed.data.toLowerCase();
+    }
+    const id = query ? `search:${query}` : path.startsWith('/api/market/cards/') ? path.slice('/api/market/cards/'.length) : '';
+    if (!query && !MarketIdSchema.safeParse(id).success) { send(400, { error: 'invalid_card_id' }); return; }
     const cached = cache.get(id);
     if (cached && cached.expires > Date.now()) {
-      send(200, { ...cached.data, quotes: cached.data.quotes.map(quote => ({ ...quote, freshness: freshness(quote.updatedAt) })) }); return;
+      send(200, 'quotes' in cached.data ? { ...cached.data, quotes: cached.data.quotes.map(quote => ({ ...quote, freshness: freshness(quote.updatedAt) })) } : cached.data); return;
     }
     cache.delete(id);
     let request = pending.get(id);
@@ -91,7 +111,7 @@ export function marketMiddleware() {
       if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); calls = 0; }
       if (calls >= 30) { send(429, { error: 'rate_limited' }); return; }
       calls++;
-      request = load(id).finally(() => pending.delete(id));
+      request = load(id, query).finally(() => pending.delete(id));
       pending.set(id, request);
     }
     const result = await request;
