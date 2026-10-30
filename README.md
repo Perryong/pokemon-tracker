@@ -48,7 +48,7 @@ Get a key from [pokemontcgapi.com](https://pokemontcgapi.com/free-api-key). Rest
 
 When a card is opened, the app requests additional Cardmarket data through its own `/api/cardmarket/:cardId` endpoint. The server authenticates with [pokemontcgapi.com](https://pokemontcgapi.com/cardmarket-price-api), verifies the card identity, and returns only normalized English, ungraded Cardmarket price rows. The UI retains each row’s condition, printing, pricing basis, and observation date. Asking prices describe seller listings and should not be interpreted as completed sales.
 
-Cardmarket EUR prices are displayed as estimated SGD using dated [ECB reference rates via Frankfurter](https://frankfurter.dev/). TCGplayer prices remain in USD. If exchange-rate retrieval fails, the app shows the original EUR prices with an explanation.
+Cardmarket EUR and TCGplayer USD prices are displayed as estimated SGD using dated [ECB reference rates via Frankfurter](https://frankfurter.dev/). If exchange-rate retrieval fails, converted amounts are marked unavailable with an explanation.
 
 Provider coverage and account limits can leave cards without prices. When the additional provider is unavailable or has no usable data, TCGdex prices remain the fallback. The UI identifies the source used.
 
@@ -56,7 +56,7 @@ To conserve API credits, server responses are cached for six hours, concurrent r
 
 ## Mac-hosted Market view
 
-The **Market** tab shows read-only TCGdex reference prices from the local backend, with original currencies, provider timestamps and connection status. The Market Agent remains simulated. See [setup and private phone access](docs/market-live-view.md) and [verification evidence](docs/market-live-view-verification.md). A static-only deployment has no Market backend.
+The **Market** tab shows read-only TCGdex reference prices from the local backend, with estimated SGD prices, average-price charts, partial-name discovery, provider timestamps and connection status. The Market Agent remains simulated. See [setup and private phone access](docs/market-live-view.md) and [verification evidence](docs/market-live-view-verification.md). A static-only deployment has no Market backend.
 
 ## Collection storage
 

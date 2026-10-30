@@ -41,7 +41,7 @@ function normalizeSearch(raw: unknown, query: string): MarketSearchResult {
   });
   const rank = (name: string) => name.toLowerCase() === query ? 0 : name.toLowerCase().startsWith(query) ? 1 : 2;
   const matches = [...new Map(cards.filter(card => card.name.toLowerCase().includes(query)).map(card => [card.id, card])).values()];
-  matches.sort((a,b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name, 'en') || a.id.localeCompare(b.id, 'en', { numeric: true }));
+  matches.sort((a,b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name, 'en'));
   return MarketSearchSchema.parse({ schemaVersion: 1, query, cards: matches.slice(0, 500), truncated: raw.length > 500 });
 }
 async function readJson(response: Response): Promise<unknown> {

@@ -148,3 +148,8 @@ it('loads multi-part set IDs from search safely', async () => {
   vi.mocked(fetch).mockResolvedValueOnce(reply(card('tk-hs-r-2')));
   expect((await request(marketMiddleware(), '/api/market/cards/tk-hs-r-2')).status).toBe(200);
 });
+it('preserves provider order for equally relevant names instead of grouping one set first', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(reply([{ id: 'basep-1', name: 'Pikachu' }, { id: '30th-023', name: 'Pikachu' }]));
+  const result = await request(marketMiddleware(), '/api/market/search?q=pika');
+  expect(result.data.cards.map((card: { id: string }) => card.id)).toEqual(['basep-1','30th-023']);
+});
