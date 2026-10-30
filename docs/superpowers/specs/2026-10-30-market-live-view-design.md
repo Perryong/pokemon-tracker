@@ -1,7 +1,7 @@
 # Mac-hosted live market view
 
 Date: 30 October 2026 (Asia/Singapore)
-Status: proposed for operator approval; no implementation claim or new exception established. Independent builder check: nothing important left.
+Status: approved on 30 October 2026. The operator approved local build/testing and private Tailscale setup under the requested exception. No signed claim or publication/merge approval is asserted. Independent builder check: nothing important left.
 Issue: https://github.com/Perryong/pokemon-tracker/issues/26
 Branch: `codex/market-live-view`, based on the completed simulated Market slice at `f940a64`.
 
@@ -22,7 +22,7 @@ Alternatives considered:
 - Hosted frontend plus a separately authenticated tunnel to the Mac: keeps the public URL but adds authentication, cross-origin configuration and tunnel management. Unnecessary for a personal first dashboard.
 - A new Python price service: can later support the Python agent directly, but duplicates the existing HTTP hosting and normalization work for this display-only step.
 
-The Tailscale deployment choice is a recommendation for approval, not a claim that the operator has already enabled it. No public Funnel or router port-forward is proposed.
+The operator approved the proposed private Tailscale deployment choice; successful phone access still requires verification. No public Funnel or router port-forward is proposed.
 
 ## User-facing behavior
 
