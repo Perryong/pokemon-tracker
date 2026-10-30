@@ -32,4 +32,3 @@ Reviewer exclusions resolved:
 - Ruling: Leave actual phone/Tailscale verification outside this follow-up — it remains the established external sign-in step — phone access is still unverified.
 - Ruling: Keep popularity ranking and daily history excluded — the operator explicitly chose existing reference data — results cannot answer measured popularity or daily movements.
 - Ruling: Keep provider freshness as a manually refreshed snapshot — source timestamps remain visible and this is separate from FX renewal — an idle view can retain its original freshness label until another lookup.
-
