@@ -21,5 +21,13 @@ default_subagent_reasoning_effort = "high"
 command = "python3"
 args = ["-I", "/runtime/isolated_tool.py", "--requests", "/checks/requests", "--results", "/checks/results"]
 env_vars = ["SYMPHONY_PROJECT"]
+enabled_tools = ["run_checks", "check_status"]
 startup_timeout_sec = 10
 tool_timeout_sec = 60
+
+# Operator-authorized restricted host checks only; global approval stays never.
+[mcp_servers.isolated_checks.tools.run_checks]
+approval_mode = "approve"
+
+[mcp_servers.isolated_checks.tools.check_status]
+approval_mode = "approve"

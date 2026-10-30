@@ -121,6 +121,14 @@ The mounted `coordinator.toml` adds `mcp_servers.isolated_checks`, command
 60-second tool timeout. Its `env_vars = ["SYMPHONY_PROJECT"]` explicitly forwards
 the selected non-secret registration; no credential variables are forwarded.
 Without this setting, the adapter may fail startup because its project is missing.
+The operator-authorized tool loop pins `enabled_tools = ["run_checks", "check_status"]`
+and sets `tools.run_checks.approval_mode = "approve"` and
+`tools.check_status.approval_mode = "approve"` within this server only. Global
+`approval_policy = "never"` remains unchanged. No server-wide default or GitHub
+tool preapproval is granted. These scoped settings let the trusted adapter run
+under noninteractive approval policy; they do not bypass host validation or
+authorize repository execution in the coordinator. Reload the app-server after
+installing configuration changes, preserving the work volume and pending gate.
 Selected project comes from `SYMPHONY_PROJECT`. Each call
 waits at most 50 seconds; a durable `pending` result calls for `check_status`
 with the identical arguments, not another job. Confirm actual tools/list and

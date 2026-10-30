@@ -8,6 +8,19 @@ ROOT = HERE.parents[1]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_only_restricted_check_tools_are_preapproved(self):
+        config = tomllib.loads((HERE / 'coordinator.toml').read_text())
+        self.assertEqual(config['approval_policy'], 'never')
+        servers = config['mcp_servers']
+        self.assertEqual(set(servers), {'isolated_checks'})
+        tool = servers['isolated_checks']
+        self.assertEqual(set(tool.get('enabled_tools', [])), {'run_checks', 'check_status'})
+        self.assertNotIn('default_tools_approval_mode', tool)
+        self.assertEqual(tool.get('tools'), {
+            'run_checks': {'approval_mode': 'approve'},
+            'check_status': {'approval_mode': 'approve'},
+        })
+
     def test_repository_execution_is_delegated_to_offline_host_boundary(self):
         for name in ('WORKFLOW.template.md', 'README.md'):
             content = (HERE / name).read_text()
