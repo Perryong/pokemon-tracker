@@ -27,3 +27,21 @@ it('blocks rate dates beyond seven days even if a retained record claims a later
   expect(toSgd(10, 'EUR', rates)).toBeNull();
   expect(getSgdRate('EUR', rates)).toBeUndefined();
 });
+it.each(['focus', 'pageshow', 'online', 'visibilitychange'])('recovers expired SGD conversion on %s after sleep without waiting for suspended timers', async event => {
+  vi.resetModules();
+  const exchange = await import('../exchange-rate');
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-31T00:00:00Z'));
+  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.5, date: '2026-10-30' }))));
+  const { result, unmount } = renderHook(() => exchange.useSgdExchangeRates(true));
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(exchange.toSgd(10, 'EUR', result.current.rates)).toBe(15);
+  // Wall time advances while browser timers remain suspended, as on Mac sleep.
+  vi.setSystemTime(new Date('2026-10-31T08:00:00Z'));
+  expect(exchange.toSgd(10, 'EUR', result.current.rates)).toBeNull();
+  vi.mocked(fetch).mockImplementation(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.6, date: '2026-10-30' })));
+  await act(async () => { (event === 'visibilitychange' ? document : window).dispatchEvent(new Event(event)); });
+  expect(exchange.toSgd(10, 'EUR', result.current.rates)).toBe(16);
+  expect(exchange.toSgd(10, 'USD', result.current.rates)).toBe(16);
+  unmount();
+  expect(vi.getTimerCount()).toBe(0);
+});

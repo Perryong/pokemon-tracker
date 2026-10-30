@@ -32,3 +32,11 @@ Reviewer exclusions resolved:
 - Ruling: Leave actual phone/Tailscale verification outside this follow-up — it remains the established external sign-in step — phone access is still unverified.
 - Ruling: Keep popularity ranking and daily history excluded — the operator explicitly chose existing reference data — results cannot answer measured popularity or daily movements.
 - Ruling: Keep provider freshness as a manually refreshed snapshot — source timestamps remain visible and this is separate from FX renewal — an idle view can retain its original freshness label until another lookup.
+
+## Price recovery follow-up — 31 October 2026
+
+The operator's open Market page showed valid backend quotes but expired SGD rates, leaving prices unavailable and the detail view saying conversion was loading. Both direct backend lookup and the FX service were reachable. A wall-clock jump without timer advancement reproduced the sleep/resume gap: the six-hour timer alone cannot promptly renew a rate after suspension.
+
+The shared FX hook now revalidates on focus, page restore, visibility and network recovery, with duplicate renewal suppression and timer/listener cleanup. Four regression cases failed before the change and passed afterward. All 175 frontend tests, production build, changed-file ESLint and whitespace checks passed. Existing build/tool deprecation warnings remain. Live browser verification of the operator's selected `pop9-15` restored the SGD table and both average charts (observed reference trend SGD22.48). No backend restart or network configuration change was needed.
+
+Issue #26 dependencies were rechecked: no native blockers. Both repositories were checked for overlap; no FX-related overlap was found. Project access still lacks read:project; the established local execution exception continues and no workflow claim is asserted. Ruflo remains unavailable. Scope is shared conversion recovery, affecting Market and Card Detail; the existing 30-upstream-requests/minute limit and cards lacking provider quotes are unchanged. A real Mac sleep cycle was not repeated; suspended timers were reproduced with fake-clock tests. No push, merge or deployment.

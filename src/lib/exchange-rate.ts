@@ -34,18 +34,36 @@ export function useSgdExchangeRates(enabled: boolean) {
     if (!enabled) return;
     let active = true;
     const timers: Partial<Record<Currency, ReturnType<typeof setTimeout>>> = {};
+    const currentRates: SgdRates = {};
+    const renewing = new Set<Currency>();
     const renew = async (currency: Currency) => {
+      if (!active || renewing.has(currency)) return;
+      renewing.add(currency);
+      clearTimeout(timers[currency]);
+      delete currentRates[currency];
       setRates(previous => { const next = { ...previous }; delete next[currency]; return next; });
       setErrors(previous => ({ ...previous, [currency]: false }));
       let retryAt = Date.now() + 6 * 3600_000;
       try {
         const value = await fetchSgdRate(currency);
-        if (active) { setRates(previous => ({ ...previous, [currency]: value })); retryAt = value.expiresAt; }
+        if (active) { currentRates[currency] = value; setRates(previous => ({ ...previous, [currency]: value })); retryAt = value.expiresAt; }
       } catch { if (active) setErrors(previous => ({ ...previous, [currency]: true })); }
+      renewing.delete(currency);
       if (active) timers[currency] = setTimeout(() => { void renew(currency); }, Math.max(1, retryAt - Date.now()));
     };
+    // Sleep can advance wall time without running the expiry timer.
+    const resume = () => {
+      if (document.visibilityState === 'hidden') return;
+      for (const currency of ['EUR', 'USD'] as const) if (!getSgdRate(currency, currentRates)) void renew(currency);
+    };
+    for (const event of ['focus', 'pageshow', 'online']) window.addEventListener(event, resume);
+    document.addEventListener('visibilitychange', resume);
     for (const currency of ['EUR', 'USD'] as const) void renew(currency);
-    return () => { active = false; Object.values(timers).forEach(clearTimeout); };
+    return () => {
+      active = false; Object.values(timers).forEach(clearTimeout);
+      for (const event of ['focus', 'pageshow', 'online']) window.removeEventListener(event, resume);
+      document.removeEventListener('visibilitychange', resume);
+    };
 
   }, [enabled]);
   return { rates, errors };
