@@ -54,6 +54,10 @@ Provider coverage and account limits can leave cards without prices. When the ad
 
 To conserve API credits, server responses are cached for six hours, concurrent requests for the same card are shared, and uncached requests are limited. Prices are fetched on demand rather than preloading the entire catalogue. See [Cardmarket integration details](docs/cardmarket.md).
 
+## Mac-hosted Market view
+
+The **Market** tab shows read-only TCGdex reference prices from the local backend, with original currencies, provider timestamps and connection status. The Market Agent remains simulated. See [setup and private phone access](docs/market-live-view.md) and [verification evidence](docs/market-live-view-verification.md). A static-only deployment has no Market backend.
+
 ## Collection storage
 
 Collection quantities are stored in the browser’s `localStorage`, using the existing version 3 format. There are no accounts or cloud synchronization. Data belongs to the current browser and origin; clearing site storage removes the saved collection. Existing saved collections are migrated by the app when needed.
