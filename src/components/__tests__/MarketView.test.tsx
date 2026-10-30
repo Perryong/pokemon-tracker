@@ -87,3 +87,10 @@ it('does not let a late health failure override a successful price request', asy
   await act(async () => finish(new Response('<html>unavailable</html>')));
   expect(screen.getByText('Backend reachable')).toBeInTheDocument();
 });
+it('loads a special-set card with a dotted set ID', async () => {
+  render(<MarketView />); await screen.findByText('Backend reachable');
+  fireEvent.change(screen.getByLabelText('TCGdex card ID'), { target: { value: 'sv03.5-199' } });
+  vi.mocked(fetch).mockResolvedValueOnce(response(card('sv03.5-199', 'Charizard ex'))); submit();
+  expect(await screen.findByRole('heading', { name: /Charizard ex/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith('/api/market/cards/sv03.5-199', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+});

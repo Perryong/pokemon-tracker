@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const MarketIdSchema = z.string().max(80).regex(/^[a-zA-Z0-9]+-[a-zA-Z0-9.]+$/);
+export const MarketIdSchema = z.string().max(80).regex(/^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*-[a-zA-Z0-9.]+$/);
 export const MarketDateSchema = z.string().datetime({ offset: true });
 export const cardmarketMetrics = ['avg', 'low', 'trend', 'avg1', 'avg7', 'avg30', 'avg-holo', 'low-holo', 'trend-holo', 'avg1-holo', 'avg7-holo', 'avg30-holo'] as const;
 export const tcgplayerMetrics = ['lowPrice', 'midPrice', 'highPrice', 'marketPrice', 'directLowPrice'] as const;

@@ -103,3 +103,10 @@ it('rejects oversized upstream responses', async () => {
   vi.mocked(fetch).mockResolvedValueOnce(new Response('x'.repeat(1024*1024+1)));
   expect((await request(marketMiddleware())).status).toBe(502);
 });
+it.each(['sv03.5-199', 'swsh12.5-160'])('accepts real special-set ID %s without broadening the upstream path', async id => {
+  vi.mocked(fetch).mockResolvedValueOnce(reply(card(id)));
+  const result = await request(marketMiddleware(), `/api/market/cards/${id}`);
+  expect(result.status).toBe(200);
+  expect(result.data.card.id).toBe(id);
+  expect(fetch).toHaveBeenCalledWith(`https://api.tcgdex.net/v2/en/cards/${id}`, expect.objectContaining({ redirect: 'error' }));
+});

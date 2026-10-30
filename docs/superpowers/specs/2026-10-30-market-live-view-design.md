@@ -1,7 +1,7 @@
 # Mac-hosted live market view
 
 Date: 30 October 2026 (Asia/Singapore)
-Status: approved on 30 October 2026. The operator approved local build/testing and private Tailscale setup under the requested exception. No signed claim or publication/merge approval is asserted. Independent builder check: nothing important left.
+Status: implemented and locally verified on 30 October 2026; private HTTPS/phone verification pending operator sign-in. Approved on 30 October 2026. The operator approved local build/testing and private Tailscale setup under the requested exception. No signed claim or publication/merge approval is asserted. Independent builder check: nothing important left.
 Issue: https://github.com/Perryong/pokemon-tracker/issues/26
 Branch: `codex/market-live-view`, based on the completed simulated Market slice at `f940a64`.
 
