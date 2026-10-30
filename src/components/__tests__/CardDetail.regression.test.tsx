@@ -5,7 +5,7 @@ import CardDetail from '../CardDetail';
 import { normalizeTCGCard } from '@/lib/types';
 import { useSgdExchangeRates } from '@/lib/exchange-rate';
 vi.mock('@/lib/exchange-rate', async () => ({ ...await vi.importActual('@/lib/exchange-rate'), useSgdExchangeRates: vi.fn() }));
-beforeEach(() => vi.mocked(useSgdExchangeRates).mockReturnValue({ rates: { EUR: { rate: 1.5, date: new Date().toISOString().slice(0, 10) }, USD: { rate: 1.5, date: new Date().toISOString().slice(0, 10) } }, errors: {} }));
+beforeEach(() => vi.mocked(useSgdExchangeRates).mockReturnValue({ rates: { EUR: { rate: 1.5, expiresAt: Date.now() + 6 * 3600_000, date: new Date().toISOString().slice(0, 10) }, USD: { rate: 1.5, expiresAt: Date.now() + 6 * 3600_000, date: new Date().toISOString().slice(0, 10) } }, errors: {} }));
 import { STORAGE_KEY } from '@/lib/collection-types';
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });

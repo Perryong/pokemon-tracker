@@ -4,7 +4,7 @@ Scope: operator-requested continuation of issue #26 on `codex/market-live-view`,
 
 ## Verified
 
-- 169 frontend tests across21 files passed with `NODE_OPTIONS=--no-experimental-webstorage npx vitest run`. New FX/chart tests first failed, then passed; search/UI tests first failed, then passed. The provider-order regression was also observed RED→GREEN.
+- 171 frontend tests across22 files passed with `NODE_OPTIONS=--no-experimental-webstorage npx vitest run`. New FX/chart tests first failed, then passed; search/UI tests first failed, then passed. The provider-order regression was also observed RED→GREEN.
 - EUR and USD use independent validated SGD rates; invalid, future, older-than-seven-days, nonfinite and unsupported currency cases are covered. Missing conversion never displays native amounts as SGD; zero is retained. Card Detail and Market use the shared conversion.
 - Charts show actual available 30/7/1-day averages and distinguish holo. Missing/nonfinite windows are omitted, zero remains, and TCGplayer-only market prices cannot create a fictitious average chart.
 - Search validates fixed upstream/query/image boundaries, malformed responses, result caps, shared rate limits/cache, partial matching and multi-part set IDs. UI covers 12-result batches, three-request concurrency, price sort, empty/error responses, stale searches, exact selection and keyboard focus. The previously deferred initial-health cancellation issue is resolved and covered.
@@ -21,4 +21,15 @@ Scope: operator-requested continuation of issue #26 on `codex/market-live-view`,
 
 ## Independent review
 
-Pending whole-change review. Any Important/Critical findings will receive one verified RED→GREEN fix pass before handoff; deferred Minor findings will be listed here.
+Independent fresh-context review of `bb034ce..ab7df04` found no Critical findings, one Important FX expiry defect and one Minor accessibility limitation.
+
+Fixed: mounted views could keep expired FX rates indefinitely. Two fake-clock tests first failed, then passed after renewal/invalidation was added. Open hooks renew at six-hour expiry (or the seven-day observation limit); failed renewal removes the rate, marks it unavailable and retries later. Every amount and chart also checks the record's expiry/date before use, so retained expired values cannot reach tables, sorting or charts. Recovery after a failed renewal is tested. Full suite171/171, build and focused lint passed after the fix. No second review was used.
+
+Deferred minor: chart `role=img` names identify the series/currency but do not enumerate window values; the adjacent accessible table supplies those values. A future accessibility pass should include values in the chart name or use grouped text semantics.
+
+Reviewer exclusions resolved:
+
+- Ruling: Leave actual phone/Tailscale verification outside this follow-up — it remains the established external sign-in step — phone access is still unverified.
+- Ruling: Keep popularity ranking and daily history excluded — the operator explicitly chose existing reference data — results cannot answer measured popularity or daily movements.
+- Ruling: Keep provider freshness as a manually refreshed snapshot — source timestamps remain visible and this is separate from FX renewal — an idle view can retain its original freshness label until another lookup.
+

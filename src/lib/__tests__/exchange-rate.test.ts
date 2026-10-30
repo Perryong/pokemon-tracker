@@ -22,7 +22,7 @@ it('fetches and caches separate EUR and USD rates with no redirects', async () =
   await fetchSgdRate('EUR'); expect(fetch).toHaveBeenCalledTimes(2);
 });
 it('converts each supported currency, preserves zero and rejects unknown/nonfinite amounts', () => {
-  const rates = { EUR: { rate: 1.5, date: today }, USD: { rate: 1.3, date: today } };
+  const rates = { EUR: { rate: 1.5, expiresAt: Date.now() + 6 * 3600_000, date: today }, USD: { rate: 1.3, expiresAt: Date.now() + 6 * 3600_000, date: today } };
   expect(toSgd(10, 'EUR', rates)).toBe(15);
   expect(toSgd(10, 'USD', rates)).toBe(13);
   expect(toSgd(0, 'USD', rates)).toBe(0);

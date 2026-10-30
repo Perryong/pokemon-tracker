@@ -6,7 +6,7 @@ These are reference prices, not completed-sale evidence or an autonomous buy dec
 
 ## SGD and charts
 
-Market and Card Detail convert both Cardmarket EUR and TCGplayer USD with dated ECB reference rates via Frankfurter. Rates are validated, cached for up to six hours and rejected if future-dated or older than seven days. The source and date remain visible. If conversion fails, price amounts are unavailable; original foreign values are never relabelled SGD. Refresh the view to retry. The rates are estimates, not executable FX quotes.
+Market and Card Detail convert both Cardmarket EUR and TCGplayer USD with dated ECB reference rates via Frankfurter. Rates are validated, cached for up to six hours and rejected if future-dated or older than seven days. Open views renew rates at expiry; failed renewal removes converted amounts and retries after six hours (reopening the view retries sooner). Price lookups remain manual. The source and date remain visible. If conversion fails, price amounts are unavailable; original foreign values are never relabelled SGD. Refresh the view to retry. The rates are estimates, not executable FX quotes.
 
 Charts compare available **30-day, 7-day and 1-day averages**, with separate holo references when supplied. These are overlapping averaging windows, not a daily price history. Missing windows are omitted; zero values are preserved. TCGplayer-only quotes do not supply these windows. Chart values and table values use the same conversion rate.
 

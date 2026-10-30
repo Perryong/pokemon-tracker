@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MarketSearch from '../MarketSearch';
-const rates = { EUR: { rate: 1.5, date: '2026-10-29' }, USD: { rate: 1.3, date: '2026-10-29' } };
+const rates = { EUR: { rate: 1.5, expiresAt: Date.now() + 6 * 3600_000, date: '2026-10-29' }, USD: { rate: 1.3, expiresAt: Date.now() + 6 * 3600_000, date: '2026-10-29' } };
 const briefs = (count = 2) => Array.from({ length: count }, (_,i) => ({ id: `base1-${i}`, name: `Pikachu ${i}` }));
 const details = (id: string) => ({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id, name: `Pikachu ${id.split('-').pop()}` }, fetchedAt: '2026-10-30T04:00:00Z', quotes: [{ provider: 'cardmarket', currency: 'EUR', variant: 'Reference', updatedAt: null, freshness: 'unknown', prices: { trend: Number(id.split('-').pop()) + 10 } }] });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });

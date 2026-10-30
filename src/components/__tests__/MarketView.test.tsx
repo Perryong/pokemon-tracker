@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MarketView from '../MarketView';
-vi.mock('@/lib/exchange-rate', async () => ({ ...await vi.importActual('@/lib/exchange-rate'), useSgdExchangeRates: () => ({ rates: { EUR: { rate: 1.5, date: '2026-10-29' }, USD: { rate: 1.3, date: '2026-10-29' } }, errors: {} }) }));
+vi.mock('@/lib/exchange-rate', async () => ({ ...await vi.importActual('@/lib/exchange-rate'), useSgdExchangeRates: () => ({ rates: { EUR: { rate: 1.5, expiresAt: Date.now() + 6 * 3600_000, date: '2026-10-29' }, USD: { rate: 1.3, expiresAt: Date.now() + 6 * 3600_000, date: '2026-10-29' } }, errors: {} }) }));
 const health = { service: 'market-prices', schemaVersion: 1, mode: 'reference', source: 'TCGdex' };
 const card = (id = 'base1-1', name = 'Alakazam') => ({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id, name }, fetchedAt: '2026-10-30T04:00:00Z', quotes: [{ provider: 'cardmarket', currency: 'EUR', variant: 'Reference (see metric)', updatedAt: '2026-10-29T10:00:00Z', freshness: 'current', prices: { avg: 48.3 } }] });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
