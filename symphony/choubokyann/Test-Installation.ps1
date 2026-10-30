@@ -29,7 +29,7 @@ try {
         $plan = $json | ConvertFrom-Json
         if ($plan.selected.repo -ne "Example/$id" -or $plan.selected.control_issue -ne $number) { throw 'Project selection failed.' }
         if ($plan.workflow -notmatch "Example/$id" -or $plan.workflow -match 'Perryong/pokemon-tracker|#27|@@') { throw 'Workflow scope leaked.' }
-        if ($plan.selected.container -ne 'symphony-choubokyann' -or $plan.selected.cpus -ne 4 -or $plan.selected.memory -ne '6g' -or $plan.selected.primary_slots -ne 1 -or $plan.selected.child_slots -ne 1) { throw 'Global cap changed.' }
+        if ($plan.selected.container -ne 'symphony-choubokyann' -or $plan.selected.cpus -ne 2 -or $plan.selected.memory -ne '3g' -or $plan.selected.primary_slots -ne 1 -or $plan.selected.child_slots -ne 1) { throw 'Global cap changed.' }
         $plans += $plan
     }
     if ($plans[0].selected.volume -eq $plans[1].selected.volume) { throw 'Project storage is not isolated.' }

@@ -1,3 +1,5 @@
+> Current execution path: [ISOLATED-TOOL.md](ISOLATED-TOOL.md). Operator extension in #27 permits one 2 CPU/3 GiB test container alongside the 2 CPU/3 GiB coordinator, within 4 CPU/6 GiB aggregate. Earlier same-slot manual-pilot instructions below are historical and superseded; no test execution in coordinator/children.
+
 # ChouBokYann's personal Symphony coordinator
 
 For machine installation, registration and the shared agent cap, see [MACHINE.md](MACHINE.md).
@@ -9,6 +11,24 @@ work opts in with `symphony-choubokyann-queue` in public
 `Perryong/pokemon-tracker` and the existing
 [Project](https://github.com/users/ChouBokYann/projects/1). Labels are evaluation
 scope, never ownership or readiness authority. Market #24/#26 are excluded.
+
+## Repository execution boundary — pilot pending
+
+Never execute repository-controlled code in the coordinator or native children.
+The coordinator remains a credential-bearing trusted control plane. It may inspect
+source and use reviewed installed GitHub/gate tools; a repository test, installer,
+hook, build or demo must run only in the separate offline check lifetime described
+in [ISOLATION-PILOT.md](ISOLATION-PILOT.md). The host gateway stops the coordinator
+and reuses the one fixed container slot, with no auth mounts or credentials, then
+returns exact-head evidence. No Docker socket is exposed to agents or tests.
+
+The pilot artifacts are source-reviewed candidates, **not verified isolation**.
+Do not resolve the P1 or resume product execution until the actual sentinel,
+negative-control and required offline workflow checks pass. Keep pending evidence
+and use deliberate recovery after the host handoff. The agent/test separation is
+not achieved by removing an environment variable; the host must verify the entire
+container boundary and its image. This does not remove credentials from the
+trusted agent itself or establish resistance to malicious agent instructions.
 
 ## Activation on the operator host
 
@@ -156,8 +176,9 @@ merged PR alone is insufficient business acceptance. #27 remains ongoing.
 
 ## Local checks
 
-Run these in Linux (the worker image uses Python 3.13); the gate uses the
-standard-library POSIX file lock. PowerShell scripts run on the operator host.
+Run these only in the isolated host check boundary (Python 3.13), never in
+the coordinator. The gate uses the standard-library POSIX file lock. Review
+PowerShell harness source before the host pilot; record actual host results.
 
 ```sh
 python3 -m unittest discover -s symphony/choubokyann -p 'test_*.py'

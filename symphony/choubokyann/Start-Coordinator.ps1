@@ -24,6 +24,16 @@ if ($DryRun) { Write-Output $planJson; return }
 if (-not $Repository) { throw '-Repository is required for live start.' }
 $registryPath = (Resolve-Path -LiteralPath $Registry).Path
 $runtimePath = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+# Per-registration transport, distinct from host-private runner state.
+$checksRoot = Join-Path (Split-Path $registryPath -Parent) "checks/$Project"
+$requestsPath = Join-Path $checksRoot 'requests'
+$resultsPath = Join-Path $checksRoot 'results'
+foreach ($transportPath in @($requestsPath, $resultsPath)) {
+    if (-not (Test-Path -LiteralPath $transportPath -PathType Container)) {
+        throw 'Prepare isolated-check transport using ISOLATED-TOOL.md before start.'
+    }
+    if ($transportPath.Contains(',')) { throw 'Unsupported check transport mount path.' }
+}
 if ($registryPath.Contains(',') -or $runtimePath.Contains(',')) { throw 'Docker mount paths cannot contain commas.' }
 $paths = @($Repository, $CodexAuth, $SuperpowersSkills, $GraphifySkills) | ForEach-Object {
     $resolved = (Resolve-Path -LiteralPath $_).Path
@@ -63,13 +73,15 @@ try {
     $argsList = @(
         'create', '--name', $name, '--label', 'symphony.owner=ChouBokYann',
         '--label', "symphony.project=$Project", '--restart', 'no', '--init', '--security-opt', 'seccomp=unconfined',
-        '--cpus', '4', '--memory', '6g', '--memory-swap', '6g',
+        '--cpus', '2', '--memory', '3g', '--memory-swap', '3g',
         '--env', 'GH_TOKEN', '--env', 'SYMPHONY_QUEUE_TOKEN',
         '--env', 'SYMPHONY_PROJECT', '--env', 'SYMPHONY_REGISTRY',
         '--publish', "127.0.0.1:${DashboardPort}:4000",
         '--mount', "type=volume,source=$($selected.volume),target=/work",
         '--mount', "type=bind,source=$repoPath,target=/seed,readonly",
         '--mount', "type=bind,source=$runtimePath,target=/runtime,readonly",
+        '--mount', "type=bind,source=$requestsPath,target=/checks/requests",
+        '--mount', "type=bind,source=$resultsPath,target=/checks/results,readonly",
         '--mount', "type=bind,source=$registryPath,target=/config/projects.json,readonly",
         '--mount', "type=bind,source=$runtimePath/coordinator.toml,target=/root/.codex/config.toml,readonly",
         '--mount', "type=bind,source=$authPath,target=/root/.codex/auth.json,readonly",

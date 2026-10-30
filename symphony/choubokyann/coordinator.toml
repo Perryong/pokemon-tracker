@@ -15,3 +15,10 @@ default_subagent_reasoning_effort = "high"
 
 # Native explicit spawn(model, reasoning_effort, fork_turns) is used by this
 # harness. Depth one is an instruction policy, not a supported depth setting.
+
+# Trusted installed adapter only. No Docker socket or arbitrary shell tool.
+[mcp_servers.isolated_checks]
+command = "python3"
+args = ["-I", "/runtime/isolated_tool.py", "--requests", "/checks/requests", "--results", "/checks/results"]
+startup_timeout_sec = 10
+tool_timeout_sec = 60

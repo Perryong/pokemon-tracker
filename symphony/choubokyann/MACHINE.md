@@ -1,3 +1,5 @@
+> Current execution path: [ISOLATED-TOOL.md](ISOLATED-TOOL.md). Operator extension in #27 permits one 2 CPU/3 GiB test container alongside the 2 CPU/3 GiB coordinator, within 4 CPU/6 GiB aggregate. Earlier same-slot manual-pilot instructions below are historical and superseded; no test execution in coordinator/children.
+
 # Personal machine runtime
 
 The Astra coordinator **inside Symphony** owns triage, dispatch, review and routine
@@ -6,6 +8,15 @@ host commands, reports results and relays operator decisions. It does not become
 the approving coordinator. Registration is not claim approval, product readiness,
 or permission to merge. Other repositories need their own applicable approval
 policy; Pokemon's standing delegation does not extend to them.
+
+Repository installs, tests, hooks, demos and builds are prohibited in the
+credential-bearing coordinator and its children. The staged
+[offline pilot](ISOLATION-PILOT.md) uses the same fixed container slot only after
+the coordinator has returned its handoff and the gateway has stopped/removed it.
+The check lifetime has no agents, credentials, persistent coordinator volume or
+network. The gateway returns inert evidence; it does not acquire issue ownership.
+The pilot remains unverified until actual host results are recorded. Do not run
+these new artifacts or PR code in the active coordinator to validate them.
 
 ## Install once under the current user's profile
 

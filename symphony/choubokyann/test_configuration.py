@@ -8,6 +8,27 @@ ROOT = HERE.parents[1]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_repository_execution_is_delegated_to_offline_host_boundary(self):
+        for name in ('WORKFLOW.template.md', 'README.md'):
+            content = (HERE / name).read_text()
+            self.assertIn('Never execute repository-controlled code in the coordinator', content)
+            self.assertIn('ISOLATION-PILOT.md', content)
+        install = (HERE / 'Install-Coordinator.ps1').read_text()
+        for name in ('Invoke-IsolatedChecks.ps1', 'isolation_probe.py',
+                     'test_isolated_checks.py', 'ISOLATION-PILOT.md'):
+            self.assertIn(name, install)
+
+    def test_isolated_tool_has_separate_mounts_and_bounded_timeout(self):
+        start = (HERE / 'Start-Coordinator.ps1').read_text()
+        config = tomllib.loads((HERE / 'coordinator.toml').read_text())
+        tool = config['mcp_servers']['isolated_checks']
+        self.assertEqual(tool['command'], 'python3')
+        self.assertEqual(tool['tool_timeout_sec'], 60)
+        self.assertIn('/runtime/isolated_tool.py', tool['args'])
+        self.assertIn('target=/checks/results,readonly', start)
+        self.assertIn('target=/checks/requests', start)
+        self.assertNotIn('/var/run/docker.sock', start)
+
     def test_profiles_select_explicit_models_and_one_child(self):
         coordinator = tomllib.loads((HERE / 'coordinator.toml').read_text())
         worker = tomllib.loads((HERE / 'worker.toml').read_text())
@@ -80,8 +101,8 @@ class ConfigurationTests(unittest.TestCase):
         stop = (HERE / 'Stop-Coordinator.ps1').read_text()
         self.assertIn("$name = 'symphony-choubokyann'", start)
         self.assertIn("$name = 'symphony-choubokyann'", stop)
-        self.assertIn("'--cpus', '4'", start)
-        self.assertIn("'--memory', '6g'", start)
+        self.assertIn("'--cpus', '2'", start)
+        self.assertIn("'--memory', '3g'", start)
         self.assertIn('Unregistered repository', start)
 
 

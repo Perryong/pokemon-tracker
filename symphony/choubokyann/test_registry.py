@@ -57,7 +57,7 @@ class RegistryTests(unittest.TestCase):
         for chosen in (one, two):
             self.assertEqual(chosen["container"], "symphony-choubokyann")
             self.assertEqual(chosen["workspace"], "/work/coordinator")
-            self.assertEqual((chosen["cpus"], chosen["memory"]), (4, "6g"))
+            self.assertEqual((chosen["cpus"], chosen["memory"]), (2, "3g"))
             self.assertEqual((chosen["primary_slots"], chosen["child_slots"]), (1, 1))
         self.assertNotIn("volume", self.registry.load_registry(self.path)["projects"]["one"])
 
