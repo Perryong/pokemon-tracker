@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MarketView from '../MarketView';
+vi.mock('@/lib/exchange-rate', async () => ({ ...await vi.importActual('@/lib/exchange-rate'), useSgdExchangeRates: () => ({ rates: { EUR: { rate: 1.5, date: '2026-10-29' }, USD: { rate: 1.3, date: '2026-10-29' } }, errors: {} }) }));
 const health = { service: 'market-prices', schemaVersion: 1, mode: 'reference', source: 'TCGdex' };
 const card = (id = 'base1-1', name = 'Alakazam') => ({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id, name }, fetchedAt: '2026-10-30T04:00:00Z', quotes: [{ provider: 'cardmarket', currency: 'EUR', variant: 'Reference (see metric)', updatedAt: '2026-10-29T10:00:00Z', freshness: 'current', prices: { avg: 48.3 } }] });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
@@ -14,7 +15,7 @@ it('shows provenance, currency, separate timestamps and simulated harness status
   expect(fetch).toHaveBeenCalledTimes(1);
   submit();
   expect(await screen.findByRole('heading', { name: /Alakazam/ })).toBeInTheDocument();
-  expect(screen.getByText(/48.30/)).toHaveTextContent('EUR');
+  expect(screen.getByText('SGD 72.45')).toBeInTheDocument();
   expect(screen.getByText(/Provider updated/)).toBeInTheDocument();
   expect(screen.getByText(/Fetched from TCGdex/)).toBeInTheDocument();
   expect(screen.getByText(/Current/)).toBeInTheDocument();
@@ -39,7 +40,7 @@ it('marks retained prices as previous after an upstream refresh fails', async ()
   expect(await screen.findByRole('alert')).toHaveTextContent('Price provider unavailable');
   expect(screen.getByText('Backend reachable')).toBeInTheDocument();
   expect(screen.getByText(/Previous result/)).toBeInTheDocument();
-  expect(screen.getByText(/48.30/)).toBeInTheDocument();
+  expect(screen.getByText('SGD 72.45')).toBeInTheDocument();
 });
 it('shows empty quotes honestly', async () => {
   render(<MarketView />); await screen.findByText('Backend reachable');

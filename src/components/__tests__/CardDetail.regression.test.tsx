@@ -1,8 +1,11 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CardDetail from '../CardDetail';
 import { normalizeTCGCard } from '@/lib/types';
+import { useSgdExchangeRates } from '@/lib/exchange-rate';
+vi.mock('@/lib/exchange-rate', async () => ({ ...await vi.importActual('@/lib/exchange-rate'), useSgdExchangeRates: vi.fn() }));
+beforeEach(() => vi.mocked(useSgdExchangeRates).mockReturnValue({ rates: { EUR: { rate: 1.5, date: new Date().toISOString().slice(0, 10) }, USD: { rate: 1.5, date: new Date().toISOString().slice(0, 10) } }, errors: {} }));
 import { STORAGE_KEY } from '@/lib/collection-types';
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -19,6 +22,7 @@ it('opens a card and saves quantity with the current storage API', async () => {
 
 it('loads full card information and prices when opened', async () => {
   const { tcgdex } = await import('@/lib/tcgdex');
+  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.5, date: new Date().toISOString().slice(0, 10) }))));
   const fetch = vi.spyOn(tcgdex, 'fetch').mockResolvedValue({
     id: 'base1-1', localId: '1', name: 'Alakazam', category: 'Pokemon', hp: 80,
     rarity: 'Rare', illustrator: 'Ken Sugimori', types: ['Psychic'],
@@ -32,31 +36,32 @@ it('loads full card information and prices when opened', async () => {
   expect(await screen.findByText('Confuse Ray')).toBeInTheDocument();
   expect(screen.getByText('Ken Sugimori')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('tab', { name: 'Market Data' }));
-  expect(await screen.findByText(/67.51/)).toBeInTheDocument();
+  expect(await screen.findByText('SGD 101.27')).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith('cards', 'base1-1');
 });
 
-it('keeps original EUR prices when the exchange response is invalid', async () => {
+it('hides raw currency amounts when the exchange response is invalid', async () => {
+  vi.mocked(useSgdExchangeRates).mockReturnValue({ rates: {}, errors: { EUR: true, USD: true } });
   const { tcgdex } = await import('@/lib/tcgdex');
   vi.spyOn(tcgdex, 'fetch').mockResolvedValue({ id: 'base1-3', name: 'Chansey', localId: '3', pricing: { cardmarket: { unit: 'EUR', avg: 10 } } } as never);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ base: 'EUR', quote: 'USD', rate: -1, date: 'bad' }) }));
   render(<CardDetail card={normalizeTCGCard({ id: 'base1-3', name: 'Chansey', localId: '3' })} open onOpenChange={() => {}} />);
   await userEvent.click(screen.getByRole('tab', { name: 'Market Data' }));
   expect(await screen.findByText(/SGD conversion unavailable/)).toBeInTheDocument();
-  expect(screen.getByText('EUR 10.00')).toBeInTheDocument();
+  expect(screen.queryByText('EUR 10.00')).not.toBeInTheDocument();
 });
 
-it('converts only Cardmarket prices to SGD and shows the reference rate date', async () => {
+it('converts both provider currencies to SGD and shows the reference rate date', async () => {
   const { tcgdex } = await import('@/lib/tcgdex');
   vi.spyOn(tcgdex, 'fetch').mockResolvedValue({
     id: 'base1-2', localId: '2', name: 'Blastoise',
     pricing: { cardmarket: { unit: 'EUR', avg: 10, low: 0 }, tcgplayer: { unit: 'USD', holofoil: { marketPrice: 20 } } },
   } as never);
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ base: 'EUR', quote: 'SGD', rate: 1.5, date: '2026-09-25' }) }));
+  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.5, date: new Date().toISOString().slice(0, 10) }))));
   render(<CardDetail card={normalizeTCGCard({ id: 'base1-2', name: 'Blastoise', localId: '2' })} open onOpenChange={() => {}} />);
   await userEvent.click(screen.getByRole('tab', { name: 'Market Data' }));
   expect(await screen.findByText('SGD 15.00')).toBeInTheDocument();
   expect(screen.getByText('SGD 0.00')).toBeInTheDocument();
-  expect(screen.getByText('USD 20.00')).toBeInTheDocument();
-  expect(screen.getByText(/1 EUR = 1.5000 SGD/)).toHaveTextContent('2026-09-25');
+  expect(screen.getByText('SGD 30.00')).toBeInTheDocument();
+  expect(screen.getByText(/1 EUR = 1.5000 SGD/)).toHaveTextContent(new Date().toISOString().slice(0, 10));
 });

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
+import PriceChart from './PriceChart';
+import { useSgdExchangeRates, toSgd, formatSgd } from '@/lib/exchange-rate';
 import { MarketCardSchema, MarketHealthSchema, MarketIdSchema, type MarketCard } from '@/lib/market';
 
 const errors: Record<string, string> = {
@@ -11,6 +13,7 @@ const errors: Record<string, string> = {
 const date = (value: string) => new Date(value).toLocaleString();
 
 export default function MarketView() {
+  const { rates, errors: rateErrors } = useSgdExchangeRates(true);
   const [id, setId] = useState('base1-1');
   const [backend, setBackend] = useState<'checking' | 'reachable' | 'unavailable'>('checking');
   const [data, setData] = useState<MarketCard | null>(null);
@@ -85,10 +88,12 @@ export default function MarketView() {
       <p className="market-meta">Fetched from TCGdex: <time dateTime={data.fetchedAt}>{date(data.fetchedAt)}</time>. Backend cache: up to 1 hour.</p>
       {data.quotes.length === 0 && <p className="empty-state">No reference prices available for this card.</p>}
       <div className="market-quotes">{data.quotes.map((quote, index) => <article className="market-quote" key={`${quote.provider}-${quote.variant}-${index}`}>
-        <h3>{quote.provider === 'cardmarket' ? 'Cardmarket' : 'TCGplayer'} <span>{quote.currency}</span></h3>
+        <h3>{quote.provider === 'cardmarket' ? 'Cardmarket' : 'TCGplayer'} <span>SGD</span></h3>
         <p className="market-meta">{quote.variant}</p>
         <p className={`market-freshness ${quote.freshness}`}>{quote.freshness === 'current' ? 'Current · within 48 hours' : quote.freshness === 'stale' ? 'Stale · older than 48 hours' : 'Freshness unknown'}</p>
-        <table className="market-table"><caption className="sr-only">{quote.provider} reference prices in {quote.currency}</caption><tbody>{Object.entries(quote.prices).map(([metric, value]) => <tr key={metric}><th scope="row">{metric}</th><td>{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {quote.currency}</td></tr>)}</tbody></table>
+        <p className="market-meta">{rates[quote.currency] ? `Estimated SGD · 1 ${quote.currency} = ${rates[quote.currency]!.rate.toFixed(4)} SGD · Rate date ${rates[quote.currency]!.date} · ECB via Frankfurter` : rateErrors[quote.currency] ? 'SGD conversion unavailable. Reopen Market to retry.' : 'Loading SGD conversion…'}</p>
+        {rates[quote.currency] && <PriceChart prices={quote.prices} rate={rates[quote.currency]!.rate} />}
+        <table className="market-table"><caption className="sr-only">{quote.provider} reference prices in SGD</caption><tbody>{Object.entries(quote.prices).map(([metric, value]) => { const amount = toSgd(value, quote.currency, rates); return <tr key={metric}><th scope="row">{metric}</th><td>{amount === null ? 'Unavailable' : formatSgd(amount)}</td></tr>; })}</tbody></table>
         <p className="market-meta">Provider updated: {quote.updatedAt ? <time dateTime={quote.updatedAt}>{date(quote.updatedAt)}</time> : 'Unknown'}</p>
       </article>)}</div>
     </div>}
