@@ -12,11 +12,12 @@ This document is a preparation contract, not evidence that the pilot passed.
 Copy reviewed `isolated_runner.py`, `isolated_tool.py`, `registry.py`, and `isolation_probe.py`
 outside the checkout into the user runtime. The host runner imports only that
 installed probe. It accepts only the selected record from the existing host registry and the
-`coordinator` suite (runtime plus claim tests). An unauthenticated GitHub metadata
+`coordinator` (runtime plus claim tests) and fixed `sales-agent` suites. An unauthenticated GitHub metadata
 read verifies that repository is public. The active coordinator project label
 must match. Existing registration and storage remain intact. Registration still
 grants no issue ownership; the coordinator verifies authority before submission.
-No product-test support is claimed.
+The additional fixed `sales-agent` suite validates the simulated Sales slice; it
+does not authorize live model, marketplace, approval or purchase execution.
 
 The adapter publishes `{version:1,job_id,project,commit,suite}`. Commit must be
 40 lowercase hex; the host reads it from its configured seed with git archive,
@@ -165,3 +166,31 @@ operator authority. There is no background result scheduler. A failed job remain
 failed under its ID; fixes use a new exact commit and explicitly recorded job ID.
 For host crash/running marker or uncertain cleanup, inspect Docker and preserve
 state; there is no expiry, automatic replay, or deletion to force green.
+
+## Fixed Sales Agent suite
+
+Operator continuation: #27 comment 6527515526. Requests retain exactly the same
+identity fields and may select only `coordinator` or `sales-agent`. The latter
+uses `sales_agent/` from the exact requested source archive. It runs `pip check`,
+`pytest -q -p no:cacheprovider`, then all five documented scripted scenarios.
+The installed probe parses each demo JSON and verifies harness/transport,
+outbound counts, approval-only SGD4500 proposal, denial reasons, opt-out and
+replacement-mandate reassessment. No caller-supplied command or fixture path is
+accepted. `PYTHONPATH` is set to the extracted `sales_agent/src` only inside the
+test container; no repository package installation is needed.
+
+The host must first prepare a clean Python 3.13 image containing the reviewed
+exact `sales_agent/requirements.lock` dependencies. Build from the pinned
+official base with only that lock in a clean context, use binary wheels only
+(`pip install --only-binary=:all: -r requirements.lock`), and copy the resulting
+filesystem into the existing scratch final stage with only approved PATH/LANG.
+Do not install the repository or run its build hooks. Record lock digest, base
+and final image IDs; configure the immutable final ID in host-only config.
+Retain the previous image and all old job results. No dependency installation or
+network fallback occurs during checks. Missing or inconsistent dependencies fail.
+
+Install the reviewed runner, probe and adapter together outside the checkout;
+the named suite is propagated in host-generated job JSON. Refresh the native MCP
+schema before requesting `sales-agent`. If a running app-server retains the old
+schema, preserve pending evidence and use a deliberate continuation after reload;
+never write the transport manually or bypass the native tool.

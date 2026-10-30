@@ -46,7 +46,7 @@ def validate_request(value, project, filename):
             or not isinstance(project, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", project) or value["project"] != project
             or not isinstance(value["commit"], str)
             or not re.fullmatch(r"[0-9a-f]{40}", value["commit"])
-            or value["suite"] != "coordinator"):
+            or value["suite"] not in ("coordinator", "sales-agent")):
         raise ValueError("Request does not match the fixed contract")
 
 
@@ -352,7 +352,8 @@ class DockerBoundary:
             with archive.open("rb") as stream:
                 result["archive_sha256"] = hashlib.file_digest(stream, "sha256").hexdigest()
             shutil.copyfile(probe, stage / "probe.py")
-            atomic_json(stage / "job.json", {"sentinel_path": str(sentinel), "host_pid": os.getpid()})
+            atomic_json(stage / "job.json", {"sentinel_path": str(sentinel), "host_pid": os.getpid(),
+                                            "suite": request["suite"]})
             for path in stage.iterdir():
                 path.chmod(0o644)
             if "," in str(stage):

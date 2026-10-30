@@ -55,7 +55,7 @@ class CheckTool:
             raise ToolError('Only job_id, commit and suite are accepted')
         if (not isinstance(args['job_id'], str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', args['job_id'])
                 or not isinstance(args['commit'], str) or not re.fullmatch(r'[0-9a-f]{40}', args['commit'])
-                or args['suite'] != 'coordinator'):
+                or args['suite'] not in ('coordinator', 'sales-agent')):
             raise ToolError('Invalid job identity or suite')
         return dict(version=1, project=self.project, **args)
 
@@ -123,7 +123,7 @@ class CheckTool:
 SCHEMA = {'type':'object', 'additionalProperties':False,
           'properties':{'job_id':{'type':'string','pattern':'^[a-z0-9][a-z0-9-]{0,63}$'},
                         'commit':{'type':'string','pattern':'^[0-9a-f]{40}$'},
-                        'suite':{'type':'string','enum':['coordinator']}},
+                        'suite':{'type':'string','enum':['coordinator', 'sales-agent']}},
           'required':['job_id','commit','suite']}
 
 
