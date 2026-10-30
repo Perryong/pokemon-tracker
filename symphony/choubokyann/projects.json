@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "projects": {
+    "pokemon": {
+      "repo": "Perryong/pokemon-tracker",
+      "actor": "ChouBokYann",
+      "project_owner": "ChouBokYann",
+      "project_number": 1,
+      "control_issue": 27,
+      "control_label": "symphony-choubokyann-coordinator",
+      "queue_label": "symphony-choubokyann-queue",
+      "session": "symphony-coordinator-27-20261030",
+      "branch": "choubokyann/symphony-coordinator",
+      "excluded_issues": [24, 26],
+      "scope": "Sales Agent and operator UI; coordinator setup",
+      "authority_url": "https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6523188095"
+    }
+  }
+}
