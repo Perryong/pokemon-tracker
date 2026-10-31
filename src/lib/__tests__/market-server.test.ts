@@ -9,10 +9,10 @@ const card = (id = 'base1-1') => ({ id, name: 'Alakazam', secret: 'never-return'
   tcgplayer: { unit: 'USD', updated: '2026-10-29T10:00:00Z', holofoil: { marketPrice: 20, lowPrice: null, highPrice: -1, surprise: 99 } },
 } });
 const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
-async function request(middleware: ReturnType<typeof marketMiddleware>, path = '/api/market/cards/base1-1', method = 'GET') {
+async function request(middleware: ReturnType<typeof marketMiddleware>, path = '/api/market/cards/base1-1', method = 'GET', headers = {}) {
   const response = { statusCode: 200, setHeader: vi.fn(), end: vi.fn() };
   const next = vi.fn();
-  await middleware({ url: path, method } as IncomingMessage, response as unknown as ServerResponse, next);
+  await middleware({ url: path, method, headers } as IncomingMessage, response as unknown as ServerResponse, next);
   return { status: response.statusCode, data: response.end.mock.calls[0] ? JSON.parse(response.end.mock.calls[0][0]) : null, response, next };
 }
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(now); vi.stubGlobal('fetch', vi.fn(async () => reply(card()))); });
@@ -152,4 +152,35 @@ it('preserves provider order for equally relevant names instead of grouping one 
   vi.mocked(fetch).mockResolvedValueOnce(reply([{ id: 'basep-1', name: 'Pikachu' }, { id: '30th-023', name: 'Pikachu' }]));
   const result = await request(marketMiddleware(), '/api/market/search?q=pika');
   expect(result.data.cards.map((card: { id: string }) => card.id)).toEqual(['basep-1','30th-023']);
+});
+
+it('reserves five upstream slots for direct lookups and reports the remaining cooldown', async () => {
+  vi.mocked(fetch).mockImplementation(async url => reply(card(String(url).split('/').pop())));
+  const middleware = marketMiddleware();
+  for (let i=0; i<25; i++) expect((await request(middleware, `/api/market/cards/base1-${i}`, 'GET', { 'x-market-priority': 'background' })).status).toBe(200);
+  vi.setSystemTime(now + 10_000);
+  const limited = await request(middleware, '/api/market/cards/base1-25', 'GET', { 'x-market-priority': 'background' });
+  expect(limited.status).toBe(429);
+  expect(limited.data).toEqual({ error: 'rate_limited', retryAfterSeconds: 50 });
+  expect(limited.response.setHeader).toHaveBeenCalledWith('Retry-After', '50');
+  for (let i=25; i<30; i++) expect((await request(middleware, `/api/market/cards/base1-${i}`)).status).toBe(200);
+  expect((await request(middleware, '/api/market/cards/base1-31')).status).toBe(429);
+  expect((await request(middleware, '/api/market/cards/base1-0', 'GET', { 'x-market-priority': 'background' })).status).toBe(200);
+  vi.setSystemTime(now + 60_000);
+  expect((await request(middleware, '/api/market/cards/base1-31', 'GET', { 'x-market-priority': 'background' })).status).toBe(200);
+});
+it.each([['12', 12], [new Date(now + 20_000).toUTCString(), 20], ['invalid', 60], [null, 60]])('preserves provider throttling and cooldown for Retry-After %s', async (header, seconds) => {
+  const middleware = marketMiddleware();
+  await request(middleware);
+  vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 429, headers: header ? { 'Retry-After': header } : {} }));
+  const limited = await request(middleware, '/api/market/cards/base1-2');
+  expect(limited.status).toBe(429);
+  expect(limited.data).toEqual({ error: 'provider_rate_limited', retryAfterSeconds: seconds });
+  expect(limited.response.setHeader).toHaveBeenCalledWith('Retry-After', String(seconds));
+  expect((await request(middleware, '/api/market/cards/base1-3')).data.error).toBe('provider_rate_limited');
+  expect((await request(middleware)).status).toBe(200);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  vi.setSystemTime(now + Number(seconds)*1000);
+  vi.mocked(fetch).mockResolvedValueOnce(reply(card('base1-3')));
+  expect((await request(middleware, '/api/market/cards/base1-3')).status).toBe(200);
 });

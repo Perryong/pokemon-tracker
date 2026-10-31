@@ -66,10 +66,20 @@ export function marketMiddleware() {
   const pending = new Map<string, Promise<{ status: number; data: unknown }>>();
   let windowStart = Date.now();
   let calls = 0;
+  let providerRetryAt = 0;
+  const limited = (error: 'rate_limited' | 'provider_rate_limited', until: number) => ({ status: 429, data: { error, retryAfterSeconds: Math.max(1, Math.ceil((until - Date.now()) / 1000)) } });
   async function load(id: string, query?: string) {
     try {
       const url = query ? `https://api.tcgdex.net/v2/en/cards?${new URLSearchParams({ name: `like:${query}`, 'pagination:page': '1', 'pagination:itemsPerPage': '501' })}` : `https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(id)}`;
       const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(8000) });
+      if (response.status === 429) {
+        await response.body?.cancel();
+        const header = response.headers.get('Retry-After') ?? '';
+        const seconds = /^\d+$/.test(header) ? Number(header) : (Date.parse(header) - Date.now()) / 1000;
+        const delay = Number.isFinite(seconds) && seconds > 0 && seconds <= Number.MAX_SAFE_INTEGER / 1000 ? seconds * 1000 : 60_000;
+        providerRetryAt = Math.max(providerRetryAt, Date.now() + delay);
+        return limited('provider_rate_limited', providerRetryAt);
+      }
       if (!response.ok) { await response.body?.cancel(); return { status: response.status === 404 ? 404 : 502, data: { error: response.status === 404 ? 'card_not_found' : 'provider_unavailable' } }; }
       const raw = await readJson(response);
       const data = query ? normalizeSearch(raw, query) : normalize(raw, id);
@@ -88,6 +98,7 @@ export function marketMiddleware() {
       res.statusCode = status;
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-store');
+      if (status === 429) res.setHeader('Retry-After', String(object(data).retryAfterSeconds));
       res.end(JSON.stringify(data));
     };
     if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); send(405, { error: 'method_not_allowed' }); return; }
@@ -108,8 +119,10 @@ export function marketMiddleware() {
     cache.delete(id);
     let request = pending.get(id);
     if (!request) {
+      if (providerRetryAt > Date.now()) { const result = limited('provider_rate_limited', providerRetryAt); send(result.status, result.data); return; }
       if (Date.now() - windowStart >= 60_000) { windowStart = Date.now(); calls = 0; }
-      if (calls >= 30) { send(429, { error: 'rate_limited' }); return; }
+      const cap = req.headers?.['x-market-priority'] === 'background' ? 25 : 30;
+      if (calls >= cap) { const result = limited('rate_limited', windowStart + 60_000); send(result.status, result.data); return; }
       calls++;
       request = load(id, query).finally(() => pending.delete(id));
       pending.set(id, request);
