@@ -13,6 +13,7 @@ polling:
 workspace:
   root: /work/coordinator
 hooks:
+  before_run_idle_exit_code: 75
   after_create: |
     timeout 60 git clone --no-hardlinks /seed .
     git remote set-url origin https://github.com/Perryong/pokemon-tracker.git

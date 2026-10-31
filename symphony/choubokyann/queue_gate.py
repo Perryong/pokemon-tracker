@@ -248,7 +248,7 @@ def save(path, state):
 
 
 def run(command, workspace, api=None, reason=None, expected_fingerprint=None, scope=None):
-    """Return 0 for a permitted operation; every uncertainty blocks dispatch."""
+    """Return 0 for permission, 75 for unchanged, 1 for pending, 2 for errors."""
     directory = Path(workspace) / ".symphony/choubokyann"
     try:
         scope = default_scope() if scope is None else scope
@@ -287,7 +287,7 @@ def run(command, workspace, api=None, reason=None, expected_fingerprint=None, sc
                 state.pop("pending")
             else:
                 if state.get("acknowledged", {}).get("fingerprint") == current["fingerprint"]:
-                    return 1
+                    return 75
                 state["pending"] = {"at": datetime.now(timezone.utc).isoformat(), "snapshot": current}
             save(path, state)
             return 0

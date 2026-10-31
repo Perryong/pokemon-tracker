@@ -122,15 +122,21 @@ instead of silently using partial evidence. Read calls have a 20-second timeout
 and each snapshot has a 100-second budget. The head commit connection deliberately
 selects the latest commit only. Larger queues/timelines require a reviewed paging
 change, not raising limits blindly. Errors, missing data and empty scope block
-dispatch. Symphony may log/retry the failed hook with backoff; no paid model runs
-occur while it remains unchanged or blocked.
+dispatch. Symphony may log/retry a genuinely failed hook with backoff; no paid
+model runs occur while unchanged evidence or pending work blocks dispatch.
 
 `check` returns 0 only for new evidence and atomically saves a pending record
-under `<workspace>/.symphony/choubokyann/queue-gate.json`. Unchanged work returns
-nonzero. Pending work blocks all automatic redispatch, including after new
-evidence; it has no expiry. A local file lock serializes gate state writes.
-There is deliberately **no after_run hook**, because Symphony invokes that hook
-even on failure.
+under `<workspace>/.symphony/choubokyann/queue-gate.json`. A freshly read snapshot
+matching the acknowledged fingerprint returns 75 without changing state. The
+personal workflow opts into `hooks.before_run_idle_exit_code: 75` through the
+reviewed [Symphony runtime patch](QUEUE-IDLE.md). That outcome starts no model,
+runs no after_run hook, and returns to ordinary polling without a failure retry
+or completion record. Changed evidence on a later poll starts a new cycle.
+Pending work returns 1 and blocks all automatic redispatch, including after new
+evidence; it has no expiry. Read, scope, lock and state errors return 2. These
+remain failures, as do nonzero results from other hooks or workflows that have
+not opted in. A local file lock serializes gate state writes. There is deliberately
+**no after_run acknowledgement**; only the coordinator may reconcile fresh evidence.
 
 At successful cycle end, finish and read back all GitHub writes. Use `inspect`
 to obtain a fresh safe snapshot, reconcile its state with live GitHub, then
