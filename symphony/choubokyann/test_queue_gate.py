@@ -72,6 +72,28 @@ class QueueGateTests(unittest.TestCase):
     def state(self):
         return json.loads((self.workspace / ".symphony/choubokyann/queue-gate.json").read_text())
 
+    def test_unchanged_is_idle_without_state_mutation_and_changed_evidence_wakes(self):
+        self.assertEqual(self.run_gate("check"), 0)
+        self.assertEqual(self.run_gate("acknowledge"), 0)
+        path = self.workspace / ".symphony/choubokyann/queue-gate.json"
+        acknowledged = path.read_bytes()
+        for _ in range(2):
+            self.assertEqual(self.run_gate("check"), 75)
+            self.assertEqual(path.read_bytes(), acknowledged)
+        self.api.queue["body"] = "new operator evidence"
+        self.assertEqual(self.run_gate("check"), 0)
+        self.assertIn("pending", self.state())
+        self.assertEqual(self.run_gate("check"), 1)
+
+    def test_pending_and_api_errors_never_report_clean_idle(self):
+        self.assertEqual(self.run_gate("check"), 0)
+        self.assertEqual(self.run_gate("check"), 1)
+        self.assertEqual(self.run_gate("acknowledge"), 0)
+        acknowledged = self.state()
+        self.api = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("unavailable"))
+        self.assertEqual(self.run_gate("check"), 2)
+        self.assertEqual(self.state(), acknowledged)
+
     def test_pending_blocks_even_when_evidence_changes_until_explicit_retry(self):
         self.assertEqual(self.run_gate("check"), 0)
         pending = self.state()["pending"]
