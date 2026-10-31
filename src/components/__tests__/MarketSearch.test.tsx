@@ -6,7 +6,10 @@ const briefs = (count = 2) => Array.from({ length: count }, (_,i) => ({ id: `bas
 const details = (id: string) => ({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id, name: `Pikachu ${id.split('-').pop()}` }, fetchedAt: '2026-10-30T04:00:00Z', quotes: [{ provider: 'cardmarket', currency: 'EUR', variant: 'Reference', updatedAt: null, freshness: 'unknown', prices: { trend: Number(id.split('-').pop()) + 10 } }] });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 const search = (name = 'pika') => { fireEvent.change(screen.getByLabelText('Search card names'), { target: { value: name } }); fireEvent.submit(screen.getByRole('form', { name: 'Card name search' })); };
-beforeEach(() => vi.stubGlobal('fetch', vi.fn(async url => response(String(url).includes('/search?') ? { schemaVersion: 1, query: 'pika', cards: briefs(), truncated: false } : details(String(url).split('/').pop()!)))));
+beforeEach(() => vi.stubGlobal('fetch', vi.fn(async url => {
+  if (!String(url).startsWith('https://pokemon-price-api-omega.vercel.app/api/market/')) throw new Error('No local backend');
+  return response(String(url).includes('/search?') ? { schemaVersion: 1, query: 'pika', cards: briefs(), truncated: false } : details(String(url).split('/').pop()!));
+})));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 it('finds partial-name matches, converts prices and selects an exact card', async () => {
   const select = vi.fn(); render(<MarketSearch rates={rates} onSelect={select} />); search();
@@ -63,10 +66,10 @@ it('pauses all background workers, counts down and resumes limited prices', asyn
   });
   render(<MarketSearch rates={rates} onSelect={vi.fn()} />);
   await act(async () => search());
-  expect(screen.getByText(/Mac request limit.*3s/)).toBeInTheDocument();
+  expect(screen.getByText(/Price API request limit.*3s/)).toBeInTheDocument();
   const calls = vi.mocked(fetch).mock.calls.length;
   await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
-  expect(screen.getByText(/Mac request limit.*1s/)).toBeInTheDocument();
+  expect(screen.getByText(/Price API request limit.*1s/)).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(calls);
   limited = false;
   await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
@@ -136,7 +139,7 @@ it('uses a sixty-second fallback for invalid retry metadata', async () => {
   vi.mocked(fetch).mockImplementation(async url => String(url).includes('/search?') ? response({ schemaVersion: 1, query: 'pika', cards: briefs(1), truncated: false }) : response({ error: 'rate_limited', retryAfterSeconds: 'bad' }, 429));
   render(<MarketSearch rates={rates} onSelect={vi.fn()} />);
   await act(async () => search());
-  expect(screen.getByText(/Mac request limit.*60s/)).toBeInTheDocument();
+  expect(screen.getByText(/Price API request limit.*60s/)).toBeInTheDocument();
   await act(async () => { await vi.advanceTimersByTimeAsync(59_000); });
   expect(fetch).toHaveBeenCalledTimes(2);
 });

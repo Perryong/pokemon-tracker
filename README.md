@@ -48,15 +48,15 @@ Get a key from [pokemontcgapi.com](https://pokemontcgapi.com/free-api-key). Rest
 
 When a card is opened, the app requests additional Cardmarket data through its own `/api/cardmarket/:cardId` endpoint. The server authenticates with [pokemontcgapi.com](https://pokemontcgapi.com/cardmarket-price-api), verifies the card identity, and returns only normalized English, ungraded Cardmarket price rows. The UI retains each row’s condition, printing, pricing basis, and observation date. Asking prices describe seller listings and should not be interpreted as completed sales.
 
-Cardmarket EUR and TCGplayer USD prices are displayed as estimated SGD using dated [ECB reference rates via Frankfurter](https://frankfurter.dev/). If exchange-rate retrieval fails, converted amounts are marked unavailable with an explanation.
+Cardmarket EUR and TCGplayer USD prices are displayed as estimated SGD using dated [ECB reference rates via Frankfurter](https://frankfurter.dev/), retrieved through the hosted price API. If exchange-rate retrieval fails, converted amounts are marked unavailable with an explanation.
 
 Provider coverage and account limits can leave cards without prices. When the additional provider is unavailable or has no usable data, TCGdex prices remain the fallback. The UI identifies the source used.
 
 To conserve API credits, server responses are cached for six hours, concurrent requests for the same card are shared, and uncached requests are limited. Prices are fetched on demand rather than preloading the entire catalogue. See [Cardmarket integration details](docs/cardmarket.md).
 
-## Mac-hosted Market view
+## Hosted Market pricing
 
-The **Market** tab shows read-only TCGdex reference prices from the local backend, with estimated SGD prices, average-price charts, partial-name discovery, provider timestamps and connection status. The Market Agent remains simulated. See [setup and private phone access](docs/market-live-view.md) and [verification evidence](docs/market-live-view-verification.md). A static-only deployment has no Market backend.
+The **Market** tab shows read-only TCGdex reference prices from [pokemon-price-api](https://pokemon-price-api-omega.vercel.app), with estimated SGD prices, average-price charts, partial-name discovery, provider timestamps and connection status. The Market Agent remains simulated. The browser calls this public read-only API directly, including from a static deployment; no Mac backend, key or environment variable is required for Market pricing. See [setup and private phone access](docs/market-live-view.md). The frontend itself must also be hosted online to remain accessible when the Mac is off.
 
 ## Collection storage
 
@@ -88,7 +88,7 @@ GitHub Pages deployment is handled by `.github/workflows/deploy-pages.yml` on ev
 
 For production, host an equivalent server or serverless handler based on `server/cardmarket.ts`, configure `PTCG_API_KEY` in its secret environment, and route the frontend’s same-origin pricing requests to it. Apply access controls and shared request limits appropriate to the deployment. Vite preview is for local verification, not a production server.
 
-The application can still browse cards and use available TCGdex prices without this additional endpoint.
+The application can still browse cards and use available TCGdex prices without this additional endpoint. The Market tab and SGD exchange rates use the separately hosted price API directly and work from static hosting.
 
 ## Project structure
 

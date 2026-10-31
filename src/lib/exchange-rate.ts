@@ -1,30 +1,34 @@
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
+import { MARKET_API_URL } from './market';
 
 type Currency = 'EUR' | 'USD';
 export type ExchangeRate = { rate: number; date: string; expiresAt: number };
 export type SgdRates = Partial<Record<Currency, ExchangeRate>>;
-const cached = new Map<Currency, { value: ExchangeRate; expires: number }>();
-const pending = new Map<Currency, Promise<ExchangeRate>>();
-const rateSchema = z.object({ base: z.enum(['EUR', 'USD']), quote: z.literal('SGD'), rate: z.number().finite().positive(), date: z.string().date() });
+const cached: SgdRates = {};
+let pending: Promise<Record<Currency, ExchangeRate>> | undefined;
+const rateSchema = z.object({ rate: z.number().finite().positive(), date: z.string().date(), expiresAt: z.number().finite().positive() });
+const ratesSchema = z.object({ EUR: rateSchema, USD: rateSchema });
 
-export function fetchSgdRate(currency: Currency): Promise<ExchangeRate> {
-  const hit = cached.get(currency);
-  if (hit && hit.expires > Date.now()) return Promise.resolve(hit.value);
-  const inFlight = pending.get(currency);
-  if (inFlight) return inFlight;
-  const request = (async () => {
-    const response = await fetch(`https://api.frankfurter.dev/v2/rate/${currency}/SGD?providers=ecb`, { signal: AbortSignal.timeout(8000), redirect: 'error' });
-    if (!response.ok) throw new Error('Exchange rate unavailable');
-    const data = rateSchema.parse(await response.json());
-    const age = Date.now() - Date.parse(data.date);
-    if (data.base !== currency || age < 0 || age > 7 * 86400_000) throw new Error('Invalid or stale exchange rate');
-    const value = { rate: data.rate, date: data.date, expiresAt: Math.min(Date.now() + 6 * 3600_000, Date.parse(data.date) + 7 * 86400_000) };
-    cached.set(currency, { value, expires: value.expiresAt });
-    return value;
-  })().finally(() => pending.delete(currency));
-  pending.set(currency, request);
-  return request;
+export async function fetchSgdRate(currency: Currency): Promise<ExchangeRate> {
+  const hit = getSgdRate(currency, cached);
+  if (hit) return hit;
+  if (!pending) {
+    pending = (async () => {
+      const response = await fetch(`${MARKET_API_URL}/rates`, { signal: AbortSignal.timeout(8000), redirect: 'error' });
+      if (!response.ok) throw new Error('Exchange rate unavailable');
+      const rates = ratesSchema.parse(await response.json());
+      const now = Date.now();
+      for (const rate of Object.values(rates)) {
+        const observation = Date.parse(rate.date);
+        rate.expiresAt = Math.min(rate.expiresAt, now + 6 * 3600_000, observation + 7 * 86400_000);
+        if (observation > now || rate.expiresAt <= now) throw new Error('Invalid or stale exchange rate');
+      }
+      Object.assign(cached, rates);
+      return rates;
+    })().finally(() => { pending = undefined; });
+  }
+  return (await pending)[currency];
 }
 
 export function useSgdExchangeRates(enabled: boolean) {
