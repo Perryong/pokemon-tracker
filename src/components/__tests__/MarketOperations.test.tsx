@@ -254,3 +254,89 @@ it('updates expiry at its boundary while idle and cleans up its timers on unmoun
     unmount(); expect(vi.getTimerCount()).toBe(0);
   } finally { vi.useRealTimers(); }
 });
+
+const inspection = () => {
+  const card = { set: 'SV-SYNTHETIC', number: '001', language: 'en', printing: 'standard', finish: 'holo', category: 'raw', grading_company: null, grade: null };
+  return { ...state(), captured_at: '2026-10-31T04:00:00Z',
+    scope: { policy_version: '001-policy', allowed_cards: [card], allowed_conditions: ['near_mint'], max_evidence_age_seconds: 86400 },
+    next_scheduled_at: '2026-10-31T10:00:00Z',
+    sales_connection: { configured: true, last_dispatch: { status: 'succeeded', at: '2026-10-31T03:00:00Z' } },
+    listings: [{ id: 'listing-1', version: 4, card, condition: 'damaged', condition_reviewed: false }],
+    assessments: [{ ...state().assessments[0], version: 3, card, condition: 'near_mint', evidence: [
+      { id: 'e1', source: 'fixture-source', basis: 'completed_sale', observed_at: '2026-10-31T03:00:00Z', currency: 'SGD', gross_amount: '120.00' },
+      { id: 'e2', source: 'old-source', basis: 'reference', observed_at: '2026-10-29T03:00:00Z', currency: 'EUR', gross_amount: '20.00' },
+      { id: 'e3', source: 'future-source', basis: 'asking', observed_at: '2026-11-01T03:00:00Z', currency: 'USD', gross_amount: '30.00' },
+    ] }],
+    mandates: [{ ...state().mandates[0], assessment_version: 3, conversation_version: 2, policy_version: '001-policy', exposure: '0.00' }],
+  };
+};
+
+it('shows stored watchlist, current identity, separate authority versions and timestamped evidence', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(response(inspection()));
+  render(<MarketOperations />);
+  await screen.findByRole('heading', { name: 'Scope and watchlist' });
+  expect(screen.getByText('Policy version: 001-policy')).toBeInTheDocument();
+  expect(screen.getByText('Allowed conditions: near mint')).toBeInTheDocument();
+  expect(screen.getByText('Current listing version: 4')).toBeInTheDocument();
+  expect(screen.getByText('Current condition: damaged · unreviewed')).toBeInTheDocument();
+  expect(screen.getByText('Assessment version: 3')).toBeInTheDocument();
+  expect(screen.getByText('Assessment 3 · Conversation 2 · Policy 001-policy')).toBeInTheDocument();
+  expect(screen.getByText('Fixture Sales transport configured')).toBeInTheDocument();
+  expect(screen.getByText(/Last recorded dispatch: succeeded/)).toBeInTheDocument();
+  expect(screen.getByText(/Next scheduled slot:/)).toHaveTextContent('18:00');
+  fireEvent.click(screen.getByText('Assessment evidence (3)'));
+  expect(screen.getByText('Fresh at snapshot')).toBeInTheDocument();
+  expect(screen.getByText('Stale at snapshot')).toBeInTheDocument();
+  expect(screen.getByText('Future observation at snapshot')).toBeInTheDocument();
+  expect(screen.getByText('EUR 20.00 · reference')).toBeInTheDocument();
+  expect(screen.getByText(/fixture-source/)).toBeInTheDocument();
+  expect(screen.queryByText(/Live ready/)).not.toBeInTheDocument();
+});
+
+it('shows pause and failed recorded dispatch without claiming a healthy connection', async () => {
+  const data = inspection();
+  vi.mocked(fetch).mockResolvedValueOnce(response({ ...data, paused: true, next_scheduled_at: null,
+    sales_connection: { configured: true, last_dispatch: { status: 'failed', at: data.captured_at } } }));
+  render(<MarketOperations />);
+  expect(await screen.findByText('Scheduled work paused')).toBeInTheDocument();
+  expect(screen.getByText(/Last recorded dispatch: failed/)).toBeInTheDocument();
+  expect(screen.queryByText(/Next scheduled slot:/)).not.toBeInTheDocument();
+  expect(screen.getByText(/Configuration and historical dispatch do not prove current connectivity/)).toBeInTheDocument();
+});
+
+it('shows due catch-up, graded identity and escaped source text without inventing a live scope', async () => {
+  const data = inspection(); const card = { ...data.scope.allowed_cards[0], category: 'graded', grading_company: 'PSA', grade: '10' };
+  vi.mocked(fetch).mockResolvedValueOnce(response({ ...data, next_scheduled_at: '2026-10-31T01:00:00Z',
+    scope: { ...data.scope, allowed_cards: [card] },
+    assessments: [{ ...data.assessments[0], evidence: [{ ...data.assessments[0].evidence[0], source: '<img src=x onerror=alert(1)>' }] }],
+  }));
+  render(<MarketOperations />);
+  expect(await screen.findByText(/Due scheduled slot/)).toHaveTextContent('09:00');
+  expect(screen.getByText(/PSA 10/)).toBeInTheDocument();
+  expect(screen.getByText(/Geographic trading scope: not configured/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Assessment evidence (1)'));
+  expect(screen.getByText(/<img src=x onerror=alert\(1\)>/)).toBeInTheDocument();
+  expect(document.querySelector('img[src="x"]')).toBeNull();
+});
+
+it('keeps older private responses usable while labeling unavailable inspection metadata', async () => {
+  render(<MarketOperations />);
+  expect(await screen.findByText('Scope unavailable from this service version.')).toBeInTheDocument();
+  expect(screen.getByText('Connection evidence unavailable.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Assess selected listing' })).toBeEnabled();
+});
+
+it('rejects malformed supplied inspection metadata rather than presenting it as verified', async () => {
+  const data = inspection();
+  vi.mocked(fetch).mockResolvedValueOnce(response({ ...data, scope: { ...data.scope, policy_version: 1 } }));
+  render(<MarketOperations />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Private operations unavailable');
+  expect(screen.queryByRole('heading', { name: 'Scope and watchlist' })).not.toBeInTheDocument();
+});
+
+it('rejects a syntactically accepted timestamp that cannot be rendered as a real date', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(response({ ...inspection(), captured_at: '2026-10-31T04:00:00+99:99' }));
+  render(<MarketOperations />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Private operations unavailable');
+  expect(screen.queryByRole('heading', { name: 'Scope and watchlist' })).not.toBeInTheDocument();
+});

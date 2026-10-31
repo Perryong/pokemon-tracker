@@ -16,6 +16,15 @@ from .controlled import ControlledModel
 from .harness import run_agent
 
 
+def _schedule_slots(times, now):
+    local = now.astimezone(ZoneInfo('Asia/Singapore'))
+    slots = [local.replace(hour=int(time[:2]), minute=int(time[3:]), second=0, microsecond=0) for time in times]
+    latest = max((slot if slot <= local else slot - timedelta(days=1) for slot in slots), default=None)
+    upcoming = min((slot if slot > local else slot + timedelta(days=1) for slot in slots), default=None)
+    return (latest.astimezone(timezone.utc) if latest else None,
+            upcoming.astimezone(timezone.utc) if upcoming else None)
+
+
 class WorkflowService:
     def __init__(self, store, workspace, *, clock=None, peer=None):
         self.store = store
@@ -50,13 +59,22 @@ class WorkflowService:
                               prepare_threshold=0, options='-c search_path=market_checkpoints')
 
     def state(self):
+        now = self.clock()
         snapshot = self.session.snapshot()
         with psycopg.connect(self.store.dsn, row_factory=dict_row) as conn:
-            control = conn.execute('SELECT schedule,paused FROM market_private.workflows WHERE workspace=%s', (self.workspace,)).fetchone()
+            control = conn.execute('SELECT schedule,paused,last_slot FROM market_private.workflows WHERE workspace=%s', (self.workspace,)).fetchone()
             runs = conn.execute('SELECT id,status,scheduled_for,completed_at,error,result FROM market_private.runs WHERE workspace=%s ORDER BY scheduled_for DESC,id LIMIT 100', (self.workspace,)).fetchall()
         scenarios = {}
+        dispatches = []
         for run in runs:
             result = run.pop('result')
+            if run['completed_at'] and run['error'] == 'fixture_peer_unavailable':
+                dispatches.append({'status': 'failed', 'at': run['completed_at']})
+            elif run['completed_at'] and run['status'] == 'completed' and result and result.get('peer_dispatched') is True:
+                dispatches.append({'status': 'succeeded', 'at': run['completed_at']})
+            elif result and result.get('last_dispatch'):
+                dispatch = result['last_dispatch']
+                dispatches.append(dict(dispatch, at=datetime.fromisoformat(dispatch['at'])))
             if result and result.get('assessment') and result.get('scenarios'):
                 scenarios.setdefault(result['assessment']['id'], result['scenarios'])
             for key in ('scheduled_for', 'completed_at'):
@@ -67,10 +85,22 @@ class WorkflowService:
                 assessment['scenarios'] = scenarios[assessment['id']]
         # Keep the operator payload bounded; durable history is never deleted.
         mandates = sorted(snapshot['mandates'], key=lambda item: (item['status'] == 'active', item['expires_at']), reverse=True)[:1000]
+        latest, upcoming = _schedule_slots(control['schedule']['times'], now)
+        next_slot = latest if latest and (control['last_slot'] is None or latest > control['last_slot']) else upcoming
+        last_dispatch = max(dispatches, key=lambda item: item['at'], default=None)
+        if last_dispatch:
+            last_dispatch['at'] = last_dispatch['at'].isoformat()
+        policy = snapshot['policy']
         return dict(mode='simulation', peer='fixture', live_ready=False,
+                    captured_at=now.isoformat(),
+                    scope=dict(policy_version=policy['version'], allowed_cards=policy['allowed_cards'],
+                               allowed_conditions=policy['allowed_conditions'], max_evidence_age_seconds=policy['max_evidence_age_seconds']),
+                    next_scheduled_at=next_slot.isoformat() if next_slot and not control['paused'] else None,
+                    sales_connection=dict(configured=self.peer is not None, last_dispatch=last_dispatch),
                     paused=control['paused'], schedule=control['schedule'], runs=runs,
                     assessments=snapshot['assessments'], mandates=mandates,
-                    inventory=snapshot['inventory'], listings=[{'id': x['id']} for x in snapshot['listings']],
+                    inventory=snapshot['inventory'],
+                    listings=[{key: x[key] for key in ('id', 'version', 'card', 'condition', 'condition_reviewed')} for x in snapshot['listings']],
                     blocked_reasons=['Live marketplace connector, real Sales peer and operator live policy are not configured.'])
 
     def set_schedule(self, times, zone):
@@ -106,8 +136,12 @@ class WorkflowService:
                 raise MarketError('run_in_progress')
             if row['status'] == 'failed' and (row['error'] != 'fixture_peer_unavailable' or row['attempts'] >= 3):
                 raise MarketError('run_failed')
-            conn.execute("UPDATE market_private.runs SET status='running',owner=%s,lease_until=%s,error=NULL,attempts=attempts+1 WHERE workspace=%s AND id=%s",
-                         (owner, now + timedelta(seconds=120), self.workspace, job_id))
+            # Retry clears the current error, so retain the prior dispatch outcome.
+            result = row['result']
+            if row['error'] == 'fixture_peer_unavailable' and row['completed_at']:
+                result = dict(result or {}, last_dispatch={'status': 'failed', 'at': row['completed_at'].isoformat()})
+            conn.execute("UPDATE market_private.runs SET status='running',owner=%s,lease_until=%s,error=NULL,result=%s,attempts=attempts+1 WHERE workspace=%s AND id=%s",
+                         (owner, now + timedelta(seconds=120), Jsonb(result) if result is not None else None, self.workspace, job_id))
         return owner
 
     def _result(self, listing_id, request_id):
@@ -128,13 +162,17 @@ class WorkflowService:
         with self._checkpoint_connection() as conn:
             result = run_agent(self.session, ControlledModel(), request,
                                checkpointer=PostgresSaver(conn), thread_id=self.workspace + ':' + request_id)
+        peer_dispatched = False
         if result.mandate and self.peer:
             if self.state()['paused']:
                 raise MarketError('paused')
             self.peer(result)
+            peer_dispatched = True
         from .evidence import valuation_scenarios
 
         output = result.model_dump(mode='json')
+        if peer_dispatched:
+            output['peer_dispatched'] = True
         if result.mandate:
             output['mandate'] = self.session.current_mandate(result.mandate.id).model_dump(mode='json')
         if result.assessment and self.session.read_listing(listing_id) == listing_input:
@@ -182,10 +220,10 @@ class WorkflowService:
                 conn.execute("UPDATE market_private.runs SET status=%s,error=%s,completed_at=%s,lease_until=NULL WHERE workspace=%s AND id=%s AND owner=%s",
                              ('queued' if code == 'paused' else 'failed', code, None if code == 'paused' else self.clock(), self.workspace, job_id, owner))
             raise MarketError(code) from None
-        with psycopg.connect(self.store.dsn) as conn:
-            conn.execute("UPDATE market_private.runs SET status='completed',completed_at=%s,lease_until=NULL,result=%s WHERE workspace=%s AND id=%s AND owner=%s",
-                         (self.clock(), Jsonb(result), self.workspace, job_id, owner))
-        return result
+        with psycopg.connect(self.store.dsn, row_factory=dict_row) as conn:
+            recorded = conn.execute("UPDATE market_private.runs SET status='completed',completed_at=%s,lease_until=NULL,result=COALESCE(result,'{}'::jsonb) || %s WHERE workspace=%s AND id=%s AND owner=%s RETURNING result",
+                                    (self.clock(), Jsonb(result), self.workspace, job_id, owner)).fetchone()
+        return recorded['result'] if recorded else result
 
     def run_due(self):
         now = self.clock()
@@ -193,13 +231,7 @@ class WorkflowService:
             control = conn.execute('SELECT * FROM market_private.workflows WHERE workspace=%s FOR UPDATE', (self.workspace,)).fetchone()
             if control['paused']:
                 return 0
-            local = now.astimezone(ZoneInfo('Asia/Singapore'))
-            slots = []
-            for time in control['schedule']['times']:
-                hour, minute = map(int, time.split(':'))
-                slot = local.replace(hour=hour, minute=minute, second=0, microsecond=0)
-                slots.append(slot if slot <= local else slot - timedelta(days=1))
-            slot = max(slots).astimezone(timezone.utc) if slots else None
+            slot, _ = _schedule_slots(control['schedule']['times'], now)
             if slot is not None and (control['last_slot'] is None or slot > control['last_slot']):
                 for listing in self.session.snapshot()['listings']:
                     key = 'schedule-' + hashlib.sha256((slot.isoformat() + listing['id']).encode()).hexdigest()[:32]

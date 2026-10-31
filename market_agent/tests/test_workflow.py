@@ -211,3 +211,89 @@ def test_pause_between_graph_and_peer_suspends_work_until_resume(workflow, monke
     assert service.run_due() == 1
     assert len(dispatched) == 1
     assert len(service.state()['mandates']) == 1
+
+
+def test_inspection_uses_persisted_scope_and_current_listing_identity(workflow):
+    service, clock = workflow
+    listing = service.session.read_listing('listing-1')
+    service.session.ingest_listing(listing.model_copy(update={'version': 2, 'condition': 'damaged', 'condition_reviewed': False}))
+    state = service.state()
+    assert state['captured_at'] == clock[0].isoformat()
+    assert state['scope']['policy_version'] == 'policy-1'
+    assert state['scope']['allowed_cards'][0]['number'] == '001'
+    assert state['scope']['allowed_conditions'] == ['near_mint']
+    assert state['scope']['max_evidence_age_seconds'] == 604800
+    assert state['listings'][0] == {
+        'id': 'listing-1', 'version': 2, 'card': listing.card.model_dump(mode='json'),
+        'condition': 'damaged', 'condition_reviewed': False,
+    }
+    assert 'seller_id' not in state['listings'][0]
+
+
+def test_next_schedule_matches_latest_catch_up_then_future_slot_and_pause(workflow):
+    service, clock = workflow
+    assert service.state()['next_scheduled_at'] is None
+    service.set_schedule(['09:00', '18:00'], 'Asia/Singapore')
+    assert service.state()['next_scheduled_at'] == clock[0].replace(hour=1).isoformat()
+    assert service.run_due() == 1
+    assert service.state()['next_scheduled_at'] == clock[0].replace(hour=10).isoformat()
+    service.set_paused(True)
+    assert service.state()['next_scheduled_at'] is None
+    service.set_paused(False)
+    assert service.state()['next_scheduled_at'] == clock[0].replace(hour=10).isoformat()
+
+
+@pytest.mark.parametrize(('hour', 'minute', 'slot', 'next_hour', 'next_minute', 'day_offset'), [
+    (4, 0, '12:00', 4, 0, 1),
+    (15, 59, '00:05', 16, 5, 0),
+])
+def test_next_schedule_handles_exact_slot_and_singapore_midnight(workflow, hour, minute, slot, next_hour, next_minute, day_offset):
+    service, clock = workflow
+    clock[0] = clock[0].replace(hour=hour, minute=minute)
+    service.set_schedule([slot], 'Asia/Singapore')
+    assert service.state()['next_scheduled_at'] <= clock[0].isoformat()
+    service.run_due()
+    expected = (clock[0] + timedelta(days=day_offset)).replace(hour=next_hour, minute=next_minute)
+    assert service.state()['next_scheduled_at'] == expected.isoformat()
+
+
+def test_connection_status_requires_recorded_dispatch_not_a_completed_graph(workflow):
+    service, clock = workflow
+    service.assess('listing-1')
+    assert service.state()['sales_connection'] == {'configured': False, 'last_dispatch': None}
+    def unavailable(_artifact):
+        raise MarketError('fixture_peer_unavailable')
+    service.peer = unavailable
+    clock[0] += timedelta(seconds=1)
+    with pytest.raises(MarketError, match='fixture_peer_unavailable'):
+        service.assess('listing-1', job_id='peer-attempt')
+    assert service.state()['sales_connection'] == {
+        'configured': True, 'last_dispatch': {'status': 'failed', 'at': clock[0].isoformat()},
+    }
+    clock[0] += timedelta(seconds=1)
+    service.peer = lambda _artifact: None
+    service.assess('listing-1', job_id='peer-attempt')
+    assert service.state()['sales_connection']['last_dispatch'] == {'status': 'succeeded', 'at': clock[0].isoformat()}
+
+
+def test_failed_dispatch_history_survives_retry_and_pre_dispatch_failure(workflow, monkeypatch):
+    service, clock = workflow
+    service.peer = lambda _artifact: None
+    service.assess('listing-1', job_id='older-success')
+    clock[0] += timedelta(seconds=1)
+    def unavailable(_artifact):
+        raise MarketError('fixture_peer_unavailable')
+    service.peer = unavailable
+    with pytest.raises(MarketError, match='fixture_peer_unavailable'):
+        service.assess('listing-1', job_id='later-failure')
+    failure = {'status': 'failed', 'at': clock[0].isoformat()}
+    assert service.state()['sales_connection']['last_dispatch'] == failure
+    clock[0] += timedelta(seconds=1)
+    def fail_before_dispatch(*_args):
+        assert service.state()['sales_connection']['last_dispatch'] == failure
+        raise MarketError('expired_request')
+    monkeypatch.setattr(service, '_result', fail_before_dispatch)
+    with pytest.raises(MarketError, match='expired_request'):
+        service.assess('listing-1', job_id='later-failure')
+    restarted = WorkflowService(service.store, service.workspace, clock=service.clock)
+    assert restarted.state()['sales_connection']['last_dispatch'] == failure

@@ -16,7 +16,7 @@ The operator selected Supabase PostgreSQL and the documented Market contract wit
 | #37 Authority | Durable idempotency, exposure serialization, stale-version rejection, expiry/revocation and exact-request recovery | Real shared budget/approval authority and live limits |
 | #38 Peer | Authenticated A2A HTTP+JSON 1.0 fixture roles, SDK message/task round trip, durable receipts | Real Sales interoperability; full protocol cancellation/typed-error coverage is not claimed |
 | #39 Inventory | Read-only fixture inspection/ageing/cost/outcome summaries, including unresolved settlement | Authoritative shared inventory/outcome ledger #16 |
-| #40 UI | Cookie-authenticated loopback operations, schedules, pause, assessments, mandates, scenarios, fixture inventory and blocked reasons | Private production hosting/authentication; this local host is single operator |
+| #40 UI | Cookie-authenticated loopback operations, read-only scope/watchlist, dispatch history, Singapore run timing, listing identity, evidence freshness, versions, scenarios and fixture inventory | Private production hosting/authentication; this local host is single operator |
 | #41 Acceptance | Durable sanitized run metadata, offline/database/browser/recovery tests and fresh review | Langfuse sink/export, model budget/credentials and bounded real-model/live acceptance |
 
 Business state and checkpoints use distinct private PostgreSQL schemas. Every run uses the same operator workspace; run IDs never reset exposure. The public tracker does not receive operator credentials, private records or fixture fallback. A plain Vite deployment reports the private backend unavailable.
@@ -86,3 +86,20 @@ The private proxy now forwards only the exact supported `X-Market-Priority: back
 At **17:27 Singapore time on 31 October 2026**, headed Playwright opened the private operations panel, authenticated using the protected local key, resumed the existing workspace, assessed `listing-1`, and paused scheduling again. New run `manual-1b9acbdf73a43b811d148dd5423af488` completed with a qualified assessment and **S$80.00 simulated item ceiling**. The stored authenticated fixture Sales task `c61f4ca3bc525ed6b7b2a317cd3523b3` completed with `proposed_terms` and `approval: false`. Existing history was retained. Screenshots: `/tmp/market-agent-inspection.png` and `/tmp/market-agent-assessment.png`.
 
 This uses the real Deep Agents graph with a controlled model and synthetic business data. It does not verify paid-model behavior or a real Sales deployment. The inspection browser is authenticated locally; no credential was placed in Git or the screenshots. #40/#41 retain their production/integration acceptance gates.
+
+
+## Operations inspection fields — 31 October 2026
+
+The private panel now shows the persisted read-only synthetic scope/watchlist, exact current card identity and condition, listing/assessment/conversation/policy versions, evidence source/basis/original amount/currency/observation time, snapshot-relative freshness, reviewed-assumption details when present, and recorded mandate exposure. Scope, geography and fixture/live readiness remain explicit; this does not add a live policy editor.
+
+Run timing uses the same Singapore slot calculation as the worker, including latest missed-slot catch-up, exact slots and midnight. Paused/no-schedule states have no next execution claim. Fixture transport configuration and the latest recorded dispatch outcome are shown separately from current connectivity. Historical graph completions without dispatch evidence remain unverified. A retry retains the prior failed dispatch in existing run JSON even if it subsequently fails before transport.
+
+Fresh verification on the final implementation:
+
+- **273 Python tests passed**, no skips, with `MARKET_TEST_DSN` pointing to disposable PostgreSQL and `PYTHONPATH=market_agent/src`; includes 24 workflow tests and CLI subprocess checks. An earlier invocation omitted the source path and failed seven CLI imports; the corrected full invocation passed.
+- **221 frontend tests passed across 23 files**, including 27 private operations tests. Production build, focused ESLint, Ruff symbol checks and whitespace passed. Full lint retains **9 errors / 5 warnings** in unchanged files.
+- Independent focused review found two Important issues: invalid timezone offsets could crash rendering, and retrying a failed dispatch could erase its displayed outcome. Both were reproduced by failing regressions before correction; the full suites above passed afterward.
+- Headed Playwright at **18:52 Singapore time** authenticated to the existing workspace, inspected scope, resumed, ran a fresh assessment and paused scheduling again. Persisted run `manual-58e062b4dd14715a2df95de547a9d059` completed with a qualified assessment and **S$80.00 simulated item ceiling**; the fixture dispatch recorded success. Existing history remained intact.
+- Desktop and 390px rendering were inspected visually; no horizontal document overflow. Local screenshots: `/tmp/market-operations-details-desktop.png`, `/tmp/market-operations-details-assessment.png`, `/tmp/market-operations-details-mobile.png`. The browser remains open and scheduling paused.
+
+The inspection-field slice of #40 is delivered for the selected fixture target. #40/#41 remain open for shared UI/service agreements, private production hosting, real Sales/ledger acceptance, model-budget evaluation and Langfuse decisions. No production migration, main merge or live marketplace action was performed.

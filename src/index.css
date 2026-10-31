@@ -224,6 +224,8 @@
 .operations-card > label { display: block; margin: 16px 0 8px; }
 .operations-card .control { width: 100%; min-width: 0; }
 .operations-card > button { margin-top: 16px; }
+.operations-card details { margin-top: 12px; }
+.operations-card summary { cursor: pointer; min-height: 44px; padding-block: 10px; font-weight: 600; }
 .operations-records { list-style: none; padding: 0; margin: 0; }
 .operations-records > li { padding-block: 12px; border-bottom: 1px solid hsl(var(--border)); }
 .operations-records > li:last-child { border-bottom: 0; }
