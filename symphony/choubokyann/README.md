@@ -190,6 +190,44 @@ operator decision. Passing review can remain In review / awaiting human merge.
 No automatic merging, Done, deployment or marketplace action is authorized. A
 merged PR alone is insufficient business acceptance. #27 remains ongoing.
 
+## Bounded reviewer and selected backlog intake
+
+The operator extension in [#27](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539152475)
+adds two explicit tool tasks: readiness review of selected Sales/UI backlog, and
+acceptance review of In review/returned work at the exact current PR head. Invoke
+an independent native `gpt-6-astra`/high child with a clean context, read-only
+public evidence and immutable source, task ID, file/tool scope and time/turn
+budget, under the [model clarification](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539174541). At most one Astra reviewer replaces one Sol worker slot: one Astra coordinator plus reviewer plus at most two Sol workers, four agents total. Without a reviewer, up to three Sol workers remain allowed. The implementation default stays Sol/high. This exception supersedes the earlier Sol-only child description. It consumes one existing child slot; Astra retains issue ownership and
+all decisions. No persistent reviewer, recursive delegation or additional scheduler.
+
+Reviewers cannot execute repository code, submit checks, write GitHub/status or
+ownership, merge or take live actions. Astra serializes isolated checks and
+independently verifies the returned verdict, source and live head. Require status,
+ready/blocked or pass/changes-needed verdict, evidence/head, blocker owner/action,
+checks and uncertainty. Inaccessible, failed or incomplete reviews fail closed;
+a changed head invalidates acceptance. Preserve the original product owner for
+any fix. Passing work remains In review until authorized human merge, with
+business acceptance still separate.
+
+Use existing gate/workpad evidence digests to avoid another reviewer when its
+issue/dependency/ownership inputs or head/check/review evidence are unchanged.
+Record the prior verdict and rationale; another issue's change alone is no reason
+to repeat it. The cache grants neither readiness nor ownership.
+
+For Pokemon, the recorded initial intake is #8, #9 and #11–#21 only. Audit full
+ownership/scope before adding the existing queue label. Leave colleague Market
+#24/#26/#31–#41, unrelated issues and private repositories outside intake. Labels
+permit evaluation, not coding. Record actual blockers and responsible next
+decisions; promote only after verified prerequisite and non-code resolution.
+Avoid duplicate comments and same-status writes. Other registrations require
+their own recorded scope and selected list; do not copy these issue numbers.
+
+Validation uses the existing isolated coordinator suite for rendering/scope
+regressions plus actual returned readiness/acceptance trials, model metadata and
+parent decisions. Prose declarations alone do not prove reviewer activation.
+Install the reviewed template/docs through the existing gateway path and reload
+only after the bounded cycle returns, preserving pending evidence and budgets.
+
 ## Local checks
 
 Run these only in the isolated host check boundary (Python 3.13), never in

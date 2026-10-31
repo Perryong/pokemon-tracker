@@ -111,9 +111,12 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
    path for product coding, request supervisor reconciliation; do not self-claim.
    Serialize routine delegated decisions and verify assignment/In progress after
    recording them. Read back an uncertain write before any retry.
-6. For authorized implementation, invoke at most THREE native children at a time
+6. For authorized implementation or review, invoke at most THREE native children at a time
    alongside the one Astra coordinator (four development agents total), with
-   explicit `model=gpt-6.1-sol`, `reasoning_effort=high`, `fork_turns=none`.
+   explicit `model=gpt-6.1-sol` for implementation workers or `model=gpt-6-astra`
+   for the independent reviewer, always `reasoning_effort=high`, `fork_turns=none`.
+   Allow at most one reviewer; while it is active, at most TWO Sol workers may
+   run alongside it and the coordinator. All children share the same three slots.
    Give task ID, objective, relevant context, owned files, permitted actions,
    acceptance checks and a time/turn budget. Use fewer children when work is not
    independent; assign disjoint file ownership to concurrent children. Serialize
@@ -123,6 +126,31 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
    uncertainty and remaining work. Verify transcript model metadata when
    available; configuration or model cache entries alone prove no applied model.
    If unavailable or mismatched, report the actual gap without substitution.
+
+Bounded reviewer procedure:
+- For changed selected backlog evidence, invoke an independent native Astra/high
+  readiness reviewer; for changed In review/returned work, invoke an independent
+  native Astra/high acceptance reviewer at the exact current PR head. A reviewer
+  uses one existing child slot and returns to Astra; it is not a service or owner.
+- Give task ID, public evidence/immutable source, read-only files, allowed tools
+  and a time/turn budget. No repository execution, GitHub/status/ownership writes,
+  merges, live actions or recursive delegation. Main serializes isolated checks.
+- Return completed/blocked/failed, ready/blocked or pass/changes-needed, evidence,
+  exact head when applicable, each blocker owner/action, actual checks and uncertainty.
+  Fail closed on missing evidence, failure or timeout. Recheck the head after
+  validation; movement invalidates acceptance. Main verifies findings and owns
+  Ready promotion, dispatch and rework under the original ownership gates.
+- Cache the reviewed issue/dependency/ownership evidence digest or exact head plus
+  check/review evidence digest and verdict in the existing workpad. No repeat
+  reviewer on unchanged inputs, even if another issue triggered this cycle.
+  No new scheduler/database. A cached verdict never substitutes for live authority.
+- Intake only explicitly operator-selected public issues after ownership/scope
+  audit, using the existing queue label as evaluation opt-in. Follow the selected
+  repository's recorded intake list and exclusions; do not discover/label unrelated
+  or colleague work. Record genuine blockers with responsible decision/action,
+  without duplicate comments or blanket status writes. Only verified resolved
+  prerequisites permit Ready; passing acceptance stays In review awaiting human merge.
+
 7. Inspect the returned diff and independently run appropriate checks. Resolve
    failures before acceptance. Maintain a concise local workpad with issue,
    owner/session, branch/head, decisions and evidence links, checks, next step,
@@ -158,6 +186,7 @@ commit/request digest, pinned image/archive identity, successful checks and veri
 cleanup, then independently reconcile live GitHub before gate acknowledgement.
 No test code runs here or in native children. Host setup is ISOLATED-TOOL.md; ISOLATION-PILOT.md is historical.
 The global budget is coordinator 2 CPU/3 GiB plus one non-agent test container
-2 CPU/3 GiB; the development agent cap is one Astra plus up to three Sol children.
+2 CPU/3 GiB; the development agent cap is four: one Astra coordinator and up to
+three children, with at most one Astra reviewer replacing one Sol worker slot.
 A container restart preserves pending evidence and never authorizes an automatic
 retry or ownership recovery. The earlier same-container/offline-manual-pilot constraint is superseded by this tool path.
