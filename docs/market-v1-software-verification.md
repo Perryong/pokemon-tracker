@@ -64,3 +64,5 @@ The existing GitHub/Vercel integration automatically built a public preview afte
 The operator selected real card-price research as the next data source. Market now automatically loads the existing default card from the real TCGdex feed on entry, with dated SGD conversion, separate provider/fetch timestamps, cache limits and explicit opt-in synthetic controls. Search, manual refresh and failure behavior remain supported. Reference quotes do not become completed sales or mandate authority.
 
 Fresh frontend checks: **215 tests passed across 23 files**, build/focused ESLint/whitespace passed. Playwright verified automatic Alakazam display, refresh, Pikachu selection, real FX provenance and 390px layout. Cancellation, initial-response races, strict effect remount and collection persistence have regressions. The current browser tab shows the new research view; the fixture scheduler is paused. This frontend change did not require repeating the unchanged Python/database suite.
+
+Fresh independent review found no Important/Critical or actionable minor findings and independently passed 42 relevant frontend tests.

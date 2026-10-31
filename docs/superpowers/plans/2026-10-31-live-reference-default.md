@@ -36,7 +36,7 @@
 - [x] Reuse the bounded `load(selected: string)` path from the mount effect; identify live reference research and opt-in fixture controls truthfully. Update callers/tests for the new initial request.
 - [x] Run all frontend tests, production build, focused ESLint and whitespace checks. Expect no failures; report existing full lint separately.
 - [x] Use Playwright against the built server to verify automatic actual-provider prices, provenance/SGD, selection, refresh and 390px no overflow. Confirm fixture service remains paused.
-- [ ] Fresh review of the change and connected behavior; fix Important findings with regressions. Commit/push the feature branch and append exact issue/PR evidence.
+- [x] Fresh review of the change and connected behavior; fix Important findings with regressions. Commit/push the feature branch and append exact issue/PR evidence.
 
 
 ## Verification ledger
@@ -45,3 +45,5 @@
 - Full frontend suite: **215 passed across 23 files**. Build, focused ESLint and whitespace checks passed. The App collection persistence test needed a proper card-response HTTP fake for the new automatic request; its saved quantities still pass.
 - Actual-provider Playwright: default Alakazam loaded without form submission, dated SGD/provenance displayed, manual refresh and Pikachu selection worked, and 390px rendering had no horizontal overflow. The current in-app tab was refreshed to this view.
 - The fixture scheduler was found enabled during final inspection and explicitly paused for this read-only research handoff. Private contracts, business state and source adapters were not changed.
+
+- Fresh independent review found no Important/Critical or actionable minor issues; 42 relevant frontend tests passed independently. Publishing uses the existing feature branch and PR #42; main stays unchanged.
