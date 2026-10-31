@@ -194,9 +194,12 @@ def make_server(service, *, port=8790, token, peer_token, dist, reference_url=No
                 if not reference_url:
                     self.respond(503, {'error': 'backend_unavailable'})
                     return
+                headers = {}
+                if path.startswith('/api/market/') and self.headers.get('X-Market-Priority') == 'background':
+                    headers['X-Market-Priority'] = 'background'
                 try:
                     with httpx.Client(timeout=12, follow_redirects=False, trust_env=False) as client:
-                        with client.stream('GET', reference_url.rstrip('/') + self.path) as response:
+                        with client.stream('GET', reference_url.rstrip('/') + self.path, headers=headers) as response:
                             output = bytearray()
                             for chunk in response.iter_bytes():
                                 output.extend(chunk)

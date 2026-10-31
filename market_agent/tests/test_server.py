@@ -1,5 +1,7 @@
 import os
+import json
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
 
 import httpx
@@ -101,3 +103,46 @@ def test_serve_cli_requires_private_configuration(monkeypatch, capsys):
         monkeypatch.delenv(key, raising=False)
     assert main(['serve']) == 1
     assert capsys.readouterr().err.strip() == 'missing_server_configuration'
+
+
+@pytest.mark.parametrize(('path', 'priority', 'expected'), [
+    ('/api/market/cards/base1-1', 'background', 'background'),
+    ('/api/market/cards/base1-1', 'unexpected', None),
+    ('/api/market/cards/base1-1', None, None),
+    ('/api/cardmarket/base1-1', 'background', None),
+])
+def test_reference_proxy_preserves_only_supported_market_priority(tmp_path, path, priority, expected):
+    class ReferenceBackend(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = json.dumps(dict(self.headers)).encode()
+            self.send_response(200)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_):
+            pass
+
+    backend = ThreadingHTTPServer(('127.0.0.1', 0), ReferenceBackend)
+    proxy = make_server(None, port=0, token='operator-test-key-with-32-characters',
+                        peer_token='peer-test-key-distinct-32-characters', dist=tmp_path,
+                        reference_url=f'http://127.0.0.1:{backend.server_port}')
+    threads = [threading.Thread(target=server.serve_forever, daemon=True) for server in (backend, proxy)]
+    for thread in threads:
+        thread.start()
+    try:
+        headers = {'Authorization': 'Bearer private-test-only', 'Cookie': 'market_session=private-test-only'}
+        if priority is not None:
+            headers['X-Market-Priority'] = priority
+        response = httpx.get(f'http://127.0.0.1:{proxy.server_port}{path}', headers=headers, trust_env=False)
+        assert response.status_code == 200
+        forwarded = {key.lower(): value for key, value in response.json().items()}
+        assert forwarded.get('x-market-priority') == expected
+        assert 'authorization' not in forwarded
+        assert 'cookie' not in forwarded
+    finally:
+        for server in (proxy, backend):
+            server.shutdown()
+            server.server_close()
+        for thread in threads:
+            thread.join(5)

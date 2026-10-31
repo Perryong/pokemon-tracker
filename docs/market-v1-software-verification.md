@@ -27,7 +27,7 @@ A2A structured parts carry canonical business JSON in `requestJson`/`resultJson`
 
 | Check | Actual result |
 | --- | --- |
-| Full Python suite with `MARKET_TEST_DSN` and worktree `PYTHONPATH` | **263 passed**, no database skips |
+| Full Python suite with `MARKET_TEST_DSN` and worktree `PYTHONPATH` | **267 passed**, no database skips |
 | Six controlled CLI scenarios | **6/6**, valid JSON stdout and empty stderr |
 | `uv pip check --python market_agent/.venv/bin/python` | All 81 installed packages compatible |
 | Frontend `NODE_OPTIONS=--no-experimental-webstorage npm test -- --run` | **215 passed**, 23 files |
@@ -75,4 +75,14 @@ Exact successful reassessment replay now uses the durable request fingerprint an
 
 After this correction, the full Python suite passed **263 tests**, including **33 peer tests**, with real disposable PostgreSQL and no skips. Ruff symbol checks and whole-branch whitespace checks passed. Fresh checks immediately before this backend-only correction passed **215 frontend tests**, build, changed-TypeScript lint, dependency compatibility, wheel packaging and all six controlled CLI scenarios from the installed wheel outside the checkout. Full lint was rerun and retains **9 errors / 5 warnings**, all in unchanged files.
 
-One Minor review finding is deferred: the private reference proxy drops `X-Market-Priority: background`, so proxied batch research can consume the Node backend's reserved foreground request slots. The backend still enforces its overall rate limit, but manual selection can temporarily receive a rate-limit response during a batch. Forwarding this validated priority header and testing the foreground reserve remains a UI/proxy follow-up under #40. No production Supabase, real Sales or live marketplace acceptance is asserted by this review.
+The Minor reference-proxy priority finding from this review was subsequently corrected under #40; see the agent-inspection update below. No production Supabase, real Sales or live marketplace acceptance is asserted by this review.
+
+## Agent inspection and proxy priority correction
+
+The operator asked to proceed with the next task and inspect the agents. The task check found hosted reference integration #43 already delivered separately in draft PR #44, so this work continued the independent #40 proxy correction in PR #42.
+
+The private proxy now forwards only the exact supported `X-Market-Priority: background` value on Market routes. This preserves the existing Node backend's 25-background/30-total request limits. Unknown priority values and Cardmarket routes receive no priority override; operator cookies and authorization headers remain excluded. A real HTTP regression reproduced the dropped header before the fix. All four proxy cases now pass, along with **267 Python tests with disposable PostgreSQL**, **42 Node middleware tests** (including foreground reserve), Ruff symbol checks and whitespace checks. Focused independent review found no actionable issues. No frontend source or bundle change was required.
+
+At **17:27 Singapore time on 31 October 2026**, headed Playwright opened the private operations panel, authenticated using the protected local key, resumed the existing workspace, assessed `listing-1`, and paused scheduling again. New run `manual-1b9acbdf73a43b811d148dd5423af488` completed with a qualified assessment and **S$80.00 simulated item ceiling**. The stored authenticated fixture Sales task `c61f4ca3bc525ed6b7b2a317cd3523b3` completed with `proposed_terms` and `approval: false`. Existing history was retained. Screenshots: `/tmp/market-agent-inspection.png` and `/tmp/market-agent-assessment.png`.
+
+This uses the real Deep Agents graph with a controlled model and synthetic business data. It does not verify paid-model behavior or a real Sales deployment. The inspection browser is authenticated locally; no credential was placed in Git or the screenshots. #40/#41 retain their production/integration acceptance gates.
