@@ -113,3 +113,10 @@ it('selects a searched card and takes keyboard focus to its price details', asyn
   expect(await screen.findByRole('heading', { name: 'Pikachu base1-58' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Card price details' })).toHaveFocus();
 });
+it.each(['rate_limited', 'provider_rate_limited'])('shows retry seconds and source for %s without reporting the backend offline', async code => {
+  render(<MarketView />); await screen.findByText('Backend reachable');
+  vi.mocked(fetch).mockResolvedValueOnce(response({ error: code, retryAfterSeconds: 17 }, 429)); submit();
+  expect(await screen.findByRole('alert')).toHaveTextContent(code === 'rate_limited' ? 'Mac request limit' : 'Price provider request limit');
+  expect(screen.getByRole('alert')).toHaveTextContent('17 seconds');
+  expect(screen.getByText('Backend reachable')).toBeInTheDocument();
+});

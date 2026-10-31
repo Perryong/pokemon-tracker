@@ -9,7 +9,8 @@ const errors: Record<string, string> = {
   card_not_found: 'Card not found. Check the TCGdex card ID.',
   provider_unavailable: 'Price provider unavailable. Try again later.',
   provider_timeout: 'Price provider timed out. Try again later.',
-  rate_limited: 'Request limit reached. Wait a minute before trying again.',
+  rate_limited: 'Mac request limit.',
+  provider_rate_limited: 'Price provider request limit.',
 };
 const date = (value: string) => new Date(value).toLocaleString();
 
@@ -60,7 +61,9 @@ export default function MarketView() {
       if (!response.ok) {
         const code = raw && typeof raw === 'object' && 'error' in raw ? String(raw.error) : '';
         if (!errors[code]) throw new Error('Invalid response');
-        setBackend('reachable'); setError(errors[code]); return;
+        const retry = raw && typeof raw === 'object' && 'retryAfterSeconds' in raw ? raw.retryAfterSeconds : null;
+        const seconds = typeof retry === 'number' && Number.isFinite(retry) && retry > 0 ? Math.ceil(retry) : 60;
+        setBackend('reachable'); setError(errors[code] + (code.endsWith('rate_limited') ? ` Try again in ${seconds} seconds.` : '')); return;
       }
       const parsed = MarketCardSchema.parse(raw);
       if (parsed.card.id !== selected) throw new Error('Mismatched card');
