@@ -131,16 +131,19 @@ def test_skills_and_current_authority_are_enforced_before_replay(peer_setup):
         peer.send(message, role="sales")
 
 
-def test_market_reassessment_task_is_durable_and_does_not_reapply_changes(peer_setup):
+@pytest.mark.parametrize("include_mandate", [False, True])
+def test_market_reassessment_task_is_durable_and_does_not_reapply_changes(peer_setup, include_mandate):
     from pokemon_market.peer import FixturePeerService, peer_message
     store, workspace, request, now = peer_setup
-    request = change(request, request_id="change", operation="reassess_opportunity", mandate_id=None, changes={"price": "70.00"})
+    request = change(request, request_id="change", operation="reassess_opportunity", mandate_id=request.mandate_id if include_mandate else None, changes={"price": "70.00"})
     message = peer_message(request, workspace)
     peer = FixturePeerService(store, workspace, clock=lambda: now)
     first = peer.send(message, role="market")
     assert peer.send(message, role="market") == first
     assert store.session(workspace, clock=lambda: now).read_listing("listing-1").version == 2
     assert json.loads(first["task"]["artifacts"][0]["parts"][0]["data"]["resultJson"])["assessment"]["version"] == 2
+    if include_mandate:
+        assert peer.session.current_mandate(request.mandate_id).status == "revoked"
 
 
 def test_helper_keeps_opaque_policy_and_exact_large_counters(qualified_request):
@@ -155,10 +158,11 @@ def test_helper_keeps_opaque_policy_and_exact_large_counters(qualified_request):
     assert value["assessment_version"] == 2**53 + 1
 
 
-def test_reassessment_recovers_after_business_commit_before_receipt(peer_setup, monkeypatch):
+@pytest.mark.parametrize("include_mandate", [False, True])
+def test_reassessment_recovers_after_business_commit_before_receipt(peer_setup, monkeypatch, include_mandate):
     from pokemon_market.peer import FixturePeerService, peer_message
     store, workspace, request, now = peer_setup
-    request = change(request, request_id="crash-change", operation="reassess_opportunity", mandate_id=None, changes={"price": "70.00"})
+    request = change(request, request_id="crash-change", operation="reassess_opportunity", mandate_id=request.mandate_id if include_mandate else None, changes={"price": "70.00"})
     peer = FixturePeerService(store, workspace, clock=lambda: now)
     original = peer.session._call
     def crash(action):
@@ -171,6 +175,8 @@ def test_reassessment_recovers_after_business_commit_before_receipt(peer_setup, 
     result = recovered.send(peer_message(request, workspace), role="market")
     assert json.loads(result["task"]["artifacts"][0]["parts"][0]["data"]["resultJson"])["assessment"]["version"] == 2
     assert store.session(workspace, clock=lambda: now).read_listing("listing-1").version == 2
+    if include_mandate:
+        assert recovered.session.current_mandate(request.mandate_id).status == "revoked"
 
 
 def test_resale_and_owned_skills_retain_inventory_eligibility(peer_setup):
@@ -264,3 +270,31 @@ def test_real_sdk_rest_transport_sends_and_reads_authenticated_http_task(peer_se
         server.shutdown()
         server.server_close()
         thread.join(5)
+
+
+def test_mandate_linked_replay_rejects_unassessed_material_updates(peer_setup):
+    from pokemon_market.peer import FixturePeerService, peer_message
+
+    store, workspace, request, now = peer_setup
+    peer = FixturePeerService(store, workspace, clock=lambda: now)
+    reassess = change(request, request_id="linked-change", operation="reassess_opportunity", changes={"price": "70.00"})
+    message = peer_message(reassess, workspace)
+    peer.send(message, role="market")
+    session = store.session(workspace, clock=lambda: now)
+    listing = session.read_listing("listing-1")
+    session.ingest_listing(Listing.model_validate(listing.model_dump(mode="json") | {"version": 3, "fees": "50.00"}))
+    with pytest.raises(MarketError, match="stale_state"):
+        peer.send(message, role="market")
+
+
+def test_fresh_reassessment_cannot_reuse_a_revoked_mandate(peer_setup):
+    from pokemon_market.peer import FixturePeerService, peer_message
+
+    store, workspace, request, now = peer_setup
+    peer = FixturePeerService(store, workspace, clock=lambda: now)
+    reassess = change(request, request_id="first-linked", operation="reassess_opportunity", changes={"price": "70.00"})
+    peer.send(peer_message(reassess, workspace), role="market")
+    fresh = change(reassess, request_id="new-linked", assessment_version=2, conversation_version=1, changes={"price": "60.00"})
+    with pytest.raises(MarketError, match="authority_inactive"):
+        peer.send(peer_message(fresh, workspace), role="market")
+    assert store.session(workspace, clock=lambda: now).current_mandate(request.mandate_id).status == "revoked"

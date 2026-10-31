@@ -1,6 +1,6 @@
 # Market V1 fixture software verification
 
-31 October 2026, Asia/Singapore. Branch `feature/market-agent-ui-v1`; draft [PR #42](https://github.com/Perryong/pokemon-tracker/pull/42), roadmap [#31](https://github.com/Perryong/pokemon-tracker/issues/31).
+31 October 2026, Asia/Singapore. Branch `feature/market-agent-ui-v1`; ready-for-review [PR #42](https://github.com/Perryong/pokemon-tracker/pull/42), roadmap [#31](https://github.com/Perryong/pokemon-tracker/issues/31).
 
 The operator selected Supabase PostgreSQL and the documented Market contract with a fixture Sales peer. This delivery implements that **simulation software target**. Existing native dependencies and real integration acceptance remain open. The operator's existing personal Project/claim exception applies; no signed claim, Project state, merge or live approval is asserted.
 
@@ -27,10 +27,10 @@ A2A structured parts carry canonical business JSON in `requestJson`/`resultJson`
 
 | Check | Actual result |
 | --- | --- |
-| Full Python suite with `MARKET_TEST_DSN` and worktree `PYTHONPATH` | **259 passed**, no database skips |
+| Full Python suite with `MARKET_TEST_DSN` and worktree `PYTHONPATH` | **263 passed**, no database skips |
 | Six controlled CLI scenarios | **6/6**, valid JSON stdout and empty stderr |
 | `uv pip check --python market_agent/.venv/bin/python` | All 81 installed packages compatible |
-| Frontend `NODE_OPTIONS=--no-experimental-webstorage npm test -- --run` | **211 passed**, 23 files |
+| Frontend `NODE_OPTIONS=--no-experimental-webstorage npm test -- --run` | **215 passed**, 23 files |
 | `npm run build` | Passed |
 | ESLint for MarketOperations, its tests and modified MarketView | Passed |
 | Ruff undefined/unused-symbol checks across Python source/tests | Passed |
@@ -66,3 +66,13 @@ The operator selected real card-price research as the next data source. Market n
 Fresh frontend checks: **215 tests passed across 23 files**, build/focused ESLint/whitespace passed. Playwright verified automatic Alakazam display, refresh, Pikachu selection, real FX provenance and 390px layout. Cancellation, initial-response races, strict effect remount and collection persistence have regressions. The current browser tab shows the new research view; the fixture scheduler is paused. This frontend change did not require repeating the unchanged Python/database suite.
 
 Fresh independent review found no Important/Critical or actionable minor findings and independently passed 42 relevant frontend tests.
+
+## Merge-readiness review and recovery correction
+
+A fresh whole-branch review found that a successful mandate-linked reassessment revoked its previous mandate, then rejected an identical transport retry with `authority_inactive`. The same problem prevented recovery after a business commit followed by a lost peer receipt. Both failures were reproduced before changing the implementation.
+
+Exact successful reassessment replay now uses the durable request fingerprint and current assessment/conversation versions without requiring the old mandate to become active again. Material listing updates invalidate replay even before another assessment is calculated. New requests still reject revoked mandates. Regression tests cover receipt replay, interrupted receipt recovery, later unassessed changes and attempted reuse of revoked authority; the original mandate remains revoked after recovery.
+
+After this correction, the full Python suite passed **263 tests**, including **33 peer tests**, with real disposable PostgreSQL and no skips. Ruff symbol checks and whole-branch whitespace checks passed. Fresh checks immediately before this backend-only correction passed **215 frontend tests**, build, changed-TypeScript lint, dependency compatibility, wheel packaging and all six controlled CLI scenarios from the installed wheel outside the checkout. Full lint was rerun and retains **9 errors / 5 warnings**, all in unchanged files.
+
+One Minor review finding is deferred: the private reference proxy drops `X-Market-Priority: background`, so proxied batch research can consume the Node backend's reserved foreground request slots. The backend still enforces its overall rate limit, but manual selection can temporarily receive a rate-limit response during a batch. Forwarding this validated priority header and testing the foreground reserve remains a UI/proxy follow-up under #40. No production Supabase, real Sales or live marketplace acceptance is asserted by this review.

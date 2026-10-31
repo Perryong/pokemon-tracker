@@ -167,11 +167,14 @@ class FixturePeerService:
         version = request.assessment_version
         conversation = request.conversation_version
         cached = session._requests.get(request.request_id)
-        if cached and isinstance(cached[1], Artifact):
+        replayed = bool(cached and isinstance(cached[1], Artifact))
+        if replayed:
             # Recover a committed reassessment even if its transport receipt was lost.
             expected = json.dumps(request.model_dump(mode="json"), sort_keys=True)
             if cached[0] != expected:
                 raise MarketError("request_conflict")
+            if request.correlation_id in session._dirty:
+                raise MarketError("stale_state")
             version = cached[1].assessment.version
             conversation += 1
         if (not assessment or assessment.version != version
@@ -181,7 +184,7 @@ class FixturePeerService:
             mandate = session.current_mandate(request.mandate_id)
             if mandate.listing_id != request.correlation_id:
                 raise MarketError("mandate_scope")
-            if mandate.status != "active":
+            if mandate.status != "active" and not replayed:
                 raise MarketError("authority_inactive")
 
     def send(self, payload, role="market"):
