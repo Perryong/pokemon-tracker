@@ -117,7 +117,7 @@ it('parks the remaining batch when the provider asks for a wait longer than one 
   expect(fetch).toHaveBeenCalledTimes(4);
   expect(screen.getAllByText(/7200 seconds/)).toHaveLength(12);
 });
-it('resumes unfinished tiles after a selection without refetching completed tiles', async () => {
+it('resumes unfinished tiles after repeated selections without refetching completed tiles', async () => {
   vi.useFakeTimers();
   let limited = true;
   vi.mocked(fetch).mockImplementation(async url => String(url).includes('/search?') ? response({ schemaVersion: 1, query: 'pika', cards: briefs(4), truncated: false }) : limited && !String(url).endsWith('base1-0') ? response({ error: 'rate_limited', retryAfterSeconds: 5 }, 429) : response(details(String(url).split('/').pop()!)));
@@ -125,6 +125,7 @@ it('resumes unfinished tiles after a selection without refetching completed tile
   await act(async () => search());
   fireEvent.click(screen.getAllByRole('button', { name: /View prices/ })[0]);
   expect(screen.getByText('SGD 15.00')).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole('button', { name: /View prices/ })[1]);
   limited = false;
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Resume price loading' })));
   expect(screen.getByText('SGD 19.50')).toBeInTheDocument();

@@ -85,7 +85,7 @@ export default function MarketSearch({ rates, onSelect }: { rates: SgdRates; onS
     if (!controller.signal.aborted && version === generation.current) { setPricing(false); setCooldown(null); }
   }
   function cancel() { current.current?.abort(); generation.current++; setLoading(false); setPricing(false); setCooldown(null); setPaused(false); }
-  function select(id: string) { const interrupted = pricing; cancel(); setPaused(interrupted); onSelect(id); }
+  function select(id: string) { const interrupted = pricing || paused; cancel(); setPaused(interrupted); onSelect(id); }
   function resume() {
     if (!results) return;
     const controller = new AbortController(); current.current = controller;

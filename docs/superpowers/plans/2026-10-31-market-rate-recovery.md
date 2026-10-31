@@ -15,12 +15,12 @@ Shared cooldown races; cancellation while sleeping; long/malformed provider retr
 
 ## Task 1 — Backend retry contract and reserved capacity
 Files: server/market.ts; src/lib/__tests__/market-server.test.ts.
-- [ ] Add tests: 25 background lookups then 429 with retry time while five direct lookups succeed; cached hits remain available; upstream 429 preserves distinct code and cooldown, missing/date headers handled.
-- [ ] Run focused tests RED, implement minimal backend contract, run GREEN.
+- [x] Add tests: 25 background lookups then 429 with retry time while five direct lookups succeed; cached hits remain available; upstream 429 preserves distinct code and cooldown, missing/date headers handled.
+- [x] Run focused tests RED, implement minimal backend contract, run GREEN.
 
 ## Task 2 — Cancellable background pause/resume
 Files: src/components/MarketSearch.tsx; src/components/MarketView.tsx; their tests.
-- [ ] Fake-clock tests: 429 then success after exact wait, no early calls, shared cooldown, maximum two retries, cancellation on search change/unmount and selection.
-- [ ] Implement background header, one shared cooldown per batch, countdown and abortable waits. Selection pauses unfinished tile work and preserves loaded results. Direct provider/local error messages include retry seconds.
-- [ ] Run tests RED/GREEN; full suite, build, focused lint, browser proof with deterministic temporary local harness if live exhaustion is unnecessary.
-- [ ] Independent review, fix important findings with regression tests, record evidence, commit locally.
+- [x] Fake-clock tests: 429 then success after exact wait, no early calls, shared cooldown, maximum two retries, cancellation on search change/unmount and selection.
+- [x] Implement background header, one shared cooldown per batch, countdown and abortable waits. Selection pauses unfinished tile work and preserves loaded results. Direct provider/local error messages include retry seconds.
+- [x] Run tests RED/GREEN; full suite, build, focused lint, browser proof with deterministic temporary local harness if live exhaustion is unnecessary.
+- [x] Independent review, fix important findings with regression tests, record evidence, commit locally.

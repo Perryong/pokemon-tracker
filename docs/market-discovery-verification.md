@@ -40,3 +40,21 @@ The operator's open Market page showed valid backend quotes but expired SGD rate
 The shared FX hook now revalidates on focus, page restore, visibility and network recovery, with duplicate renewal suppression and timer/listener cleanup. Four regression cases failed before the change and passed afterward. All 175 frontend tests, production build, changed-file ESLint and whitespace checks passed. Existing build/tool deprecation warnings remain. Live browser verification of the operator's selected `pop9-15` restored the SGD table and both average charts (observed reference trend SGD22.48). No backend restart or network configuration change was needed.
 
 Issue #26 dependencies were rechecked: no native blockers. Both repositories were checked for overlap; no FX-related overlap was found. Project access still lacks read:project; the established local execution exception continues and no workflow claim is asserted. Ruflo remains unavailable. Scope is shared conversion recovery, affecting Market and Card Detail; the existing 30-upstream-requests/minute limit and cards lacking provider quotes are unchanged. A real Mac sleep cycle was not repeated; suspended timers were reproduced with fake-clock tests. No push, merge or deployment.
+
+## Rate-limit recovery — 31 October 2026
+
+The operator approved automatic recovery and selected-card priority. The backend still caps upstream requests at30/minute; background tile requests stop at25, reserving five slots for search/direct requests. Cache hits remain available without consuming capacity. Local 429 and upstream 429 now have separate error codes and Retry-After seconds; upstream cooldown also protects direct requests. Provider Retry-After seconds and HTTP dates are supported; invalid/missing values default to60 seconds.
+
+Background workers share a countdown, pause and automatically retry each limited card at most twice. Changing search, unmounting or selecting a card aborts pending waits. Selection preserves completed prices and offers Resume price loading for unfinished tiles, including after repeated selection. Provider waits longer than one hour park the batch without an early automatic retry.
+
+Verification: backend tests first failed then42/42 passed; UI countdown/retry/cancellation tests observed RED→GREEN. Final full frontend suite190/190, production build, changed-file ESLint and whitespace checks passed. The independent review found one Important repeated-selection bug; its regression failed before the fix and passed afterward with the full suite. No second review. Existing build/deprecation warnings remain; whole-repo lint was not rerun (previous nine errors/five warnings).
+
+Browser verification used an isolated loopback fixture with clearly labelled TEST cards to show the live countdown and a direct card price/chart while background work was paused. Automatic timing/resume and cancellation were verified by fake-clock tests. The real preview/backend on5184 was refreshed; no provider was deliberately flooded. Fixture screenshot: /tmp/pokemon-rate-countdown-test.png.
+
+Deferred minor: when different in-flight requests return a short limit followed by a very long provider cooldown, a sleeping worker can make an extra local-backend request after the batch is parked. The backend's shared provider cooldown prevents that request reaching TCGdex; no provider limit is bypassed. A staggered-response regression and post-wait stop check remain for a follow-up.
+
+Rulings:
+- Treat proceed as approval of the proposed automatic recovery and priority scope — avoids redundant approval — persistent caching and cap changes remain deferred.
+- Live provider behavior is checked only through bounded ordinary lookups; deterministic throttling uses fixtures — avoids intentional provider exhaustion — actual provider throttling is not live-tested.
+- GitHub ownership/Project status remains under the existing local exception; issue26 dependencies and overlap were rechecked — Project read is still inaccessible — no new claim or publication is asserted.
+- Rate enforcement remains per backend process — this app runs one local process — multiple future replicas would need a shared limit/cache.
