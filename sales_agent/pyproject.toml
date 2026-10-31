@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pokemon-sales-slice"
+version = "0.1.0"
+description = "Actual Deep Agents Sales harness with simulated marketplace tools"
+requires-python = ">=3.13,<3.14"
+dependencies = ["deepagents==0.7.32", "pydantic==2.14.1", "langchain-core==1.7.1", "langchain==1.4.7", "langsmith==0.14.15"]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.setuptools.package-data]
+pokemon_sales = ["fixtures/*.json"]
