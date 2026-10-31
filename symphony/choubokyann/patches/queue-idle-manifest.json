@@ -1,0 +1,18 @@
+{
+  "baseline": "Installed source snapshot; upstream Git metadata unavailable",
+  "base_sha256": {
+    "lib/symphony_elixir/config/schema.ex": "9e28610ddafce7dfa2fb6650e62816f50743976018cd0fd7fa63a59c76b1e014",
+    "lib/symphony_elixir/workspace.ex": "b72132293f572fa0c7caa38adda941452072e8639f2c39b4c8a569d69084c6e5",
+    "lib/symphony_elixir/agent_runner.ex": "4b4ab877427c76e5778034c7c89a41e9ec884fb1b142f3c6754550f3ba25be39",
+    "lib/symphony_elixir/orchestrator.ex": "ffa6fd2ca66f775b93ca561adb60a61a416f8fb604ff247128d3638169fdab22",
+    "mix.lock": "fc826437b924373c8eb09027d5d9d1914922bbe25bb4d69baa76c66ddbc63061"
+  },
+  "result_sha256": {
+    "lib/symphony_elixir/config/schema.ex": "30cf5acb1ca0cb01ad442ee8de3822cc19de095b2aa3349fe5f606823cc14008",
+    "lib/symphony_elixir/workspace.ex": "b1acd643a500a48b77aaaa88992f026d9d5868812d635097993a9fd33916be07",
+    "lib/symphony_elixir/agent_runner.ex": "87d5e39246825ecae0832360268c71c8bb34a12df2f6a5eb92ec9e308ef3fe98",
+    "lib/symphony_elixir/orchestrator.ex": "2dec62641e6b28dd27b277e7f43a28f4f65f43cae5a785b60fd58985d8d17b3b",
+    "test/symphony_elixir/queue_idle_test.exs": "b0d99f95dacaed5efa789e6bec354b6faf76ee98abc0c6179b184d3f99e69d23"
+  },
+  "patch_sha256": "fb89d92aa239d99417a2c92c94240b3bf4a886f1618571f687a81c58881b128e"
+}
