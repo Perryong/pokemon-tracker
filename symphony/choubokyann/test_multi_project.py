@@ -116,7 +116,7 @@ class MultiProjectTests(unittest.TestCase):
             for plan in plans:
                 selected = plan['selected']
                 self.assertEqual(selected['container'], 'symphony-choubokyann')
-                self.assertEqual((selected['cpus'], selected['memory'], selected['primary_slots'], selected['child_slots']), (2, '3g', 1, 1))
+                self.assertEqual((selected['cpus'], selected['memory'], selected['primary_slots'], selected['child_slots']), (2, '3g', 1, 3))
             self.assertEqual(sorted(p.name for p in Path(directory).iterdir()), ['projects.json'])
 
     def test_template_renders_two_projects_without_pokemon_ids_or_scheduler_changes(self):

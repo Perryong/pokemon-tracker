@@ -58,7 +58,7 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(chosen["container"], "symphony-choubokyann")
             self.assertEqual(chosen["workspace"], "/work/coordinator")
             self.assertEqual((chosen["cpus"], chosen["memory"]), (2, "3g"))
-            self.assertEqual((chosen["primary_slots"], chosen["child_slots"]), (1, 1))
+            self.assertEqual((chosen["primary_slots"], chosen["child_slots"]), (1, 3))
         self.assertNotIn("volume", self.registry.load_registry(self.path)["projects"]["one"])
 
     def test_record_validator_rejects_unknown_unsafe_or_mismatched_scope(self):

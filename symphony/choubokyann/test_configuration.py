@@ -44,14 +44,14 @@ class ConfigurationTests(unittest.TestCase):
         self.assertIn('target=/checks/requests', start)
         self.assertNotIn('/var/run/docker.sock', start)
 
-    def test_profiles_select_explicit_models_and_one_child(self):
+    def test_profiles_select_explicit_models_and_three_children(self):
         coordinator = tomllib.loads((HERE / 'coordinator.toml').read_text())
         worker = tomllib.loads((HERE / 'worker.toml').read_text())
         self.assertEqual(coordinator['model'], 'gpt-6-astra')
         self.assertEqual(worker['model'], 'gpt-6.1-sol')
         self.assertEqual(coordinator['model_reasoning_effort'], 'high')
         self.assertEqual(worker['model_reasoning_effort'], 'high')
-        self.assertEqual(coordinator['agents']['max_concurrent_threads_per_session'], 1)
+        self.assertEqual(coordinator['agents']['max_concurrent_threads_per_session'], 3)
         self.assertEqual(coordinator['agents']['default_subagent_model'], worker['model'])
         self.assertEqual(coordinator['agents']['default_subagent_reasoning_effort'], 'high')
         self.assertFalse(worker['agents']['enabled'])
