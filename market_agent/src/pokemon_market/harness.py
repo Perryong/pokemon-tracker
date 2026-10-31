@@ -15,7 +15,8 @@ from deepagents import (
 from deepagents.middleware.filesystem import FilesystemMiddleware
 from langchain.agents.middleware import AgentMiddleware
 from langchain.tools import ToolRuntime, tool
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, RemoveMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langsmith import tracing_context
 from .contracts import Artifact, MarketError, Request
 
@@ -108,7 +109,7 @@ class Guard(AgentMiddleware):
             return handler(request)
 
 
-def build_agent(session, model):
+def build_agent(session, model, *, checkpointer=None):
     def remember(ctx, result):
         ctx.results[result.request_id] = result
         return result.model_dump_json()
@@ -222,6 +223,7 @@ def build_agent(session, model):
     )
     return create_deep_agent(
         model=model,
+        checkpointer=checkpointer,
         tools=[
             read_listing,
             read_evidence,
@@ -251,7 +253,9 @@ def build_agent(session, model):
     )
 
 
-def run_agent(session, model, request: Request) -> Artifact:
+def run_agent(
+    session, model, request: Request, *, checkpointer=None, thread_id=None
+) -> Artifact:
     request = Request.model_validate_json(request.model_dump_json(exclude_unset=True))
     ctx = RunContext(request=request, deadline=monotonic() + RUN_TIMEOUT)
     results = Queue(maxsize=1)
@@ -259,7 +263,12 @@ def run_agent(session, model, request: Request) -> Artifact:
     def work():
         try:
             with tracing_context(enabled=False):
-                graph = build_agent(session, model)
+                graph = build_agent(session, model, checkpointer=checkpointer)
+                config = {"recursion_limit": 50, "callbacks": []}
+                if checkpointer is not None:
+                    config["configurable"] = {
+                        "thread_id": thread_id or session.bundle.session_id
+                    }
                 state = {
                     "messages": [
                         HumanMessage(
@@ -267,11 +276,14 @@ def run_agent(session, model, request: Request) -> Artifact:
                         )
                     ]
                 }
+                if checkpointer is not None:
+                    # Each explicit run has fresh scoped results; history stays in checkpoints.
+                    state["messages"].insert(0, RemoveMessage(id=REMOVE_ALL_MESSAGES))
                 for _ in range(2):
                     state = graph.invoke(
                         state,
                         context=ctx,
-                        config={"recursion_limit": 50, "callbacks": []},
+                        config=config,
                     )
                     if ctx.final is not None:
                         results.put(ctx.final)

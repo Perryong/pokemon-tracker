@@ -1,6 +1,6 @@
 # Market-to-Sales contract compatibility proposal
 
-Status: **Market-side proposal; peer agreement pending.** References:
+Status: **Operator-selected fixture development contract; real peer agreement pending.** References:
 [#32](https://github.com/Perryong/pokemon-tracker/issues/32),
 [shared contract #11](https://github.com/Perryong/pokemon-tracker/issues/11),
 and [Sales PR #23](https://github.com/Perryong/pokemon-tracker/pull/23).
@@ -18,6 +18,11 @@ unused conversion layer before there is an agreed consumer.
 The operator confirmed Supabase PostgreSQL for durable business state, with a
 disposable local database for tests. Business state, execution checkpoints and
 traces remain separate. No production import is selected by this decision.
+
+The operator subsequently selected **the documented Market contract with a fixture
+Sales peer for now**. This unblocks fixture-based implementation of downstream
+software tasks. It does not establish agreement with the real Sales implementation
+or supply live policy.
 
 ## Compatibility decisions required by #11
 
@@ -66,5 +71,5 @@ Those require explicit schema decisions and operator values rather than defaults
 5. Keep live policy unset until operator values are supplied and validated.
 
 The verified simulation and this proposal are useful preparation. They do not
-complete the shared-contract task, establish a compatible peer or unblock durable
-authority and live qualification on their own.
+complete the real shared-contract task or establish live qualification. The
+operator-selected fixture target unblocks durable simulation development.

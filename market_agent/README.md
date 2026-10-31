@@ -10,7 +10,7 @@ Verified with Python **3.12.13**. Run from the repository root:
 uv venv --python 3.12 market_agent/.venv
 uv pip install --python market_agent/.venv/bin/python -r market_agent/requirements.lock
 uv pip install --python market_agent/.venv/bin/python --no-deps --no-build-isolation -e ./market_agent
-market_agent/.venv/bin/python -m pip check
+uv pip check --python market_agent/.venv/bin/python
 market_agent/.venv/bin/python -m pytest market_agent/tests -q
 market_agent/.venv/bin/python -m pokemon_market demo --scenario qualified
 ```
@@ -55,25 +55,56 @@ market_agent/.venv/bin/python -m pokemon_market demo --scenario qualified --mode
 
 Only the OpenAI adapter is configured in this slice. Do not put keys in fixtures, arguments, prompts or Git. This mode still uses synthetic listings and in-memory authority. Live model quality, account access and costs have **not** been verified by the offline suite.
 
-## Temporary peer contract
+## Durable private fixture workflow
 
-The package does not import or alter Sales PR #23. These are application artifacts, **not authenticated A2A messages**.
+The operator selected the documented Market contract as the temporary development target, with a fixture Sales peer and Supabase-compatible PostgreSQL. Business state lives in `market_private`; LangGraph checkpoints live separately in `market_checkpoints`. Graph checkpoints do not grant authority. A stable workspace owns exposure across runs and restarts.
 
-| Market slice | Sales proposal / integration decision |
-| --- | --- |
-| `schema_version: "1"`, simulation mode | Agree a shared versioned envelope and authenticated sender before integration |
-| SGD decimal strings (`"80.00"`) | Proposal uses integer `ceiling_minor`; agree lossless currency/precision conversion |
-| String policy version and integer assessment/conversation versions | Proposal uses numeric policy/state versions; agree authority and mapping rather than casting blindly |
-| `negotiate_acquisition`, `prepare_resale` artifacts | No Sales dispatch; later use real authenticated A2A tasks/artifacts |
-| `reassess_opportunity`, `assess_owned_unit` | Local validated request handling only; no transport authentication |
-| Historical replay result | Check `current_mandate` separately; replay never renews authority |
+Build the frontend (`npm run build`) and start its existing reference backend (`npm run preview -- --host 127.0.0.1 --port 5193`). Configure the private service process with these environment variables through your local secret manager or an untracked protected file:
 
-See [shared-contract issue #11](https://github.com/Perryong/pokemon-tracker/issues/11) and [Sales PR #23](https://github.com/Perryong/pokemon-tracker/pull/23). Owned-unit valuation reuses the evidence/economics calculation with zero proposed acquisition fees; its ceiling is an analytical output, not permission to buy, reserve or sell that unit.
+- `MARKET_DATABASE_URL`: trusted direct/session PostgreSQL connection, using a dedicated server role. For Supabase use the connection details from that project's dashboard and its required TLS settings. Transaction pooling is not verified.
+- `MARKET_OPERATOR_TOKEN`: a random secret of at least 32 characters, used only at the private login form.
+- `MARKET_PEER_TOKEN`: a different random secret of at least 32 characters for fixture peer HTTP requests.
 
-## Boundaries and next integration work
+For a **disposable simulation database only**, explicitly initialize synthetic data and serve the private UI:
 
-The session stores records in memory; a new process starts fresh. There are no durable schedules, restart recovery, persistent global exposure, real budget/stock holds, operational tracing, authentication server or private web UI. Session locks serialize concurrent graph tool calls only within that process. Inventory fixtures support one lifecycle outcome per physical unit; repeated resale/return cycles require the later authoritative ledger.
+```sh
+market_agent/.venv/bin/python -m pokemon_market serve \
+  --workspace market-operator-fixture --initialize-demo \
+  --port 8791 --dist dist --reference-url http://127.0.0.1:5193
+```
 
-No live searches, messages, commitments, payments, stock mutation, data migration or tracker synchronization occur. The existing React tracker, browser collection and Sales workstream remain separate. Full V1 still requires shared contracts/ledger, persistent workflows, authenticated A2A, exact approvals, authorized marketplace capabilities and live acceptance.
+`--initialize-demo` creates the private schemas and seeds this workspace once, rebasing synthetic fixture dates to initialization time. A restart never refreshes its evidence, policy or expiry. Later starts may omit this flag. An unknown workspace fails rather than inventing data. Stop with Ctrl-C; restart with the same workspace and database. Operator cookies expire after eight hours and reset on server restart; business state persists.
+
+Open the loopback URL, select **Market → Open private operations**, and enter the operator key. The private panel supports bounded Singapore schedules, pause/resume, assessment, conservative/base/upside comparisons, current simulated mandates, sanitized run status and fixture inventory/outcomes. The worker checks durable jobs every five seconds, catches up only the latest scheduled slot after downtime, and recovers expired leases even without a recurring schedule. Transient fixture peer failures replay the same request at most three attempts; other failures remain visible for review. Pausing prevents new job claims and peer dispatch; an already executing deterministic tool can finish.
+
+The server binds only `127.0.0.1`, validates Host and mutation Origin, bounds JSON requests and read time, and separates HttpOnly/SameSite operator cookies from peer bearer authentication. It proxies only the configured loopback reference/cardmarket paths. A plain Vite/public deployment has no private operator backend and must show unavailable. This local standard-library host is not an internet deployment or multi-user authentication system.
+
+### Fixture A2A boundary
+
+The A2A SDK validates Agent Cards, SendMessage requests, task responses and artifacts for the HTTP+JSON 1.0 binding. Both fixture role endpoints require the peer bearer key:
+
+- `/a2a/market/.well-known/agent-card.json`, `/a2a/market/message:send`, `/a2a/market/tasks/{id}`
+- Equivalent `/a2a/sales/...` routes for the fixture Sales role.
+
+Structured A2A parts contain `data.requestJson`, the canonical strict Request JSON string; response parts contain `data.resultJson`, the canonical Artifact JSON string plus explicit fixture/mode/outcome/approval metadata. This avoids protobuf Struct converting integer counters to floating point during real SDK transport. Nested JSON must be canonical (sorted keys, compact separators, no duplicate keys). The business envelope preserves full card identity, strict decimal money and separate policy/assessment/conversation versions. Completed tasks describe simulated proposed terms or resale drafts; they never grant purchase approval or imply seller contact. The fixture does not import or alter Sales PR #23. Real Sales agreement/interoperability remains [#11](https://github.com/Perryong/pokemon-tracker/issues/11)/[#12](https://github.com/Perryong/pokemon-tracker/issues/12).
+
+### Verification and recovery
+
+Database integration tests require `MARKET_TEST_DSN` pointing to a **disposable** PostgreSQL database. They create isolated synthetic workspaces. Without that variable, database tests skip; an offline pass alone does not verify persistence.
+
+```sh
+market_agent/.venv/bin/python -m pytest market_agent/tests -q
+uv pip check --python market_agent/.venv/bin/python
+NODE_OPTIONS=--no-experimental-webstorage npm test -- --run
+npm run build
+```
+
+Back up both private schemas with `pg_dump`, store dumps as private data, restore to a separate disposable database and compare the business snapshot, job receipts, peer tasks and checkpoints before relying on a backup. This was exercised locally; no production Supabase migration or restore has been performed. Run status exposes only whitelisted IDs/status/timestamps/error codes; prompts, credentials, raw listing content and peer bodies are not exported as traces. Langfuse export and paid model evaluation remain unconfigured.
+
+## Boundaries before live operation
+
+The live reference adapter preserves original currencies, provenance and timestamps. Reference quotes are not completed sales and do not qualify acquisition authority. No approved marketplace discovery connector, real Sales peer, authoritative shared stock/budget/approval service or live operator policy is configured. Scheduling currently discovers the explicitly seeded synthetic listings only. The read-only inventory is a fixture view, not the shared production ledger under #16.
+
+There are no live seller messages, commitments, payments, stock mutations or tracker synchronization. Repeated physical resale/return cycles still require the authoritative ledger. New workspaces must not be used to evade exposure limits. Hosting, shared-service integration, live policy, marketplace authorization, model/trace budgets and real operational acceptance remain external gates. See [software verification](../docs/market-v1-software-verification.md).
 
 [Issue #24](https://github.com/Perryong/pokemon-tracker/issues/24) tracks this slice. The operator explicitly authorized a **one-time local build/test exception** to the repository's Project/signed-claim gate on 30 October 2026. The operator subsequently extended the exception to pushing this branch and opening a draft PR. This is not a signed claim, Project completion, merge or deployment approval. See [verification](VERIFICATION.md) for actual evidence.

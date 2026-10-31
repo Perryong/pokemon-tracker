@@ -19,8 +19,18 @@ def main(argv: list[str] | None = None) -> int:
         "--model",
         help="Optional paid model API: openai:MODEL. Tools and data stay synthetic.",
     )
+    server = sub.add_parser('serve', help='Private loopback fixture workflow and UI')
+    server.add_argument('--workspace', default='market-operator-fixture')
+    server.add_argument('--port', type=int, default=8790)
+    server.add_argument('--dist', default='dist')
+    server.add_argument('--reference-url', default=None)
+    server.add_argument('--initialize-demo', action='store_true', help='Explicitly initialize disposable simulation data')
     args = parser.parse_args(argv)
     try:
+        if args.command == 'serve':
+            from .server import serve
+
+            return serve(args)
         model = None
         if args.model:
             provider, separator, name = args.model.partition(":")

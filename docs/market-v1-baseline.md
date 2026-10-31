@@ -89,3 +89,11 @@ No live model evaluation, Carousell search/contact, authenticated peer exchange,
 durable ledger operation, private operations UI, migration, merge or deployment was
 tested. Those remain the separately tracked tasks and acceptance gates. Existing
 full-repository lint findings remain unresolved.
+
+
+## Subsequent operator decision
+
+The operator selected the documented Market contract with a fixture Sales peer.
+That decision unblocked downstream simulation software work; the baseline's earlier
+blocked state above is historical. See [the software verification](market-v1-software-verification.md)
+for the resulting implementation, checks and remaining real integration gates.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import PriceChart from './PriceChart';
 import MarketSearch from './MarketSearch';
+import MarketOperations from './MarketOperations';
 import { useSgdExchangeRates, getSgdRate, toSgd, formatSgd } from '@/lib/exchange-rate';
 import { MarketCardSchema, MarketHealthSchema, MarketIdSchema, type MarketCard } from '@/lib/market';
 
@@ -17,6 +18,7 @@ const date = (value: string) => new Date(value).toLocaleString();
 export default function MarketView() {
   const { rates, errors: rateErrors } = useSgdExchangeRates(true);
   const [id, setId] = useState('base1-1');
+  const [operationsOpen, setOperationsOpen] = useState(false);
   const [backend, setBackend] = useState<'checking' | 'reachable' | 'unavailable'>('checking');
   const [data, setData] = useState<MarketCard | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,8 @@ export default function MarketView() {
     <header className="page-heading"><div><h1>Market</h1><p className="page-description">Find a card by name, compare estimated SGD prices, and explore its average-price chart.</p></div></header>
     <div className="market-status" role="status"><span className={`backend-dot ${backend}`} />{backend === 'checking' ? 'Checking backend…' : backend === 'reachable' ? 'Backend reachable' : 'Backend unavailable'}</div>
     <p className="page-description market-limit">Market Agent remains simulated. These reference prices are not completed-sale evidence or a buy recommendation. Approved policy and exact sale evidence are required before any real qualification.</p>
+    <div className="operations-toggle"><Button type="button" variant="outline" aria-expanded={operationsOpen} aria-controls="market-private-operations" onClick={() => setOperationsOpen(open => !open)}>{operationsOpen ? 'Close private operations' : 'Open private operations'}</Button></div>
+    {operationsOpen && <div id="market-private-operations"><MarketOperations /></div>}
     <MarketSearch rates={rates} onSelect={selected => { void load(selected); detailHeading.current?.focus(); }} />
     <h2 ref={detailHeading} tabIndex={-1} className="market-detail-heading">Card price details</h2>
     <form className="filter-tray" aria-label="Price lookup" onSubmit={event => { event.preventDefault(); void load(); }}>
