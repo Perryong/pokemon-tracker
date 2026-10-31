@@ -7,7 +7,10 @@ const health = { service: 'market-prices', schemaVersion: 1, mode: 'reference', 
 const card = (id = 'base1-1', name = 'Alakazam') => ({ schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id, name }, fetchedAt: '2026-10-30T04:00:00Z', quotes: [{ provider: 'cardmarket', currency: 'EUR', variant: 'Reference (see metric)', updatedAt: '2026-10-29T10:00:00Z', freshness: 'current', prices: { avg: 48.3 } }] });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 const submit = () => fireEvent.submit(screen.getByRole('form', { name: 'Price lookup' }));
-beforeEach(() => vi.stubGlobal('fetch', vi.fn(async url => response(String(url).endsWith('/health') ? health : card()))));
+beforeEach(() => vi.stubGlobal('fetch', vi.fn(async url => {
+  if (!String(url).startsWith('https://pokemon-price-api-omega.vercel.app/api/market/')) throw new Error('No local backend');
+  return response(String(url).endsWith('/health') ? health : card());
+})));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it('shows real reference provenance, dated currency and separate timestamps on entry', async () => {
   render(<MarketView />);
@@ -93,7 +96,7 @@ it('loads a special-set card with a dotted set ID', async () => {
   fireEvent.change(screen.getByLabelText('TCGdex card ID'), { target: { value: 'sv03.5-199' } });
   vi.mocked(fetch).mockResolvedValueOnce(response(card('sv03.5-199', 'Charizard ex'))); submit();
   expect(await screen.findByRole('heading', { name: /Charizard ex/ })).toBeInTheDocument();
-  expect(fetch).toHaveBeenLastCalledWith('/api/market/cards/sv03.5-199', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  expect(fetch).toHaveBeenLastCalledWith('https://pokemon-price-api-omega.vercel.app/api/market/cards/sv03.5-199', expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
 it('lets the independent health check settle after the first lookup is cancelled', async () => {
   let finish!: (response: Response) => void;
@@ -116,7 +119,7 @@ it('selects a searched card and takes keyboard focus to its price details', asyn
 it.each(['rate_limited', 'provider_rate_limited'])('shows retry seconds and source for %s without reporting the backend offline', async code => {
   render(<MarketView />); await screen.findByText('Backend reachable');
   vi.mocked(fetch).mockResolvedValueOnce(response({ error: code, retryAfterSeconds: 17 }, 429)); submit();
-  expect(await screen.findByRole('alert')).toHaveTextContent(code === 'rate_limited' ? 'Mac request limit' : 'Price provider request limit');
+  expect(await screen.findByRole('alert')).toHaveTextContent(code === 'rate_limited' ? 'Price API request limit' : 'Price provider request limit');
   expect(screen.getByRole('alert')).toHaveTextContent('17 seconds');
   expect(screen.getByText('Backend reachable')).toBeInTheDocument();
 });

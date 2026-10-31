@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
-import { MarketCardSchema, MarketQuerySchema, MarketSearchSchema, type MarketCard, type MarketSearchResult } from '@/lib/market';
+import { MARKET_API_URL, MarketCardSchema, MarketQuerySchema, MarketSearchSchema, type MarketCard, type MarketSearchResult } from '@/lib/market';
 import { formatSgd, toSgd, type SgdRates } from '@/lib/exchange-rate';
 
 function waitForRetry(milliseconds: number, signal: AbortSignal): Promise<void> {
@@ -57,14 +57,14 @@ export default function MarketSearch({ rates, onSelect }: { rates: SgdRates; onS
           if (controller.signal.aborted || version !== generation.current) return;
           setCooldown(previous => previous && previous.until > Date.now() ? previous : null);
           try {
-            const response = await fetch(`/api/market/cards/${encodeURIComponent(card.id)}`, { headers: { 'X-Market-Priority': 'background' }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+            const response = await fetch(`${MARKET_API_URL}/cards/${encodeURIComponent(card.id)}`, { headers: { 'X-Market-Priority': 'background' }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
             if (controller.signal.aborted || version !== generation.current) return;
             if (response.status === 429) {
               const body: unknown = await response.json();
               if (controller.signal.aborted || version !== generation.current) return;
               const limit = body && typeof body === 'object' ? body as Record<string, unknown> : {};
               const seconds = typeof limit.retryAfterSeconds === 'number' && Number.isFinite(limit.retryAfterSeconds) && limit.retryAfterSeconds > 0 ? Math.ceil(limit.retryAfterSeconds) : 60;
-              const source = limit.error === 'provider_rate_limited' ? 'Provider' : 'Mac';
+              const source = limit.error === 'provider_rate_limited' ? 'Provider' : 'Price API';
               if (seconds > 3600) { stopped = `${source} limit: wait ${seconds} seconds before retrying.`; state = { error: stopped }; break; }
               retryAt = Math.max(retryAt, Date.now() + seconds * 1000);
               setClock(Date.now()); setCooldown({ until: retryAt, source });
@@ -99,15 +99,15 @@ export default function MarketSearch({ rates, onSelect }: { rates: SgdRates; onS
     const controller = new AbortController(); current.current = controller;
     setLoading(true);
     try {
-      const response = await fetch(`/api/market/search?q=${encodeURIComponent(parsed.data)}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
-      if (!response.ok) throw new Error(response.status === 429 ? 'Search limit reached. Wait a minute and retry.' : 'Search unavailable. Check the Mac backend and retry.');
+      const response = await fetch(`${MARKET_API_URL}/search?q=${encodeURIComponent(parsed.data)}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+      if (!response.ok) throw new Error(response.status === 429 ? 'Search limit reached. Wait a minute and retry.' : 'Search unavailable. Check your connection and try again later.');
       const data = MarketSearchSchema.parse(await response.json());
       if (data.query.toLowerCase() !== parsed.data.toLowerCase()) throw new Error('Mismatched search');
       if (controller.signal.aborted || version !== generation.current) return;
       setResults(data); setCount(Math.min(12, data.cards.length)); setLoading(false);
       await priceBatch(data.cards.slice(0, 12), controller, version);
     } catch (failure) {
-      if (!controller.signal.aborted && version === generation.current) { setLoading(false); setError(failure instanceof Error && failure.message.startsWith('Search limit') ? failure.message : 'Search unavailable. Check the Mac backend and retry.'); }
+      if (!controller.signal.aborted && version === generation.current) { setLoading(false); setError(failure instanceof Error && failure.message.startsWith('Search limit') ? failure.message : 'Search unavailable. Check your connection and try again later.'); }
     }
   }
   function more() {

@@ -4,13 +4,13 @@ import PriceChart from './PriceChart';
 import MarketSearch from './MarketSearch';
 import MarketOperations from './MarketOperations';
 import { useSgdExchangeRates, getSgdRate, toSgd, formatSgd } from '@/lib/exchange-rate';
-import { MarketCardSchema, MarketHealthSchema, MarketIdSchema, type MarketCard } from '@/lib/market';
+import { MARKET_API_URL, MarketCardSchema, MarketHealthSchema, MarketIdSchema, type MarketCard } from '@/lib/market';
 
 const errors: Record<string, string> = {
   card_not_found: 'Card not found. Check the TCGdex card ID.',
   provider_unavailable: 'Price provider unavailable. Try again later.',
   provider_timeout: 'Price provider timed out. Try again later.',
-  rate_limited: 'Mac request limit.',
+  rate_limited: 'Price API request limit.',
   provider_rate_limited: 'Price provider request limit.',
 };
 const date = (value: string) => new Date(value).toLocaleString();
@@ -38,7 +38,7 @@ export default function MarketView() {
     setLoading(true); setError('');
     const timer = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(`/api/market/cards/${encodeURIComponent(selected)}`, { signal: controller.signal });
+      const response = await fetch(`${MARKET_API_URL}/cards/${encodeURIComponent(selected)}`, { signal: controller.signal });
       const raw: unknown = await response.json();
       if (version !== generation.current || controller.signal.aborted) return;
       backendSettled.current = true;
@@ -53,7 +53,7 @@ export default function MarketView() {
       if (parsed.card.id !== selected) throw new Error('Mismatched card');
       setBackend('reachable'); setData(parsed);
     } catch {
-      if (version === generation.current) { backendSettled.current = true; setBackend('unavailable'); setError(controller.signal.aborted ? 'Backend request timed out. Try again.' : 'Backend response unavailable. Open the Mac-hosted view and check its connection.'); }
+      if (version === generation.current) { backendSettled.current = true; setBackend('unavailable'); setError(controller.signal.aborted ? 'Backend request timed out. Try again.' : 'Backend response unavailable. Check your connection and try again later.'); }
     } finally {
       clearTimeout(timer);
       if (version === generation.current) setLoading(false);
@@ -67,7 +67,7 @@ export default function MarketView() {
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
     void (async () => {
       try {
-        const response = await fetch('/api/market/health', { signal: controller.signal });
+        const response = await fetch(`${MARKET_API_URL}/health`, { signal: controller.signal });
         const valid = response.ok && MarketHealthSchema.safeParse(await response.json()).success;
         if (!controller.signal.aborted && !backendSettled.current) setBackend(valid ? 'reachable' : 'unavailable');
       } catch { if (!controller.signal.aborted && !backendSettled.current) setBackend('unavailable'); }

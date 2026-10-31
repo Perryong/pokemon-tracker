@@ -22,7 +22,7 @@ it('opens a card and saves quantity with the current storage API', async () => {
 
 it('loads full card information and prices when opened', async () => {
   const { tcgdex } = await import('@/lib/tcgdex');
-  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.5, date: new Date().toISOString().slice(0, 10) }))));
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ EUR: { rate: 1.5, date: new Date().toISOString().slice(0, 10), expiresAt: Date.now() + 3600_000 }, USD: { rate: 1.5, date: new Date().toISOString().slice(0, 10), expiresAt: Date.now() + 3600_000 } }))));
   const fetch = vi.spyOn(tcgdex, 'fetch').mockResolvedValue({
     id: 'base1-1', localId: '1', name: 'Alakazam', category: 'Pokemon', hp: 80,
     rarity: 'Rare', illustrator: 'Ken Sugimori', types: ['Psychic'],
@@ -57,7 +57,7 @@ it('converts both provider currencies to SGD and shows the reference rate date',
     id: 'base1-2', localId: '2', name: 'Blastoise',
     pricing: { cardmarket: { unit: 'EUR', avg: 10, low: 0 }, tcgplayer: { unit: 'USD', holofoil: { marketPrice: 20 } } },
   } as never);
-  vi.stubGlobal('fetch', vi.fn(async url => new Response(JSON.stringify({ base: String(url).includes('/EUR/') ? 'EUR' : 'USD', quote: 'SGD', rate: 1.5, date: new Date().toISOString().slice(0, 10) }))));
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ EUR: { rate: 1.5, date: new Date().toISOString().slice(0, 10), expiresAt: Date.now() + 3600_000 }, USD: { rate: 1.5, date: new Date().toISOString().slice(0, 10), expiresAt: Date.now() + 3600_000 } }))));
   render(<CardDetail card={normalizeTCGCard({ id: 'base1-2', name: 'Blastoise', localId: '2' })} open onOpenChange={() => {}} />);
   await userEvent.click(screen.getByRole('tab', { name: 'Market Data' }));
   expect(await screen.findByText('SGD 15.00')).toBeInTheDocument();

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const MARKET_API_URL = 'https://pokemon-price-api-omega.vercel.app/api/market';
+
 export const MarketIdSchema = z.string().max(80).regex(/^[a-zA-Z0-9]+(?:[.-][a-zA-Z0-9]+)*-[a-zA-Z0-9.]+$/);
 export const MarketDateSchema = z.string().datetime({ offset: true });
 export const cardmarketMetrics = ['avg', 'low', 'trend', 'avg1', 'avg7', 'avg30', 'avg-holo', 'low-holo', 'trend-holo', 'avg1-holo', 'avg7-holo', 'avg30-holo'] as const;

@@ -114,3 +114,16 @@ A2A responses now use the documented nested HTTP error envelope and pinned SDK e
 Verification: **281 Python/PostgreSQL tests passed, no skips**, including **41 peer tests** and actual SDK HTTP transport. Seven new raw-HTTP cases failed before implementation; after correcting a test URL typo, the SDK cancellation regression was also rerun against the old server and failed for the expected missing route. All eight new cases pass in the final suite. Fresh scoped review found no Critical or Important findings. Ruff symbol checks and whitespace passed. No frontend source changed, so the preceding 221-test/build/Playwright UI results remain historical and were not repeated.
 
 Protocol reference: [A2A 1.0.1 HTTP error handling](https://a2a-protocol.org/v1.0.1/specification/#116-error-handling). This finishes the synchronous fixture route/error gap, not asynchronous cancellation, streaming, real Sales interoperability, shared approvals/stock, Langfuse or paid-model acceptance. #38/#41 retain those applicable gates; no main merge or live action is included.
+
+
+## Hosted reference integration — 31 October 2026
+
+Integrated the already reviewed PR #44 commit `970ad32` into this branch, preserving automatic initial card lookup, selection/cancellation/race handling, private operations and collection behavior. Public Market health/search/native-card/FX calls now use the hosted pokemon-price-api. Private operations remain same-origin; the Python read-only evidence adapter and its optional trusted loopback backend are unchanged.
+
+Hosted FX uses one shared request for EUR/USD, validates observation and server expiry, caps freshness, and converts native values once. Card Detail regression fixtures were updated to the same hosted contract; existing sleep/focus rate recovery tests remain.
+
+Fresh checks: **226 frontend tests across 24 files**, build, focused ESLint and whitespace passed. Full lint still reports **9 existing errors/5 warnings**. The new hosted-public/local-private integration regression was observed failing before integration. Fresh scoped review found no actionable issues.
+
+Headed Playwright against plain static `dist/` at port 8792 verified automatic live prices despite local `/api/market/health` returning 404. Native EUR 48.30 × dated rate 1.4282 displayed **SGD 68.98**; these are recorded observations, not fixed expected prices. Pikachu search/selection, desktop and 390px layout passed with no page errors/overflow. All eight observed Market requests used the hosted API without credentials or request bodies. Private operations reported unavailable on that static origin; separate authentication to the existing port8791 private host still showed scope and paused scheduling. Screenshots: `/tmp/market-hosted-integrated-desktop.png`, `/tmp/market-hosted-integrated-mobile.png`.
+
+The unchanged backend's **281-test** result is from the preceding protocol task and was not repeated. Hosted API availability and physical-phone access remain external acceptance limits. PR #44's source commit is now incorporated, but neither PR is merged into main and no PR is closed automatically.
