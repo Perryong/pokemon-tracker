@@ -28,7 +28,7 @@ class ToolTests(unittest.TestCase):
         req = json.loads((self.requests / 'trial-1.json').read_text())
         value = dict(req, request_sha256=digest(req), status='completed',
                      image='sha256:' + 'b' * 64, archive_sha256='c' * 64,
-                     exit_code=0, output='untrusted test output', cleanup=True, error=None)
+                     exit_code=0, cleanup=True)
         value.update(changes)
         (self.results / 'trial-1.json').write_text(json.dumps(value))
 
@@ -52,11 +52,12 @@ class ToolTests(unittest.TestCase):
             with self.subTest(args=args), self.assertRaises(ToolError):
                 self.tool.submit(args)
 
-    def test_correlated_result_returned_as_untrusted(self):
+    def test_correlated_result_returns_only_structured_facts(self):
         self.tool.submit(self.args); self.result()
         result = self.tool.status(self.args)
         self.assertEqual(result['status'], 'completed')
-        self.assertTrue(result['output_is_untrusted'])
+        self.assertNotIn('output', result)
+        self.assertNotIn('error', result)
         self.assertEqual(result['commit'], 'a' * 40)
 
     def test_mismatched_result_and_false_success_rejected(self):
@@ -72,6 +73,27 @@ class ToolTests(unittest.TestCase):
         self.tool.submit(self.args); self.result(status='failed', exit_code=1)
         self.assertEqual(self.tool.submit(self.args)['status'], 'failed')
         self.assertEqual(self.tool.status(self.args)['exit_code'], 1)
+
+    def test_facts_only_failure_payload_still_requires_strict_scalar_evidence(self):
+        self.tool.submit(self.args)
+        mutations = [dict(version=True), dict(exit_code=True), dict(exit_code='17'),
+                     dict(exit_code=-1), dict(exit_code=256), dict(exit_code=0),
+                     dict(exit_code=None), dict(archive_sha256='invalid'),
+                     dict(cleanup='yes'), dict(status=['failed'])]
+        for mutation in mutations:
+            evidence = dict(status='failed', exit_code=17)
+            evidence.update(mutation)
+            self.result(**evidence)
+            with self.subTest(mutation=mutation), self.assertRaises(ToolError):
+                self.tool.status(self.args)
+
+    def test_duplicate_result_json_keys_are_rejected(self):
+        self.tool.submit(self.args); self.result()
+        path = self.results / 'trial-1.json'
+        original = path.read_text()
+        path.write_text(original[:-1] + ', "exit_code": 17, "exit_code": 0}')
+        with self.assertRaises(ToolError):
+            self.tool.status(self.args)
 
     def test_symlink_requests_and_results_rejected(self):
         target = self.root / 'foreign'; target.write_text('{}')

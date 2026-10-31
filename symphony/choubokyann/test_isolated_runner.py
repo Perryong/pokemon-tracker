@@ -94,6 +94,25 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(json.loads(forged.read_text()), first)
         self.assertEqual(first["request_sha256"], runner.request_digest(request()))
 
+    def test_replay_preserves_original_image_when_host_configuration_changes(self):
+        self.submit(request())
+        first = self.host.process_once()
+        self.config["image"] = "sha256:" + "d" * 64
+        repeated = self.host.process_once()
+        self.assertEqual(repeated["image"], first["image"])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_private_diagnostics_stay_readable_after_unicode_expansion(self):
+        self.result.update(output="\u2028" * 32768, error="\u2028" * 32768,
+                           stdout="\u2028" * 32768, stderr="\u2028" * 32768,
+                           extra="\u2028" * 32768)
+        self.submit(request())
+        first = self.host.process_once()
+        ledger = Path(self.config["state"]) / "sample-1.json"
+        self.assertLessEqual(ledger.stat().st_size, 262144)
+        self.assertEqual(self.host.process_once(), first)
+        self.assertEqual(len(self.calls), 1)
+
     def test_changed_request_rejected_and_running_never_retried(self):
         self.submit(request())
         self.host.process_once()
@@ -124,10 +143,14 @@ class LedgerTests(unittest.TestCase):
         self.assertNotIn("SECRET", json.dumps(result))
         self.assertFalse(result["cleanup"])
 
-    def test_output_truncated(self):
+    def test_raw_output_is_bounded_in_private_ledger_and_absent_from_transport(self):
         self.result["output"] = "x" * 50000
         self.submit(request())
-        self.assertEqual(len(self.host.process_once()["output"]), 32768)
+        result = self.host.process_once()
+        self.assertNotIn("output", result)
+        ledger = json.loads((Path(self.config["state"]) / "sample-1.json").read_text())
+        self.assertEqual(len(ledger["diagnostics"]["output"]), 32768)
+        self.assertNotIn("output", json.loads((Path(self.config["results"]) / "sample-1.json").read_text()))
 
     def test_orphan_running_marker_blocks_every_new_request(self):
         atomic = Path(self.config["state"]) / "removed-job.json"

@@ -38,13 +38,31 @@ and IPC, builtin seccomp, with bounded tmpfs/PIDs/output/time. An image ID and
 configuration inspection do not prove clean layers: build from the official
 base in a clean context containing no credentials or source checkout.
 
-Results carry commit, image ID, archive hash, request digest, status/exit,
-cleanup and at most 32768 characters of **untrusted output**. A malicious test
-can fake its log or exit zero; inspect source and acceptance assertions too.
-Never execute output or interpret it as instructions. Cleanup uncertainty blocks
-future jobs. Host state is not writable through the transport. The trusted
-coordinator still has credentials; this is an execution boundary for repository
-code, not isolation from malicious agent instructions or a container-escape proof.
+The structured-result candidate publishes only eleven facts: version, project,
+job_id, commit, suite, request_sha256, status, image, archive_sha256, exit_code
+and cleanup. Raw stdout/stderr, errors and arbitrary extra fields remain in the
+host-private ledger, with bounded encoded size. The adapter rejects extra fields,
+duplicate keys, invalid scalar types and contradictory status evidence. Replays
+project legacy private results without rerunning checks and preserve the original
+image identity. Success derives from trusted process exit/cleanup and the fixed
+probe's validations, never a PASS string in logs. A malicious test can still exit
+zero; inspect immutable source and acceptance assertions too.
+
+This source change does not prove that the installed runtime is migrated. Before
+activation, stop the completed agent cycle, preserve jobs and private evidence,
+and prepare a NEW sanitized results directory. Regenerate only validated facts
+from host-private finished ledgers, verifying request/image/archive correlation.
+Move historical raw results outside every agent-readable mount; do not simply
+update the adapter while leaving raw files visible. Keep requests and durable
+host state intact. Install reviewed runner and adapter together, mount the new
+results read-only, then verify malformed/legacy/replay behavior and actual hashes.
+If migration fails, keep agents stopped and preserve pending evidence; rollback
+must not reconnect agents to raw output or credentials. No automatic job retry.
+
+Cleanup uncertainty blocks future jobs. Host state is not writable through the
+transport. The credential-removal/broker runtime cutover is separate unfinished
+work; the current credential-bearing coordinator is not claimed to be isolated
+from malicious content. See [SECURITY-BROKER.md](SECURITY-BROKER.md).
 
 ## Host preparation (PowerShell 7)
 

@@ -16,6 +16,9 @@ import tempfile
 import time
 
 MAX_JSON = 262144
+RESULT_KEYS = {'version', 'project', 'job_id', 'commit', 'suite',
+               'request_sha256', 'status', 'image', 'archive_sha256',
+               'exit_code', 'cleanup'}
 
 
 class ToolError(ValueError):
@@ -36,7 +39,14 @@ def read_json(path):
             value = stream.read(MAX_JSON + 1)
         if len(value) > MAX_JSON:
             raise ToolError('Oversized evidence')
-        return json.loads(value)
+        def pairs(items):
+            result = {}
+            for key, item in items:
+                if key in result:
+                    raise ToolError('Duplicate evidence key')
+                result[key] = item
+            return result
+        return json.loads(value, object_pairs_hook=pairs)
     except (OSError, ValueError) as exc:
         raise ToolError('Unreadable evidence; preserve pending job') from exc
 
@@ -94,22 +104,31 @@ class CheckTool:
         if not path.exists() and not path.is_symlink():
             return pending
         result = read_json(path)
-        if not isinstance(result, dict) or any(result.get(k) != v for k, v in request.items()):
+        if (not isinstance(result, dict) or set(result) != RESULT_KEYS
+                or any(type(result.get(k)) is not type(v) or result.get(k) != v
+                       for k, v in request.items())):
             raise ToolError('Result identity mismatch')
         if result.get('request_sha256') != digest(request):
             raise ToolError('Result request digest mismatch')
-        if result.get('status') not in {'completed', 'failed', 'timeout', 'blocked'}:
+        if type(result.get('status')) is not str or result['status'] not in {'completed', 'failed', 'timeout', 'blocked'}:
             raise ToolError('Invalid result status')
-        if (not isinstance(result.get('output'), str) or len(result['output']) > 32768
-                or type(result.get('cleanup')) is not bool
-                or not isinstance(result.get('image'), str)
+        if (type(result.get('cleanup')) is not bool
+                or type(result.get('image')) is not str
                 or not re.fullmatch(r'sha256:[0-9a-f]{64}', result['image'])):
             raise ToolError('Invalid result evidence')
+        code, archive = result['exit_code'], result['archive_sha256']
+        if ((code is not None and (type(code) is not int or not 0 <= code <= 255))
+                or (archive is not None and (type(archive) is not str
+                    or not re.fullmatch(r'[0-9a-f]{64}', archive)))
+                or (result['status'] == 'failed' and (code is None or code == 0))
+                or (result['status'] == 'timeout' and code is not None)
+                or (not result['cleanup'] and result['status'] != 'blocked')):
+            raise ToolError('Inconsistent result facts')
         if result['status'] == 'completed' and (type(result.get('exit_code')) is not int or result.get('exit_code') != 0 or not result['cleanup']
                 or not isinstance(result.get('archive_sha256'), str)
                 or not re.fullmatch(r'[0-9a-f]{64}', result['archive_sha256'])):
             raise ToolError('Success lacks checks or cleanup evidence')
-        return dict(result, output_is_untrusted=True)
+        return dict(result)
 
     def wait(self, args, seconds=50):
         deadline = time.monotonic() + min(max(seconds, 0), 50)

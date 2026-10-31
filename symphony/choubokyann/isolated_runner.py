@@ -394,6 +394,35 @@ class DockerBoundary:
         return result
 
 
+def public_result(request, image, evidence):
+    """Project trusted process facts, never diagnostics, into the public spool.
+
+    This also applies when replaying an older private ledger. Invalid facts
+    become blocked evidence and cannot be promoted by any text in test logs.
+    """
+    source = evidence if isinstance(evidence, dict) else {}
+    status = source.get("status")
+    code, archive, cleanup = (source.get(key) for key in
+                              ("exit_code", "archive_sha256", "cleanup"))
+    valid_code = code is None or (type(code) is int and 0 <= code <= 255)
+    valid_archive = archive is None or (type(archive) is str and
+                                        re.fullmatch(r"[0-9a-f]{64}", archive))
+    valid = (type(status) is str and status in ("completed", "failed", "timeout", "blocked")
+             and valid_code and valid_archive and type(cleanup) is bool)
+    if valid:
+        valid = ((status != "completed" or (code == 0 and archive is not None and cleanup))
+                 and (status != "failed" or (code is not None and code != 0))
+                 and (status != "timeout" or code is None)
+                 and (cleanup or status == "blocked"))
+    if not valid:
+        status = "blocked"
+        code = code if valid_code else None
+        archive = archive if valid_archive else None
+        cleanup = cleanup if type(cleanup) is bool else False
+    return dict(request, request_sha256=request_digest(request), image=image,
+                status=status, exit_code=code, archive_sha256=archive, cleanup=cleanup)
+
+
 class HostRunner:
     def __init__(self, config, execute=None):
         self.config = config
@@ -421,23 +450,52 @@ class HostRunner:
                     raise ValueError("Job ID already belongs to another request")
                 if record["phase"] != "finished":
                     raise RuntimeError("Uncertain previous job; host reconciliation required")
-                atomic_json(Path(c["results"]) / path.name, record["result"])
+                recorded = record["result"]
+                if (not isinstance(recorded, dict) or type(recorded.get("image")) is not str
+                        or not re.fullmatch(r"sha256:[0-9a-f]{64}", recorded["image"])):
+                    raise ValueError("Historical image evidence is invalid; reconcile on host")
+                published = public_result(value, recorded["image"], recorded)
+                atomic_json(Path(c["results"]) / path.name, published)
+                if not published["cleanup"]:
+                    atomic_json(state / "blocked.json", {"job_id": value["job_id"]})
+                    return published
                 continue
             atomic_json(ledger, {"phase": "running", "request_sha256": digest})
-            result = {**value, "request_sha256": digest, "image": c["image"]}
             try:
-                result.update(self.execute(value))
+                evidence = self.execute(value)
             except Exception:
-                result.update(status="blocked", archive_sha256=None, exit_code=None,
-                              output="", cleanup=False, error="Host execution uncertain; reconcile on host")
-            result["output"] = result["output"][:32768]
+                evidence = dict(status="blocked", archive_sha256=None, exit_code=None,
+                                output="", cleanup=False, error="Host execution uncertain; reconcile on host")
+            result = public_result(value, c["image"], evidence)
+            # Only this host-private ledger receives raw logs and extra fields.
+            # Production DockerBoundary already bounds logs; bound private
+            # retention too so the next read cannot exceed the ledger limit.
+            diagnostics = {}
+            if isinstance(evidence, dict):
+                for key in ("output", "stdout", "stderr", "error"):
+                    item = evidence.get(key)
+                    if isinstance(item, str):
+                        diagnostics[key] = item[:32768]
+                extras = {key: item for key, item in evidence.items()
+                          if key not in {"status", "exit_code", "archive_sha256", "cleanup",
+                                         "output", "stdout", "stderr", "error"}}
+                try:
+                    diagnostics["extra_json"] = json.dumps(extras, sort_keys=True)[:32768]
+                except (TypeError, ValueError):
+                    diagnostics["extra_json"] = "Unserializable host diagnostics"
+                # Bound encoded bytes, including JSON's Unicode escaping, so
+                # private records remain readable under conservative limits.
+                while len(canonical(diagnostics)) > 131072:
+                    largest = max(diagnostics, key=lambda key: len(diagnostics[key]))
+                    diagnostics[largest] = diagnostics[largest][:len(diagnostics[largest]) // 2]
             if not result["cleanup"]:
                 atomic_json(state / "blocked.json", {"job_id": value["job_id"]})
-            atomic_json(ledger, {"phase": "finished", "request_sha256": digest, "result": result})
+            atomic_json(ledger, {"phase": "finished", "request_sha256": digest,
+                                 "result": result, "diagnostics": diagnostics})
             atomic_json(Path(c["results"]) / path.name, result)
             return result
         # Existing finished requests are republished from private state, never rerun.
-        return record["result"] if "record" in locals() else None
+        return published if "published" in locals() else None
 
 
 def load_config(path):
