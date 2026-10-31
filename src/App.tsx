@@ -5,11 +5,12 @@ import SetGrid from './components/SetGrid';
 import CardGrid from './components/CardGrid';
 import CardDetail from './components/CardDetail';
 import CollectionView from './components/CollectionView';
+import MarketView from './components/MarketView';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 
 function App() {
-  const [view, setView] = useState<'sets' | 'cards' | 'collection'>('sets');
+  const [view, setView] = useState<'sets' | 'cards' | 'collection' | 'market'>('sets');
   const [selectedSet, setSelectedSet] = useState<PokemonSet | null>(null);
   const [selectedCard, setSelectedCard] = useState<PokemonCard | null>(null);
   const [showCardDetail, setShowCardDetail] = useState(false);
@@ -28,7 +29,7 @@ function App() {
     setShowCardDetail(true);
   };
 
-  const handleSetView = (newView: 'sets' | 'cards' | 'collection') => {
+  const handleSetView = (newView: 'sets' | 'cards' | 'collection' | 'market') => {
     if (newView === 'sets') {
       setSelectedSet(null);
     }
@@ -54,6 +55,7 @@ function App() {
             />
           )}
           
+          {view === 'market' && <MarketView />}
           {view === 'collection' && (
             <CollectionView onCardSelect={handleCardSelect} />
           )}

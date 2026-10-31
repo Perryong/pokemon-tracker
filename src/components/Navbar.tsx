@@ -1,10 +1,10 @@
 import { useTheme } from 'next-themes';
 import { useCollection } from '@/lib/collection';
-import { BookOpen, Layers, Moon, Sun, CircleDot, ArrowUpRight } from 'lucide-react';
+import { ChartNoAxesCombined, BookOpen, Layers, Moon, Sun, CircleDot, ArrowUpRight } from 'lucide-react';
 
 interface NavbarProps {
-  view: 'sets' | 'cards' | 'collection';
-  onSetSelectView: (view: 'sets' | 'cards' | 'collection') => void;
+  view: 'sets' | 'cards' | 'collection' | 'market';
+  onSetSelectView: (view: 'sets' | 'cards' | 'collection' | 'market') => void;
 }
 export default function Navbar({ view, onSetSelectView }: NavbarProps) {
   const { resolvedTheme, setTheme } = useTheme();
@@ -16,8 +16,9 @@ export default function Navbar({ view, onSetSelectView }: NavbarProps) {
       <CircleDot size={31} strokeWidth={1.6} /><span>Pokémon<span className="wordmark-caption">Collection tracker</span></span>
     </button>
     <nav aria-label="Main" className="library-nav">
-      <button type="button" className={view !== 'collection' ? 'nav-item is-active' : 'nav-item'} aria-current={view !== 'collection' ? 'page' : undefined} onClick={() => onSetSelectView('sets')}><Layers size={19} /><span>Sets</span><span className="nav-hint">Explore</span></button>
+      <button type="button" className={(view === 'sets' || view === 'cards') ? 'nav-item is-active' : 'nav-item'} aria-current={(view === 'sets' || view === 'cards') ? 'page' : undefined} onClick={() => onSetSelectView('sets')}><Layers size={19} /><span>Sets</span><span className="nav-hint">Explore</span></button>
       <button type="button" className={view === 'collection' ? 'nav-item is-active' : 'nav-item'} aria-current={view === 'collection' ? 'page' : undefined} onClick={() => onSetSelectView('collection')}><BookOpen size={19} /><span>My Collection</span>{unique > 0 && <span className="nav-count">{unique}</span>}</button>
+      <button type="button" className={view === 'market' ? 'nav-item is-active' : 'nav-item'} aria-current={view === 'market' ? 'page' : undefined} onClick={() => onSetSelectView('market')}><ChartNoAxesCombined size={19} /><span>Market</span></button>
     </nav>
     <div className="binder-note"><BookOpen size={23} strokeWidth={1.5} /><h2>Your binder, at a glance.</h2><p><strong>{unique}</strong> unique cards<br /><strong>{quantity}</strong> total copies</p><span className="save-indicator"><span />Saved on this device</span></div>
     <div className="rail-bottom">

@@ -34,6 +34,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   localStorage.clear();
 });
 
@@ -75,4 +76,21 @@ describe('App persistence regression', () => {
     fireEvent.click(screen.getByText('My Collection'));
     expect(within(screen.getByRole('region', { name: 'Collection View' })).getByText('2')).toBeInTheDocument();
   });
+});
+
+it('navigates to Market without changing saved collection quantities', async () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, cardQuantities: { 'base1-1': 2 } }));
+  vi.stubGlobal('fetch', vi.fn(async url => {
+    const data = String(url).endsWith('/health')
+      ? { service: 'market-prices', schemaVersion: 1, mode: 'reference', source: 'TCGdex' }
+      : { schemaVersion: 1, mode: 'reference', source: 'TCGdex', card: { id: 'base1-1', name: 'Alakazam' }, fetchedAt: '2026-10-31T04:00:00Z', quotes: [] };
+    return new Response(JSON.stringify(data));
+  }));
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Market' }));
+  expect(await screen.findByText('Backend reachable')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Alakazam base1-1' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Sets/ })).not.toHaveAttribute('aria-current');
+  fireEvent.click(screen.getByText('My Collection'));
+  expect(within(screen.getByRole('region', { name: 'Collection View' })).getByText('2')).toBeInTheDocument();
 });

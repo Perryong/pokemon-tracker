@@ -1,0 +1,126 @@
+{
+  "units": [
+    {
+      "id": "available",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "acquired_at": "2026-10-20T04:00:00Z",
+      "received_at": "2026-10-21T04:00:00Z",
+      "inspected_at": "2026-10-21T05:00:00Z",
+      "inspection_passed": true,
+      "returned_at": null,
+      "status": "available",
+      "acquisition_cost": "85.00"
+    },
+    {
+      "id": "sold",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "acquired_at": "2026-10-20T04:00:00Z",
+      "received_at": "2026-10-21T04:00:00Z",
+      "inspected_at": "2026-10-21T05:00:00Z",
+      "inspection_passed": true,
+      "returned_at": null,
+      "status": "settled",
+      "acquisition_cost": "85.00"
+    },
+    {
+      "id": "returned",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "acquired_at": "2026-10-20T04:00:00Z",
+      "received_at": "2026-10-21T04:00:00Z",
+      "inspected_at": "2026-10-21T05:00:00Z",
+      "inspection_passed": true,
+      "returned_at": "2026-10-29T04:00:00Z",
+      "status": "returned",
+      "acquisition_cost": "85.00"
+    },
+    {
+      "id": "unsettled",
+      "card": {
+        "set": "SV-SYNTHETIC",
+        "number": "001",
+        "language": "en",
+        "printing": "standard",
+        "finish": "holo",
+        "category": "raw",
+        "grading_company": null,
+        "grade": null
+      },
+      "condition": "near_mint",
+      "acquired_at": "2026-10-20T04:00:00Z",
+      "received_at": "2026-10-21T04:00:00Z",
+      "inspected_at": "2026-10-21T05:00:00Z",
+      "inspection_passed": true,
+      "returned_at": null,
+      "status": "fulfilled",
+      "acquisition_cost": "85.00"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "sale",
+      "unit_id": "sold",
+      "fulfilled": true,
+      "settled": true,
+      "reconciled": true,
+      "proceeds": "120.00",
+      "refunds": "0.00",
+      "acquisition_cost": "85.00",
+      "acquisition_recovery": "0.00",
+      "seller_costs": "15.00"
+    },
+    {
+      "id": "refund",
+      "unit_id": "returned",
+      "fulfilled": true,
+      "settled": true,
+      "reconciled": true,
+      "proceeds": "120.00",
+      "refunds": "120.00",
+      "acquisition_cost": "85.00",
+      "acquisition_recovery": "85.00",
+      "seller_costs": "15.00"
+    },
+    {
+      "id": "pending",
+      "unit_id": "unsettled",
+      "fulfilled": true,
+      "settled": false,
+      "reconciled": true,
+      "proceeds": null,
+      "refunds": "0.00",
+      "acquisition_cost": "85.00",
+      "acquisition_recovery": "0.00",
+      "seller_costs": "15.00"
+    }
+  ]
+}
