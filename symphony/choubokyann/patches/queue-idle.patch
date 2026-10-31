@@ -1,0 +1,220 @@
+--- a/lib/symphony_elixir/config/schema.ex
++++ b/lib/symphony_elixir/config/schema.ex
+@@ -236,6 +236,7 @@
+     embedded_schema do
+       field(:after_create, :string)
+       field(:before_run, :string)
++      field(:before_run_idle_exit_code, :integer)
+       field(:after_run, :string)
+       field(:before_remove, :string)
+       field(:timeout_ms, :integer, default: 60_000)
+@@ -244,8 +245,9 @@
+     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
+     def changeset(schema, attrs) do
+       schema
+-      |> cast(attrs, [:after_create, :before_run, :after_run, :before_remove, :timeout_ms], empty_values: [])
++      |> cast(attrs, [:after_create, :before_run, :before_run_idle_exit_code, :after_run, :before_remove, :timeout_ms], empty_values: [])
+       |> validate_number(:timeout_ms, greater_than: 0)
++      |> validate_number(:before_run_idle_exit_code, greater_than: 0, less_than_or_equal_to: 255)
+     end
+   end
+
+--- a/lib/symphony_elixir/workspace.ex
++++ b/lib/symphony_elixir/workspace.ex
+@@ -217,7 +217,7 @@
+   def remove_issue_workspaces(_identifier, _worker_host), do: :ok
+
+   @spec run_before_run_hook(Path.t(), map() | String.t() | nil, worker_host()) ::
+-          :ok | {:error, term()}
++          :ok | {:idle, :unchanged} | {:error, term()}
+   def run_before_run_hook(workspace, issue_or_identifier, worker_host \\ nil) when is_binary(workspace) do
+     issue_context = issue_context(issue_or_identifier)
+     hooks = Config.settings!().hooks
+@@ -439,11 +439,17 @@
+   end
+
+   defp handle_hook_command_result({output, status}, workspace, issue_context, hook_name) do
+-    sanitized_output = sanitize_hook_output_for_log(output)
+-
+-    Logger.warning("Workspace hook failed hook=#{hook_name} #{issue_log_context(issue_context)} workspace=#{workspace} status=#{status} output=#{inspect(sanitized_output)}")
+-
+-    {:error, {:workspace_hook_failed, hook_name, status, output}}
++    if hook_name == "before_run" and status == Config.settings!().hooks.before_run_idle_exit_code do
++      Logger.info("Workspace hook idle hook=#{hook_name} #{issue_log_context(issue_context)} workspace=#{workspace} status=#{status}")
++
++      {:idle, :unchanged}
++    else
++      sanitized_output = sanitize_hook_output_for_log(output)
++
++      Logger.warning("Workspace hook failed hook=#{hook_name} #{issue_log_context(issue_context)} workspace=#{workspace} status=#{status} output=#{inspect(sanitized_output)}")
++
++      {:error, {:workspace_hook_failed, hook_name, status, output}}
++    end
+   end
+
+   defp sanitize_hook_output_for_log(output, max_bytes \\ 2_048) do
+--- a/lib/symphony_elixir/agent_runner.ex
++++ b/lib/symphony_elixir/agent_runner.ex
+@@ -29,6 +29,10 @@
+       :ok ->
+         :ok
+
++      {:idle, :unchanged} ->
++        Logger.info("Agent run idle for #{issue_context(issue)}; waiting for the next poll")
++        exit({:shutdown, :idle})
++
+       {:error, reason} ->
+         Logger.error("Agent run failed for #{issue_context(issue)}: #{inspect(reason)}")
+         raise RuntimeError, "Agent run failed for #{issue_context(issue)}: #{inspect(reason)}"
+@@ -42,12 +46,18 @@
+       {:ok, workspace} ->
+         send_worker_runtime_info(codex_update_recipient, issue, worker_host, workspace)
+
+-        try do
+-          with :ok <- Workspace.run_before_run_hook(workspace, issue, worker_host) do
+-            run_codex_turns(workspace, issue, codex_update_recipient, opts, worker_host)
+-          end
+-        after
+-          Workspace.run_after_run_hook(workspace, issue, worker_host)
++        case Workspace.run_before_run_hook(workspace, issue, worker_host) do
++          {:idle, :unchanged} = idle ->
++            idle
++
++          hook_result ->
++            try do
++              with :ok <- hook_result do
++                run_codex_turns(workspace, issue, codex_update_recipient, opts, worker_host)
++              end
++            after
++              Workspace.run_after_run_hook(workspace, issue, worker_host)
++            end
+         end
+
+       {:error, reason} ->
+--- a/lib/symphony_elixir/orchestrator.ex
++++ b/lib/symphony_elixir/orchestrator.ex
+@@ -203,6 +203,11 @@
+   def handle_info(msg, state) do
+     Logger.debug("Orchestrator ignored message: #{inspect(msg)}")
+     {:noreply, state}
++  end
++
++  defp handle_agent_down({:shutdown, :idle}, state, issue_id, _running_entry, session_id) do
++    Logger.info("Agent task idle for issue_id=#{issue_id} session_id=#{session_id}; waiting for the next poll")
++    release_issue_claim(state, issue_id)
+   end
+
+   defp handle_agent_down(:normal, state, issue_id, running_entry, session_id) do
+--- /dev/null
++++ b/test/symphony_elixir/queue_idle_test.exs
+@@ -0,0 +1,110 @@
++defmodule SymphonyElixir.QueueIdleTest do
++  use SymphonyElixir.TestSupport
++
++  alias SymphonyElixir.Config.Schema.Hooks
++
++  setup do
++    root = Path.join(System.tmp_dir!(), "symphony-queue-idle-#{System.unique_integer([:positive])}")
++    File.mkdir_p!(root)
++    on_exit(fn -> File.rm_rf(root) end)
++    {:ok, root: root}
++  end
++
++  test "idle exit code is optional and validates the nonzero process exit range" do
++    assert Hooks.changeset(%Hooks{}, %{}).valid?
++    assert Hooks.changeset(%Hooks{}, %{"before_run_idle_exit_code" => 75}).valid?
++
++    for invalid <- [0, -1, 256, "invalid"] do
++      refute Hooks.changeset(%Hooks{}, %{"before_run_idle_exit_code" => invalid}).valid?
++    end
++  end
++
++  test "only an opted-in before_run exit becomes idle", %{root: root} do
++    configure(root, hook_before_run: "exit 75")
++    assert {:idle, :unchanged} = Workspace.run_before_run_hook(root, "GH-27")
++  end
++
++  test "default exit 75 and pending or error exits remain failures", %{root: root} do
++    configure(root, [hook_before_run: "exit 75"], false)
++
++    assert {:error, {:workspace_hook_failed, "before_run", 75, _}} =
++             Workspace.run_before_run_hook(root, "GH-27")
++
++    for status <- [1, 2, 74] do
++      configure(root, hook_before_run: "exit #{status}")
++
++      assert {:error, {:workspace_hook_failed, "before_run", ^status, _}} =
++               Workspace.run_before_run_hook(root, "GH-27")
++    end
++  end
++
++  test "opt in does not make after_create exit 75 idle", %{root: root} do
++    configure(root, hook_after_create: "exit 75")
++
++    assert {:error, {:workspace_hook_failed, "after_create", 75, _}} =
++             Workspace.create_for_issue(issue())
++  end
++
++  test "idle runner starts no model and never executes after_run", %{root: root} do
++    model_marker = Path.join(root, "model-started")
++    after_marker = Path.join(root, "after-run")
++
++    configure(root,
++      hook_before_run: "exit 75",
++      hook_after_run: "touch '#{after_marker}'",
++      codex_command: "touch '#{model_marker}'; exit 23"
++    )
++
++    {pid, ref} = spawn_monitor(fn -> AgentRunner.run(issue()) end)
++    assert_receive {:DOWN, ^ref, :process, ^pid, {:shutdown, :idle}}, 2_000
++    refute File.exists?(model_marker)
++    refute File.exists?(after_marker)
++  end
++
++  test "idle shutdown releases claim without completion or retry and permits the next poll", %{root: root} do
++    configure(root, hook_before_run: "exit 75")
++    issue = issue()
++    ref = make_ref()
++
++    state = %Orchestrator.State{
++      max_concurrent_agents: 1,
++      codex_totals: %{},
++      running: %{issue.id => %{pid: self(), ref: ref, identifier: issue.identifier, issue: issue, started_at: DateTime.utc_now()}},
++      claimed: MapSet.new([issue.id]),
++      retry_attempts: %{}
++    }
++
++    {:noreply, idle} = Orchestrator.handle_info({:DOWN, ref, :process, self(), {:shutdown, :idle}}, state)
++    assert idle.running == %{}
++    assert idle.retry_attempts == %{}
++    refute MapSet.member?(idle.completed, issue.id)
++    refute MapSet.member?(idle.claimed, issue.id)
++    assert idle.blocked == %{}
++    assert Orchestrator.should_dispatch_issue_for_test(issue, idle)
++
++    Application.put_env(:symphony_elixir, :memory_tracker_issues, [issue])
++    {:ok, supervisor} = Task.Supervisor.start_link()
++    {:noreply, polled} = Orchestrator.handle_info(:run_poll_cycle, %{idle | task_supervisor: supervisor})
++    assert Map.has_key?(polled.running, issue.id)
++    assert MapSet.member?(polled.claimed, issue.id)
++    Process.cancel_timer(polled.tick_timer_ref)
++    worker = polled.running[issue.id]
++    assert_receive {:DOWN, worker_ref, :process, worker_pid, {:shutdown, :idle}}, 2_000
++    assert worker_ref == worker.ref
++    assert worker_pid == worker.pid
++  end
++
++  defp configure(root, overrides, idle? \\ true) do
++    path = Workflow.workflow_file_path()
++    write_workflow_file!(path, Keyword.merge([tracker_kind: "memory", workspace_root: root], overrides))
++
++    if idle? do
++      File.write!(path, String.replace(File.read!(path), "hooks:\n", "hooks:\n  before_run_idle_exit_code: 75\n"))
++      WorkflowStore.force_reload()
++    end
++  end
++
++  defp issue do
++    %Issue{id: "queue-idle", identifier: "GH-27", title: "Queue idle", state: "In Progress", dispatchable: true}
++  end
++end

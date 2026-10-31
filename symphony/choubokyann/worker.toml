@@ -1,0 +1,12 @@
+# Versioned standalone worker base; native children use explicit spawn settings.
+# Do not claim this file is loaded by a native child without runtime evidence.
+model = "gpt-6.1-sol"
+model_reasoning_effort = "high"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
+[agents]
+enabled = false

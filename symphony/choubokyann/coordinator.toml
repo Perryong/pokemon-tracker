@@ -1,0 +1,33 @@
+# Mount this file as /root/.codex/config.toml; app-server has no --profile.
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 3
+default_subagent_model = "gpt-6.1-sol"
+default_subagent_reasoning_effort = "high"
+
+# Native explicit spawn(model, reasoning_effort, fork_turns) is used by this
+# harness. Depth one is an instruction policy, not a supported depth setting.
+
+# Trusted installed adapter only. No Docker socket or arbitrary shell tool.
+[mcp_servers.isolated_checks]
+command = "python3"
+args = ["-I", "/runtime/isolated_tool.py", "--requests", "/checks/requests", "--results", "/checks/results"]
+env_vars = ["SYMPHONY_PROJECT"]
+enabled_tools = ["run_checks", "check_status"]
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+
+# Operator-authorized restricted host checks only; global approval stays never.
+[mcp_servers.isolated_checks.tools.run_checks]
+approval_mode = "approve"
+
+[mcp_servers.isolated_checks.tools.check_status]
+approval_mode = "approve"

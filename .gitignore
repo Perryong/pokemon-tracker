@@ -27,3 +27,8 @@ dist-ssr
 
 # Standard-library coordination checks
 .github/scripts/__pycache__/
+
+# Personal Symphony workpads, gate evidence, logs and code-memory artifacts
+.symphony/
+graphify-out/
+symphony/choubokyann/__pycache__/
