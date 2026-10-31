@@ -84,7 +84,9 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
    including Active and Blocked items. Filter to PUBLIC @@REPO@@
    before saving anything. Product scope requires `@@QUEUE_LABEL@@`.
    Exclude registered issue numbers @@EXCLUDED@@, colleague claims, other repositories and private data.
-   Queue membership only authorizes evaluation. Inspect each selected issue's
+   Queue membership only authorizes evaluation. For new issue branches and PRs,
+   use the integration target recorded in the selected repository's live authority;
+   keep the registered control branch and existing workspaces unchanged. Inspect each selected issue's
    full body, comments, native blocked-by edges and linked/open PR evidence.
 3. Only open Ready issues with actionable acceptance criteria, verification,
    exclusions, Dependencies and Non-code blockers may start implementation.
@@ -98,9 +100,22 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
 4. Review In review/returned work against the EXACT current PR head SHA.
    Read actual diffs, tests, check results, review threads and business acceptance
    evidence; child claims alone do not prove completion. Recheck the head after
-   validation. Passing work remains In review / awaiting human merge. Never
-   merge, enable auto-merge, deploy, close as Done, or equate merge with business
-   acceptance. Record failures with precise head, reproduction and bounded fix.
+   validation, including the exact base branch and commit. Passing work remains
+   In review until a separate authorized integration decision. Read the selected
+   repository's live operator authority and scoped AGENTS.md rules: registration
+   alone grants no PR or merge permission. Only the coordinator may merge, only
+   into the exact repository/branch explicitly authorized there, after checking
+   ownership, prerequisites, actual diff/checks and independent review findings.
+   Unresolved blockers or a moved head/base prevent acceptance. Use an exact-head
+   merge guard and ordinary GitHub controls; no main/colleague-branch merge,
+   force push, protection bypass or auto-merge. Recheck live base/head immediately
+   before the operation and verify the resulting integration revision/checks.
+   Read back uncertain writes before retrying. Merge is not business acceptance,
+   prerequisite completion, claim release or permission for Done/deployment/live
+   actions. Outside recorded branch-specific authority, await human merge.
+   If this active turn explicitly prohibits merge despite newer recorded authority,
+   preserve the gate and request reconciliation; do not override that prohibition.
+   Record failures with precise head, reproduction and bounded fix.
 5. Before implementation or a fix, retain the recorded original issue owner,
    or perform the explicit delegated transfer in AGENTS.md. Confirm outgoing
    writes have stopped and preserve branch/diff/checks/handoff. Never expire or
@@ -121,8 +136,12 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
    acceptance checks and a time/turn budget. Use fewer children when work is not
    independent; assign disjoint file ownership to concurrent children. Serialize
    shared integration, GitHub decisions and isolated-check submissions in the main
-   agent. Preserve others' edits. Prohibit child GitHub writes, ownership/status changes, merges, marketplace actions
-   and recursive delegation. Require a returned status, files, actual checks,
+   agent. Preserve others' edits. Prohibit child ownership/status changes, merges,
+   marketplace actions and recursive delegation. Sol children cannot write GitHub.
+   An Astra reviewer may create/update a scoped PR only when the repository's live
+   operator authority permits it and its task explicitly assigns that operation;
+   serialize it through the coordinator and return URL/base/head/evidence. Otherwise
+   reviewer GitHub access is read-only. Require a returned status, files, actual checks,
    uncertainty and remaining work. Verify transcript model metadata when
    available; configuration or model cache entries alone prove no applied model.
    If unavailable or mismatched, report the actual gap without substitution.
@@ -133,15 +152,17 @@ Bounded reviewer procedure:
   native Astra/high acceptance reviewer at the exact current PR head. A reviewer
   uses one existing child slot and returns to Astra; it is not a service or owner.
 - Give task ID, public evidence/immutable source, read-only files, allowed tools
-  and a time/turn budget. No repository execution, GitHub/status/ownership writes,
-  merges, live actions or recursive delegation. Main serializes isolated checks.
+  and a time/turn budget. No repository execution, status/ownership writes,
+  merges, live actions or recursive delegation. Only an explicitly assigned PR
+  creation/update under verified repository-specific authority may write GitHub;
+  otherwise remain read-only. Main serializes PR writes and isolated checks.
 - Return completed/blocked/failed, ready/blocked or pass/changes-needed, evidence,
-  exact head when applicable, each blocker owner/action, actual checks and uncertainty.
+  exact head/base when applicable, each blocker owner/action, actual checks and uncertainty.
   Fail closed on missing evidence, failure or timeout. Recheck the head after
-  validation; movement invalidates acceptance. Main verifies findings and owns
+  validation; head or base movement invalidates acceptance. Main verifies findings and owns
   Ready promotion, dispatch and rework under the original ownership gates.
 - Cache the reviewed issue/dependency/ownership evidence digest or exact head plus
-  check/review evidence digest and verdict in the existing workpad. No repeat
+  base/check/review evidence digest and verdict in the existing workpad. No repeat
   reviewer on unchanged inputs, even if another issue triggered this cycle.
   No new scheduler/database. A cached verdict never substitutes for live authority.
 - Intake only explicitly operator-selected public issues after ownership/scope
@@ -149,7 +170,8 @@ Bounded reviewer procedure:
   repository's recorded intake list and exclusions; do not discover/label unrelated
   or colleague work. Record genuine blockers with responsible decision/action,
   without duplicate comments or blanket status writes. Only verified resolved
-  prerequisites permit Ready; passing acceptance stays In review awaiting human merge.
+  prerequisites permit Ready; passing acceptance stays In review pending separately
+  authorized integration. Preserve issue ownership until verified release/handoff.
 
 7. Inspect the returned diff and independently run appropriate checks. Resolve
    failures before acceptance. Maintain a concise local workpad with issue,

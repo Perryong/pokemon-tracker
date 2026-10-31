@@ -71,7 +71,7 @@ agents total; the primary is excluded from
 Sol/high with `fork_turns=none`. `worker.toml` versions the standalone worker base
 and disables delegation when loaded independently. It is not automatically
 loaded by this harness's native child. Depth one, allowed files/actions, no
-recursive delegation and child no-write-to-GitHub rules are instruction policy;
+recursive delegation and scoped child GitHub-action rules are instruction policy;
 do not invent a supported depth config key or claim separate credential isolation.
 See the official [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
 for current keys and [subagent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents).
@@ -186,9 +186,26 @@ it cannot approve itself. This intentionally blocks unattended self-claims.
 
 Never take a colleague claim, infer abandonment from timeout, or implement
 dependent work before prerequisite acceptance. New material requirements require
-operator decision. Passing review can remain In review / awaiting human merge.
-No automatic merging, Done, deployment or marketplace action is authorized. A
-merged PR alone is insufficient business acceptance. #27 remains ongoing.
+operator decision. Passing review remains In review pending a separate integration
+decision. The operator's [scoped authority](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539304288)
+permits the Astra coordinator to accept and merge eligible Sales/UI and personal
+orchestration PRs only in public `Perryong/pokemon-tracker`, only into
+`feature/sales-agent`. New issue branches start from that integration branch;
+keep existing issue branches and the registered `choubokyann/symphony-coordinator`
+control branch. This does not extend to another registration, `main` or colleague
+branches. Outside that exact authority, human merge remains required.
+
+Immediately before merging, verify live authority, repository/base/head, ownership,
+full prerequisites, actual diff, isolated checks and independent findings. Blocking
+findings prevent merge; a moved head/base requires scoped revalidation. Use an
+exact-head merge guard and ordinary protections, never force push, bypass checks
+or enable auto-merge. Read back uncertain writes before retrying. Verify the
+resulting integration revision and required checks, then record business acceptance
+and any claim release separately. A merge is not a Done transition or permission
+for dependent work, deployment or marketplace action. Same-account reviewer
+returns are independent evidence, not fabricated GitHub approvals. #27 remains
+open/In progress. An explicit no-merge instruction in the active turn still blocks
+merging until reconciled; installing this prose does not override that turn.
 
 ## Bounded reviewer and selected backlog intake
 
@@ -200,17 +217,20 @@ public evidence and immutable source, task ID, file/tool scope and time/turn
 budget, under the [model clarification](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539174541). At most one Astra reviewer replaces one Sol worker slot: one Astra coordinator plus reviewer plus at most two Sol workers, four agents total. Without a reviewer, up to three Sol workers remain allowed. The implementation default stays Sol/high. This exception supersedes the earlier Sol-only child description. It consumes one existing child slot; Astra retains issue ownership and
 all decisions. No persistent reviewer, recursive delegation or additional scheduler.
 
-Reviewers cannot execute repository code, submit checks, write GitHub/status or
-ownership, merge or take live actions. Astra serializes isolated checks and
+Reviewers cannot execute repository code, submit checks, change status/ownership,
+merge or take live actions. Under the scoped authority above, an Astra reviewer
+may create/update a scoped PR only when explicitly assigned that operation, then
+return its URL/base/exact head and evidence. All other GitHub access remains
+read-only; Sol children cannot write GitHub. Astra serializes PR writes and isolated checks and
 independently verifies the returned verdict, source and live head. Require status,
 ready/blocked or pass/changes-needed verdict, evidence/head, blocker owner/action,
 checks and uncertainty. Inaccessible, failed or incomplete reviews fail closed;
-a changed head invalidates acceptance. Preserve the original product owner for
-any fix. Passing work remains In review until authorized human merge, with
-business acceptance still separate.
+a changed head or base invalidates acceptance. Preserve the original product owner
+for any fix. Passing work remains In review until separately authorized integration,
+with business acceptance still separate.
 
 Use existing gate/workpad evidence digests to avoid another reviewer when its
-issue/dependency/ownership inputs or head/check/review evidence are unchanged.
+issue/dependency/ownership inputs or head/base/check/review evidence are unchanged.
 Record the prior verdict and rationale; another issue's change alone is no reason
 to repeat it. The cache grants neither readiness nor ownership.
 
