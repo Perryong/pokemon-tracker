@@ -3,7 +3,7 @@
 This implements the direction approved in [#27](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6526149446).
 It supersedes the manual-only, same-container pilot in ISOLATION-PILOT.md.
 The coordinator keeps running; tests are not agents. One coordinator (Astra plus
-at most one Sol child) uses 2 CPUs/3 GiB and one ephemeral test container uses
+up to three Sol children after the reviewed runtime reload) uses 2 CPUs/3 GiB and one ephemeral test container uses
 2 CPUs/3 GiB. No Docker socket or host-shell tool enters the coordinator.
 This document is a preparation contract, not evidence that the pilot passed.
 

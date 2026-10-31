@@ -114,7 +114,7 @@ def select_project(path, project_id):
     record = registry["projects"][project_id]
     return dict(record, id=project_id, volume=f"symphony-choubokyann-{project_id}-work",
                 workspace="/work/coordinator", container="symphony-choubokyann",
-                cpus=2, memory="3g", primary_slots=1, child_slots=1)
+                cpus=2, memory="3g", primary_slots=1, child_slots=3)
 
 
 def register_project(path, project_id, record):

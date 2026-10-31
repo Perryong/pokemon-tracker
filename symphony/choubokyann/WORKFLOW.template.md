@@ -110,11 +110,14 @@ separate Symphony worker. Keep #@@CONTROL@@ open and In progress as an ongoing c
    path for product coding, request supervisor reconciliation; do not self-claim.
    Serialize routine delegated decisions and verify assignment/In progress after
    recording them. Read back an uncertain write before any retry.
-6. For authorized implementation, invoke at most ONE native child at a time,
+6. For authorized implementation, invoke at most THREE native children at a time
+   alongside the one Astra coordinator (four development agents total), with
    explicit `model=gpt-6.1-sol`, `reasoning_effort=high`, `fork_turns=none`.
    Give task ID, objective, relevant context, owned files, permitted actions,
-   acceptance checks and a time/turn budget. Preserve others' edits. Prohibit
-   child GitHub writes, ownership/status changes, merges, marketplace actions
+   acceptance checks and a time/turn budget. Use fewer children when work is not
+   independent; assign disjoint file ownership to concurrent children. Serialize
+   shared integration, GitHub decisions and isolated-check submissions in the main
+   agent. Preserve others' edits. Prohibit child GitHub writes, ownership/status changes, merges, marketplace actions
    and recursive delegation. Require a returned status, files, actual checks,
    uncertainty and remaining work. Verify transcript model metadata when
    available; configuration or model cache entries alone prove no applied model.
@@ -154,5 +157,6 @@ commit/request digest, pinned image/archive identity, successful checks and veri
 cleanup, then independently reconcile live GitHub before gate acknowledgement.
 No test code runs here or in native children. Host setup is ISOLATED-TOOL.md; ISOLATION-PILOT.md is historical.
 The global budget is coordinator 2 CPU/3 GiB plus one non-agent test container
-2 CPU/3 GiB; the one Astra plus one Sol agent cap is unchanged. The earlier
-same-container/offline-manual-pilot constraint is superseded by this tool path.
+2 CPU/3 GiB; the development agent cap is one Astra plus up to three Sol children.
+A container restart preserves pending evidence and never authorizes an automatic
+retry or ownership recovery. The earlier same-container/offline-manual-pilot constraint is superseded by this tool path.

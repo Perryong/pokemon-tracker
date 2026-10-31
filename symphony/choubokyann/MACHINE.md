@@ -121,8 +121,10 @@ requires explicit reconciliation; the gate deliberately does not migrate state.
 ## One global slot, visible terminal, start/stop/logs
 
 One selected project runs at a time. All starts share Docker name
-`symphony-choubokyann`, **4 CPUs / 6 GiB / no extra swap**, one Symphony runner,
-Astra/high plus at most one Sol/high child excluding the parent. No per-project
+`symphony-choubokyann`, **2 CPUs / 3 GiB / no extra swap**, one Symphony runner,
+Astra/high plus at most three Sol/high children excluding the parent (four
+development agents total). One separate non-agent test container is limited to
+2 CPUs / 3 GiB; the aggregate remains 4 CPUs / 6 GiB. No per-project
 container override is exposed. Docker's name reservation rejects concurrent
 starts even across different registry files; an existing stopped container also
 blocks start. Stop deliberately before switching projects. These controls cover
@@ -160,7 +162,15 @@ skills and seed mounts are read-only; the project volume is writable. Container
 `seccomp=unconfined` supports the inner Codex workspace sandbox; no privileged or
 full-access mode is used. A failed/timed-out start is uncertain: inspect that named
 container and its logs before retrying. Start never removes it or clears pending
-runs. No automatic merge, deployment, Done transition or boot startup is authorized.
+runs. The operator-authorized launcher uses Docker `unless-stopped`, so an
+unexpected exit or daemon restart can resume the existing container; a deliberate
+stop remains stopped. Stop-Coordinator removes it while preserving the volume.
+The launcher installs no OS login task. Docker and the trusted isolated-check
+runner must be available before checks can complete. Any separately installed
+operator login task must preserve deliberate stop, one coordinator and one runner.
+A restart does not clear pending work or authorize retry: reconcile an interrupted
+cycle and use the documented deliberate recovery. No merge, deployment or Done
+transition is authorized by restart support.
 
 ## Host acceptance to relay to the coordinator
 
@@ -174,9 +184,14 @@ runs. No automatic merge, deployment, Done transition or boot startup is authori
    deliberately blocks paid dispatch. No product work starts merely from registration.
 3. Inspect the safe resource/port fields (not the container environment):
    `docker inspect --format '{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}} {{json .HostConfig.PortBindings}}' symphony-choubokyann`.
-   Expect 4000000000 NanoCPUs, 6442450944 bytes and localhost publication. Attempt
+   Expect 2000000000 NanoCPUs, 3221225472 bytes and localhost publication. Attempt
    another supported start and confirm the existing-container rejection.
-4. Relay actual parent/child transcript model metadata, exact reviewed heads,
+4. Inspect `{{.HostConfig.RestartPolicy.Name}}` for `unless-stopped`. After a
+   deliberate idle reload, verify loaded child cap 3, Astra/high parent and
+   Sol/high child transcript metadata. A declared limit is not proof of four
+   agents running; use concurrent children only for independent disjoint work.
+   Keep GitHub decisions, integration and check submissions serialized.
+   Relay actual parent/child transcript model metadata, exact reviewed heads,
    unchanged/changed queue and interrupted/pending recovery results. Follow
    README's inspect/acknowledge/retry protocol; no after_run acknowledgment.
 5. Stop, confirm container removal, and verify the selected volume remains with

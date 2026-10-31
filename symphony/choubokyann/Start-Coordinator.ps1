@@ -72,7 +72,7 @@ try {
     $env:SYMPHONY_REGISTRY = '/config/projects.json'
     $argsList = @(
         'create', '--name', $name, '--label', 'symphony.owner=ChouBokYann',
-        '--label', "symphony.project=$Project", '--restart', 'no', '--init', '--security-opt', 'seccomp=unconfined',
+        '--label', "symphony.project=$Project", '--restart', 'unless-stopped', '--init', '--security-opt', 'seccomp=unconfined',
         '--cpus', '2', '--memory', '3g', '--memory-swap', '3g',
         '--env', 'GH_TOKEN', '--env', 'SYMPHONY_QUEUE_TOKEN',
         '--env', 'SYMPHONY_PROJECT', '--env', 'SYMPHONY_REGISTRY',

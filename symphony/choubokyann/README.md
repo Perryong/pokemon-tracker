@@ -50,7 +50,12 @@ The selected seed's origin and branch must match its registration. A new workspa
 clones the seed's committed branch; uncommitted product files are not copied.
 Existing workspaces remain intact. Stop checks the owner and removes the credential
 container while preserving the selected volume. All projects share one fixed
-container slot and resource/model cap, with isolated volumes. No boot auto-start.
+container slot and resource/model cap, with isolated volumes. The launcher uses
+`unless-stopped`: Docker may restart the existing container after an unexpected
+exit or daemon restart, while a deliberate stop remains stopped. Docker and the
+trusted host check runner must themselves be available; this launcher installs no
+login task. Restart never clears pending gate evidence or retries interrupted work.
+See [Docker restart policy semantics](https://docs.docker.com/engine/containers/start-containers-automatically/).
 
 ## Model settings and actual evidence
 
@@ -60,7 +65,8 @@ subcommand. The entrypoint runs `codex app-server --strict-config
 --print-startup-config` with a 30-second timeout before Symphony dispatch.
 Startup validation verifies supported configuration, **not applied model usage**.
 
-The base selects Astra/high and at most one child (the primary is excluded from
+The base selects Astra/high and at most three Sol/high children (four development
+agents total; the primary is excluded from
 `agents.max_concurrent_threads_per_session`). Native spawn explicitly selects
 Sol/high with `fork_turns=none`. `worker.toml` versions the standalone worker base
 and disables delegation when loaded independently. It is not automatically
@@ -73,7 +79,11 @@ for current keys and [subagent documentation](https://learn.chatgpt.com/docs/age
 Check actual `turn_context` model/effort metadata for both parent and child.
 The bootstrap verified Astra/high and Sol/high in separate session transcripts;
 see VERIFICATION.md. Cache availability and a TOML declaration alone are not
-proof. If the model/tool is unavailable, report it without silent substitution.
+proof. After a cap/configuration reload, verify actual loaded limits and parent/child
+model metadata before claiming activation. Use fewer children when tasks are not
+independent; require disjoint file ownership and parent-serialized integration,
+GitHub decisions and isolated checks. If the model/tool is unavailable, report it
+without silent substitution.
 
 The token is read from existing `GH_TOKEN` or `gh auth token` into process memory,
 passed to Docker with `--env NAME` (no value in argv), and restored in the host
