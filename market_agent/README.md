@@ -11,7 +11,7 @@ uv venv --python 3.12 market_agent/.venv
 uv pip install --python market_agent/.venv/bin/python -r market_agent/requirements.lock
 uv pip install --python market_agent/.venv/bin/python --no-deps --no-build-isolation -e ./market_agent
 uv pip check --python market_agent/.venv/bin/python
-market_agent/.venv/bin/python -m pytest market_agent/tests -q
+PYTHONPATH=market_agent/src market_agent/.venv/bin/python -m pytest market_agent/tests -q
 market_agent/.venv/bin/python -m pokemon_market demo --scenario qualified
 ```
 
@@ -84,16 +84,21 @@ The server binds only `127.0.0.1`, validates Host and mutation Origin, bounds JS
 The A2A SDK validates Agent Cards, SendMessage requests, task responses and artifacts for the HTTP+JSON 1.0 binding. Both fixture role endpoints require the peer bearer key:
 
 - `/a2a/market/.well-known/agent-card.json`, `/a2a/market/message:send`, `/a2a/market/tasks/{id}`
+- `POST /a2a/market/tasks/{id}:cancel`
 - Equivalent `/a2a/sales/...` routes for the fixture Sales role.
 
 Structured A2A parts contain `data.requestJson`, the canonical strict Request JSON string; response parts contain `data.resultJson`, the canonical Artifact JSON string plus explicit fixture/mode/outcome/approval metadata. This avoids protobuf Struct converting integer counters to floating point during real SDK transport. Nested JSON must be canonical (sorted keys, compact separators, no duplicate keys). The business envelope preserves full card identity, strict decimal money and separate policy/assessment/conversation versions. Completed tasks describe simulated proposed terms or resale drafts; they never grant purchase approval or imply seller contact. The fixture does not import or alter Sales PR #23. Real Sales agreement/interoperability remains [#11](https://github.com/Perryong/pokemon-tracker/issues/11)/[#12](https://github.com/Perryong/pokemon-tracker/issues/12).
+
+Cancellation uses the same peer authentication and role/workspace scope as task lookup. These fixture tasks complete synchronously: cancellation of an existing terminal task returns HTTP 400 with `TASK_NOT_CANCELABLE`; an unknown or inaccessible task returns HTTP 404 with `TASK_NOT_FOUND`. It never reverses a completed outcome or revokes a mandate. Pausing blocks new messages but still permits task lookup and cancellation responses. Cancellation accepts an empty body or a matching `id` and optional object `metadata`; conflicting identity and tenant overrides reject.
+
+Peer responses use `application/a2a+json`; both that media type and `application/json` are accepted for peer requests. Errors use the [A2A HTTP status envelope](https://a2a-protocol.org/v1.0.1/specification/#116-error-handling) and SDK `google.rpc.ErrorInfo` reasons for protocol-specific failures. Operator endpoints retain their existing JSON format. Runtime exceptions and supplied metadata are not echoed in error responses. Streaming, asynchronous running-task cancellation and real Sales lifecycle interoperability are outside this synchronous fixture host.
 
 ### Verification and recovery
 
 Database integration tests require `MARKET_TEST_DSN` pointing to a **disposable** PostgreSQL database. They create isolated synthetic workspaces. Without that variable, database tests skip; an offline pass alone does not verify persistence.
 
 ```sh
-market_agent/.venv/bin/python -m pytest market_agent/tests -q
+PYTHONPATH=market_agent/src market_agent/.venv/bin/python -m pytest market_agent/tests -q
 uv pip check --python market_agent/.venv/bin/python
 NODE_OPTIONS=--no-experimental-webstorage npm test -- --run
 npm run build

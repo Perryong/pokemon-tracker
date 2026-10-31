@@ -298,3 +298,116 @@ def test_fresh_reassessment_cannot_reuse_a_revoked_mandate(peer_setup):
     with pytest.raises(MarketError, match="authority_inactive"):
         peer.send(peer_message(fresh, workspace), role="market")
     assert store.session(workspace, clock=lambda: now).current_mandate(request.mandate_id).status == "revoked"
+
+
+@pytest.fixture
+def peer_http(peer_setup, tmp_path):
+    import threading
+    import httpx
+    from pokemon_market.peer import FixturePeerService
+    from pokemon_market.server import make_server
+    from pokemon_market.workflow import WorkflowService
+
+    store, workspace, request, now = peer_setup
+    peer = FixturePeerService(store, workspace, clock=lambda: now)
+    service = WorkflowService(store, workspace, clock=lambda: now)
+    server = make_server(service, port=0, token='operator-test-key-with-32-characters',
+                         peer_token='peer-test-key-distinct-32-characters', dist=tmp_path, peer_service=peer)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with httpx.Client(base_url=f'http://127.0.0.1:{server.server_port}',
+                          headers={'Authorization': 'Bearer peer-test-key-distinct-32-characters'}, trust_env=False) as client:
+            yield client, service, peer, request
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(5)
+
+
+def test_sdk_cancellation_reports_terminal_and_inaccessible_tasks_without_mutation(peer_http):
+    import asyncio
+    import httpx
+    from a2a.client.transports.rest import RestTransport
+    from a2a.utils.errors import TaskNotCancelableError, TaskNotFoundError
+    from google.protobuf.json_format import MessageToDict
+    from pokemon_market.peer import FixturePeerService, peer_message
+
+    client, service, peer, request = peer_http
+    async def exchange():
+        async with httpx.AsyncClient(headers=client.headers, trust_env=False) as http:
+            card = ParseDict(peer.agent_card(str(client.base_url).rstrip('/'), role='sales'), types.AgentCard())
+            transport = RestTransport(http, card, str(client.base_url).rstrip('/') + '/a2a/sales', is_shared_httpx=True)
+            task = (await transport.send_message(ParseDict(peer_message(request, peer.workspace), types.SendMessageRequest()))).task
+            before = peer.session.snapshot()
+            service.set_paused(True)
+            with pytest.raises(TaskNotCancelableError):
+                await transport.cancel_task(types.CancelTaskRequest(id=task.id))
+            with pytest.raises(TaskNotFoundError):
+                await transport.cancel_task(types.CancelTaskRequest(id='missing'))
+            with pytest.raises(TaskNotFoundError):
+                await transport.get_task(types.GetTaskRequest(id='missing'))
+            transport.url = str(client.base_url).rstrip('/') + '/a2a/market'
+            with pytest.raises(TaskNotFoundError):
+                await transport.cancel_task(types.CancelTaskRequest(id=task.id))
+            restarted = FixturePeerService(peer.store, peer.workspace, clock=peer.clock)
+            assert restarted.get_task(task.id, role='sales') == MessageToDict(task)
+            assert restarted.session.snapshot() == before
+    asyncio.run(exchange())
+
+
+@pytest.mark.parametrize('payload', [
+    {'id': 'another-task'}, {'id': True}, {'metadata': 'invalid'},
+    {'tenant': 'other-workspace'}, {'unexpected': 'field'},
+])
+def test_cancel_rejects_conflicting_or_malformed_body(peer_http, payload):
+    client, _, _, _ = peer_http
+    response = client.post('/a2a/sales/tasks/missing:cancel', json=payload)
+    assert response.status_code == 400
+    assert response.json()['error']['details'][0]['reason'] == 'INVALID_PARAMS'
+
+
+def test_peer_auth_errors_are_structured_and_do_not_reveal_task_existence(peer_http):
+    client, _, _, _ = peer_http
+    for key in ('', 'Bearer operator-test-key-with-32-characters'):
+        response = client.post('/a2a/sales/tasks/missing:cancel', content='{', headers={'Authorization': key})
+        assert response.status_code == 401
+        assert response.json() == {'error': {'code': 401, 'status': 'UNAUTHENTICATED', 'message': 'unauthorized_peer'}}
+        assert 'missing' not in response.text
+
+
+def test_peer_error_envelopes_and_media_types_preserve_private_boundary(peer_http, monkeypatch):
+    client, service, peer, request = peer_http
+    from pokemon_market.peer import peer_message
+    path = '/a2a/sales/message:send'
+    response = client.post(path, content=json.dumps(peer_message(request, peer.workspace)), headers={'Content-Type': 'application/a2a+json'})
+    assert response.status_code == 200
+    assert response.headers['Content-Type'] == 'application/a2a+json'
+    task_id = response.json()['task']['id']
+    cancelled = client.post(f'/a2a/sales/tasks/{task_id}:cancel', json={'metadata': {'untrusted': 'private-input'}})
+    assert cancelled.status_code == 400
+    assert cancelled.json()['error']['details'][0] == {'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'TASK_NOT_CANCELABLE', 'domain': 'a2a-protocol.org'}
+    assert 'private-input' not in cancelled.text
+    unknown = client.get('/a2a/market/tasks/' + task_id)
+    assert unknown.status_code == 404
+    assert unknown.json()['error']['details'][0]['reason'] == 'TASK_NOT_FOUND'
+    malformed = client.post(path, content='{', headers={'Content-Type': 'application/json'})
+    assert malformed.status_code == 400
+    assert malformed.json()['error']['details'][0]['reason'] == 'INVALID_PARAMS'
+    oversized = client.post(path, content='x' * 70000, headers={'Content-Type': 'application/json'})
+    assert oversized.status_code == 413
+    assert oversized.json()['error']['status'] == 'RESOURCE_EXHAUSTED'
+    unsupported = client.post('/a2a/market/message:send', json=peer_message(request, peer.workspace))
+    assert unsupported.status_code == 400
+    assert unsupported.json()['error']['details'][0]['reason'] == 'UNSUPPORTED_OPERATION'
+    service.set_paused(True)
+    paused = client.post(path, json=peer_message(request, peer.workspace))
+    assert paused.status_code == 409
+    assert paused.json()['error']['status'] == 'ABORTED'
+    def fail(*_args, **_kwargs):
+        raise RuntimeError('private-credential-secret')
+    monkeypatch.setattr(peer, 'get_task', fail)
+    failed = client.get('/a2a/sales/tasks/' + task_id)
+    assert failed.status_code == 503
+    assert failed.json() == {'error': {'code': 503, 'status': 'UNAVAILABLE', 'message': 'service_unavailable'}}
+    assert 'private-credential-secret' not in failed.text

@@ -14,6 +14,10 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 import httpx
+from a2a.utils.errors import (
+    A2A_ERROR_MAPPING, InvalidParamsError, TaskNotCancelableError,
+    TaskNotFoundError, UnsupportedOperationError,
+)
 
 from .contracts import MarketError
 
@@ -43,6 +47,30 @@ def make_server(service, *, port=8790, token, peer_token, dist, reference_url=No
             pass  # Access keys, cookies, private request bodies and URLs stay out of logs.
 
         def respond(self, code, data=None, *, headers=None, raw=None, content_type='application/json'):
+            if urlsplit(self.path).path.startswith('/a2a/'):
+                content_type = 'application/a2a+json'
+                if code >= 400:
+                    message = data['error']
+                    error_type = {
+                        'task_not_cancelable': TaskNotCancelableError,
+                        'unsupported_skill': UnsupportedOperationError,
+                        'invalid_peer_request': InvalidParamsError,
+                        'invalid_request': InvalidParamsError,
+                    }.get(message)
+                    if message == 'record_not_found' and '/tasks/' in urlsplit(self.path).path:
+                        error_type = TaskNotFoundError
+                    if error_type:
+                        mapping = A2A_ERROR_MAPPING[error_type]
+                        code = mapping.http_code
+                        error = {'code': code, 'status': mapping.grpc_status, 'message': error_type.message,
+                                 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+                                              'reason': mapping.reason, 'domain': 'a2a-protocol.org'}]}
+                    else:
+                        status = {400: 'INVALID_ARGUMENT', 401: 'UNAUTHENTICATED', 403: 'PERMISSION_DENIED',
+                                  404: 'NOT_FOUND', 409: 'ABORTED', 413: 'RESOURCE_EXHAUSTED',
+                                  503: 'UNAVAILABLE'}.get(code, 'UNKNOWN')
+                        error = {'code': code, 'status': status, 'message': message}
+                    data = {'error': error}
             body = raw if raw is not None else (json.dumps(data).encode() if data is not None else b'')
             if code >= 400:
                 # Rejected requests may still have unread bodies; never reuse them.
@@ -88,7 +116,8 @@ def make_server(service, *, port=8790, token, peer_token, dist, reference_url=No
                 raise MarketError('body_too_large')
             if self.headers.get('Transfer-Encoding'):
                 raise MarketError('invalid_request')
-            if size and self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
+            media_types = ('application/json', 'application/a2a+json') if urlsplit(self.path).path.startswith('/a2a/') else ('application/json',)
+            if size and self.headers.get('Content-Type', '').split(';')[0] not in media_types:
                 raise MarketError('invalid_request')
             try:
                 payload = json.loads(self.rfile.read(size)) if size else {}
@@ -181,6 +210,14 @@ def make_server(service, *, port=8790, token, peer_token, dist, reference_url=No
                     if service.state()['paused']:
                         raise MarketError('paused')
                     self.respond(200, peer_service.send(self.body(), role=role))
+                elif len(parts) == 4 and parts[2] == 'tasks' and parts[3].endswith(':cancel') and self.command == 'POST':
+                    task_id = unquote(parts[3][:-len(':cancel')])
+                    payload = self.body()
+                    if (not task_id or set(payload) - {'id', 'metadata'}
+                            or ('id' in payload and payload['id'] != task_id)
+                            or ('metadata' in payload and not isinstance(payload['metadata'], dict))):
+                        raise MarketError('invalid_request')
+                    self.respond(200, peer_service.cancel_task(task_id, role=role))
                 elif len(parts) == 4 and parts[2] == 'tasks' and self.command == 'GET':
                     self.respond(200, peer_service.get_task(unquote(parts[3]), role=role))
                 else:

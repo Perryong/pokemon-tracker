@@ -14,7 +14,7 @@ The operator selected Supabase PostgreSQL and the documented Market contract wit
 | #35 Scenarios | Deterministic conservative/base/upside calculations and private UI comparison; current mandate ceiling retained | Live evidence/policy inputs |
 | #36 Discovery | Durable Singapore schedules, latest-slot catch-up, stable listing/workspace IDs, pause and bounded retries | Authorized marketplace discovery connector; current worker uses seeded fixtures |
 | #37 Authority | Durable idempotency, exposure serialization, stale-version rejection, expiry/revocation and exact-request recovery | Real shared budget/approval authority and live limits |
-| #38 Peer | Authenticated A2A HTTP+JSON 1.0 fixture roles, SDK message/task round trip, durable receipts | Real Sales interoperability; full protocol cancellation/typed-error coverage is not claimed |
+| #38 Peer | Authenticated A2A HTTP+JSON 1.0 fixture roles, SDK message/task round trip, durable receipts | Real Sales interoperability; asynchronous running-task cancellation/streaming remain outside the synchronous fixture host |
 | #39 Inventory | Read-only fixture inspection/ageing/cost/outcome summaries, including unresolved settlement | Authoritative shared inventory/outcome ledger #16 |
 | #40 UI | Cookie-authenticated loopback operations, read-only scope/watchlist, dispatch history, Singapore run timing, listing identity, evidence freshness, versions, scenarios and fixture inventory | Private production hosting/authentication; this local host is single operator |
 | #41 Acceptance | Durable sanitized run metadata, offline/database/browser/recovery tests and fresh review | Langfuse sink/export, model budget/credentials and bounded real-model/live acceptance |
@@ -53,7 +53,7 @@ Fresh review found five Important issues in the initial implementation: actual S
 
 ## Limits
 
-No production Supabase migration, live marketplace discovery/contact, real Sales exchange, shared-ledger integration, paid model call or Langfuse export was performed. The standard-library server is loopback development hosting. Cancellation routing and SDK typed error envelopes are not full-protocol acceptance. No roadmap task requiring those real integrations is closed based on fixture tests, and nothing is merged into main or automatically queued in Symphony.
+No production Supabase migration, live marketplace discovery/contact, real Sales exchange, shared-ledger integration, paid model call or Langfuse export was performed. The standard-library server is loopback development hosting. Terminal-task cancellation routing and SDK typed errors are verified for the synchronous fixture host; asynchronous cancellation and streaming are not full-protocol acceptance. No roadmap task requiring those real integrations is closed based on fixture tests, and nothing is merged into main or automatically queued in Symphony.
 
 
 The existing GitHub/Vercel integration automatically built a public preview after the branch push; its checks succeeded. That preview has no private operations backend. No production or private-service deployment was performed. Ruflo tools were unavailable; execution used the repository workflow and Superpowers review.
@@ -103,3 +103,14 @@ Fresh verification on the final implementation:
 - Desktop and 390px rendering were inspected visually; no horizontal document overflow. Local screenshots: `/tmp/market-operations-details-desktop.png`, `/tmp/market-operations-details-assessment.png`, `/tmp/market-operations-details-mobile.png`. The browser remains open and scheduling paused.
 
 The inspection-field slice of #40 is delivered for the selected fixture target. #40/#41 remain open for shared UI/service agreements, private production hosting, real Sales/ledger acceptance, model-budget evaluation and Langfuse decisions. No production migration, main merge or live marketplace action was performed.
+
+
+## Fixture peer cancellation and typed HTTP errors — 31 October 2026
+
+The next actionable #38/#41 slice completes `POST /a2a/{role}/tasks/{id}:cancel` using the existing synchronous peer lifecycle. A completed task rejects cancellation with the SDK-recognized `TaskNotCancelableError`; unknown/other-role tasks return `TaskNotFoundError`. Cancellation does not reverse results, alter exposure or grant approval. Paused operation still permits task inspection and truthful cancellation responses. Body identity must match the path; tenant overrides, unknown fields and non-object metadata reject.
+
+A2A responses now use the documented nested HTTP error envelope and pinned SDK error mappings; peer requests accept both `application/a2a+json` and legacy `application/json`. Authentication runs before body/task inspection. Malformed requests, unsupported skills, oversized bodies, paused service and runtime failures return bounded status information without echoing request metadata or exception text. Existing operator endpoints retain their response format.
+
+Verification: **281 Python/PostgreSQL tests passed, no skips**, including **41 peer tests** and actual SDK HTTP transport. Seven new raw-HTTP cases failed before implementation; after correcting a test URL typo, the SDK cancellation regression was also rerun against the old server and failed for the expected missing route. All eight new cases pass in the final suite. Fresh scoped review found no Critical or Important findings. Ruff symbol checks and whitespace passed. No frontend source changed, so the preceding 221-test/build/Playwright UI results remain historical and were not repeated.
+
+Protocol reference: [A2A 1.0.1 HTTP error handling](https://a2a-protocol.org/v1.0.1/specification/#116-error-handling). This finishes the synchronous fixture route/error gap, not asynchronous cancellation, streaming, real Sales interoperability, shared approvals/stock, Langfuse or paid-model acceptance. #38/#41 retain those applicable gates; no main merge or live action is included.
