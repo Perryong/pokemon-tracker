@@ -54,3 +54,6 @@ Fresh review found five Important issues in the initial implementation: actual S
 ## Limits
 
 No production Supabase migration, live marketplace discovery/contact, real Sales exchange, shared-ledger integration, paid model call or Langfuse export was performed. The standard-library server is loopback development hosting. Cancellation routing and SDK typed error envelopes are not full-protocol acceptance. No roadmap task requiring those real integrations is closed based on fixture tests, and nothing is merged into main or automatically queued in Symphony.
+
+
+The existing GitHub/Vercel integration automatically built a public preview after the branch push; its checks succeeded. That preview has no private operations backend. No production or private-service deployment was performed. Ruflo tools were unavailable; execution used the repository workflow and Superpowers review.

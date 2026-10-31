@@ -17,7 +17,7 @@
 - All financial authority remains simulation-only until approved connector, shared real services and actual operator policy are supplied. Reference quotes are not completed sales.
 - PostgreSQL business state, LangGraph checkpoints and traces are distinct. No production database connection or migration is implied.
 - Existing money strings, exact identity and separate policy/assessment/conversation versions remain canonical for this development target. No lossy Sales-prototype conversion.
-- New nontrivial behavior starts with a failing test. Each task records real test results. No automatic merge or deployment.
+- New nontrivial behavior starts with a failing test. Each task records real test results. No merge or production deployment.
 - Private API credentials remain server-side; session cookies are HttpOnly/SameSite=Strict; mutating browser requests require matching Origin. Serve only loopback. No private records in static build artifacts.
 
 ## Review focus
