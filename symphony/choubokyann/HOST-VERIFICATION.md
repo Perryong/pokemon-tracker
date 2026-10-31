@@ -1,3 +1,10 @@
+> **Current status: source-only, live startup disabled.** The PowerShell launcher,
+> container entrypoint, and generated/root workflow refuse live execution before
+> starting a model. Offline installation, registration and dry-run remain available.
+> The restricted broker is not yet connected to the runtime; see
+> [SECURITY-BROKER.md](SECURITY-BROKER.md). Earlier live-pilot instructions below
+> are historical and must not be used to reactivate the old credential-bearing path.
+
 # Host activation verification — 2026-10-30
 
 Gateway execution of the in-Symphony coordinator's handoff for #27; this is not product approval or a claim transfer.

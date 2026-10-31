@@ -1,3 +1,10 @@
+> **Current status: source-only, live startup disabled.** The PowerShell launcher,
+> container entrypoint, and generated/root workflow refuse live execution before
+> starting a model. Offline installation, registration and dry-run remain available.
+> The restricted broker is not yet connected to the runtime; see
+> [SECURITY-BROKER.md](SECURITY-BROKER.md). Earlier live-pilot instructions below
+> are historical and must not be used to reactivate the old credential-bearing path.
+
 # Isolated checks with returned results
 
 This implements the direction approved in [#27](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6526149446).
@@ -123,17 +130,11 @@ execution deadline, and refuses an uncertain prior job. The loop only services
 explicit tool requests; it never selects issues or launches an agent. No OS service or automatic coordinator retry is installed. `--once` handles one request for diagnostics. Preserve terminal errors;
 invalid request/config is a refusal, never an empty queue.
 
-For first installation, new bind mounts require one deliberate coordinator
-recreation **after its current bounded cycle returns and outgoing work stops**.
-Use existing Stop/Start commands preserving volume/pending; thereafter no stop
-is needed to run checks. The updated launcher mounts requests/results and caps
-coordinator to 2 CPU/3 GiB. Never start a second coordinator. Host runner verifies
-the actual active coordinator budget before creating the test container.
-
-```powershell
-& "$runtime/Stop-Coordinator.ps1"
-& "$runtime/Start-Coordinator.ps1" -Project pokemon -Repository $repo
-```
+Coordinator recreation is currently blocked by the source-only startup gate.
+Do not use an older Start script to bypass it. Preserve existing transport, volume
+and pending evidence; activation requires the broker integration and host checks.
+The transport configuration below records the intended interface, not an active
+model service.
 
 The mounted `coordinator.toml` adds `mcp_servers.isolated_checks`, command
 `python3 -I /runtime/isolated_tool.py --requests /checks/requests --results /checks/results`,

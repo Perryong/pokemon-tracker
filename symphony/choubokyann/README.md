@@ -1,3 +1,10 @@
+> **Current status: source-only, live startup disabled.** The PowerShell launcher,
+> container entrypoint, and generated/root workflow refuse live execution before
+> starting a model. Offline installation, registration and dry-run remain available.
+> The restricted broker is not yet connected to the runtime; see
+> [SECURITY-BROKER.md](SECURITY-BROKER.md). Earlier live-pilot instructions below
+> are historical and must not be used to reactivate the old credential-bearing path.
+
 > Current execution path: [ISOLATED-TOOL.md](ISOLATED-TOOL.md). Operator extension in #27 permits one 2 CPU/3 GiB test container alongside the 2 CPU/3 GiB coordinator, within 4 CPU/6 GiB aggregate. Earlier same-slot manual-pilot instructions below are historical and superseded; no test execution in coordinator/children.
 
 # ChouBokYann's personal Symphony coordinator
@@ -45,25 +52,16 @@ ownership timeline before activation. Keep #27 open and In progress; apply the
 unique coordinator label to it only. Product opt-in is deliberate and does not
 establish readiness. Preserve/stop the bootstrap before starting another instance.
 
-Start refuses an existing named container and never discards pending evidence.
-The selected seed's origin and branch must match its registration. A new workspace
-clones the seed's committed branch; uncommitted product files are not copied.
-Existing workspaces remain intact. Stop checks the owner and removes the credential
-container while preserving the selected volume. All projects share one fixed
-container slot and resource/model cap, with isolated volumes. The launcher uses
-`unless-stopped`: Docker may restart the existing container after an unexpected
-exit or daemon restart, while a deliberate stop remains stopped. Docker and the
-trusted host check runner must themselves be available; this launcher installs no
-login task. Restart never clears pending gate evidence or retries interrupted work.
-See [Docker restart policy semantics](https://docs.docker.com/engine/containers/start-containers-automatically/).
+Live start now refuses before credential lookup, Docker access, mounts or model
+startup. `-DryRun` still validates and renders a registration without starting any
+service. Stop and log commands remain available for reconciling older installations.
+A source update does not stop or upgrade an already-running host container.
 
 ## Model settings and actual evidence
 
-`coordinator.toml` is mounted as `/root/.codex/config.toml`. The command is
-`codex app-server`; installed CLI 0.165.0 rejects `--profile`/`-p` for this
-subcommand. The entrypoint runs `codex app-server --strict-config
---print-startup-config` with a 30-second timeout before Symphony dispatch.
-Startup validation verifies supported configuration, **not applied model usage**.
+The TOML files retain the intended model configuration for future broker integration.
+No model is launched by the current entrypoints. Historical startup evidence below
+is not evidence that this source-only revision is operational.
 
 The base selects Astra/high and at most three Sol/high children (four development
 agents total; the primary is excluded from
@@ -85,16 +83,10 @@ independent; require disjoint file ownership and parent-serialized integration,
 GitHub decisions and isolated checks. If the model/tool is unavailable, report it
 without silent substitution.
 
-The token is read from existing `GH_TOKEN` or `gh auth token` into process memory,
-passed to Docker with `--env NAME` (no value in argv), and restored in the host
-shell afterward. No token file/config/log is written. Docker necessarily retains
-container environment until removal; avoid environment dumps. Codex auth is
-mounted read-only. Symphony removes tracker secret environment names before
-app-server launch. `SYMPHONY_QUEUE_TOKEN` intentionally carries the same approved
-credential to the gate's gh subprocess for end-of-cycle reads. The gate maps it
-to GH_TOKEN only in that subprocess. Parent and child share filesystem and
-credential access: these are policy boundaries, not a security sandbox between
-agents. Use the least access the operator approves; never log API stderr/payloads.
+The credential-bearing launcher has been removed. The new launcher never looks up
+or copies a GitHub credential. Do not restore the former shared-token startup:
+the trusted broker must keep credentials outside all model-accessible processes,
+mounts and tools before a reviewed live path can be enabled.
 
 ## Queue gate and recovery
 
@@ -191,8 +183,8 @@ decision. The operator's [scoped authority](https://github.com/Perryong/pokemon-
 permits the Astra coordinator to accept and merge eligible Sales/UI and personal
 orchestration PRs only in public `Perryong/pokemon-tracker`, only into
 `feature/sales-agent`. New issue branches start from that integration branch;
-keep existing issue branches and the registered `choubokyann/symphony-coordinator`
-control branch. This does not extend to another registration, `main` or colleague
+preserve existing work; the seeded control registration now uses `feature/sales-agent`
+so the merged PR branch can be deleted. This does not extend to another registration, `main` or colleague
 branches. Outside that exact authority, human merge remains required.
 
 Immediately before merging, verify live authority, repository/base/head, ownership,

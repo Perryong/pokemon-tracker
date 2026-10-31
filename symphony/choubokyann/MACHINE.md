@@ -1,3 +1,10 @@
+> **Current status: source-only, live startup disabled.** The PowerShell launcher,
+> container entrypoint, and generated/root workflow refuse live execution before
+> starting a model. Offline installation, registration and dry-run remain available.
+> The restricted broker is not yet connected to the runtime; see
+> [SECURITY-BROKER.md](SECURITY-BROKER.md). Earlier live-pilot instructions below
+> are historical and must not be used to reactivate the old credential-bearing path.
+
 > Current execution path: [ISOLATED-TOOL.md](ISOLATED-TOOL.md). Operator extension in #27 permits one 2 CPU/3 GiB test container alongside the 2 CPU/3 GiB coordinator, within 4 CPU/6 GiB aggregate. Earlier same-slot manual-pilot instructions below are historical and superseded; no test execution in coordinator/children.
 
 # Personal machine runtime
@@ -107,7 +114,8 @@ pwsh -File "$runtime/Start-Coordinator.ps1" -Project approved-project -DryRun
 The same launcher, workflow template and gate select repository, Project, control
 issue, labels, session, branch, scope and exclusions from that record. No source
 edit or Pokemon issue-ID copy is necessary. The seed checkout must be a normal
-clone of the selected repo on the registered branch; origin and branch are checked.
+clone of the selected repo on the registered branch. Those checks must be restored
+inside the trusted broker startup before live activation.
 Before live activation, its committed tree must contain the reviewed repository
 ownership policy, including the scoped AGENTS rules for Pokemon. Installation
 does not copy uncommitted seed edits into new workspaces. This bootstrap creates
@@ -118,61 +126,25 @@ branches, gate evidence and logs. A scope fingerprint rejects state reuse under
 another registration, including `retry`. Changing an established registration
 requires explicit reconciliation; the gate deliberately does not migrate state.
 
-## One global slot, visible terminal, start/stop/logs
+## Live startup disabled; existing installations
 
-One selected project runs at a time. All starts share Docker name
-`symphony-choubokyann`, **2 CPUs / 3 GiB / no extra swap**, one Symphony runner,
-Astra/high plus at most three Sol/high children excluding the parent (four
-development agents total). One separate non-agent test container is limited to
-2 CPUs / 3 GiB; the aggregate remains 4 CPUs / 6 GiB. No per-project
-container override is exposed. Docker's name reservation rejects concurrent
-starts even across different registry files; an existing stopped container also
-blocks start. Stop deliberately before switching projects. These controls cover
-supported entrypoints on one Docker daemon, not manually renamed containers,
-other machines, or shared-credential agent isolation. Depth one and allowed child
-actions are policy; no recursive or shell-launched agent is allowed.
+`Start-Coordinator.ps1` without `-DryRun` refuses immediately, before invoking any
+external program or looking up credentials. `entrypoint.sh` and both workflow
+launch paths also refuse direct starts. There is no override flag. Use the offline
+install/registration checks above; live operation requires the broker work in
+[SECURITY-BROKER.md](SECURITY-BROKER.md).
 
-After the preserved setup/handoff is reviewed, the existing bootstrap has stopped,
-and the control issue's label, assignment, Project In progress and accepted session
-are verified, run in the visible host terminal (set actual local paths):
+The seed registration now uses `feature/sales-agent`, the integration branch.
+Existing installations are not silently rewritten: after their active cycle stops,
+preserve their registry, volume and pending evidence, then deliberately reconcile
+that registration and its scope fingerprint. Never delete gate state to escape a
+registration mismatch. The same project ID, volume and control session are retained.
 
-```powershell
-$seed = 'C:/path/to/reviewed/pokemon-tracker'
-pwsh -File "$runtime/Start-Coordinator.ps1" -Project pokemon -Repository $seed `
-  -SuperpowersSkills 'C:/tools/superpowers' -GraphifySkills 'C:/tools/graphify'
-# Start opens a separate visible PowerShell terminal streaming Elixir/Symphony.
-# To open/reopen it manually in a visible terminal:
-pwsh -NoExit -File "$runtime/Show-Logs.ps1" -Follow
-# Bounded recent stdout/stderr for the gateway:
-pwsh -File "$runtime/Show-Logs.ps1" -Tail 100
-# Stop/remove credentials, preserve the project volume and all pending evidence:
-pwsh -File "$runtime/Stop-Coordinator.ps1"
-```
+Older running containers are unaffected by a source merge. Their operator must
+stop/reconcile them with `Stop-Coordinator.ps1`, preserving volumes. Do not recreate
+them using the old launcher. `Show-Logs.ps1` remains available for diagnosis.
 
-`-NoLogWindow` suppresses the automatic new window only when the gateway already
-has the requested visible terminal running `Show-Logs.ps1 -Follow`. Ctrl-C in the
-log viewer detaches it; it does not stop Symphony. Elixir remains the container's
-foreground process after configuration validation, with logs at `/work/logs` and
-Docker stdout/stderr. The dashboard is `http://localhost:4000` (host binding
-127.0.0.1); a different localhost port can be selected. Do not dump container env.
-
-Start obtains the approved existing gh token into memory and passes environment
-**names**, never credential arguments. Codex auth is read-only. Runtime/config,
-skills and seed mounts are read-only; the project volume is writable. Container
-`seccomp=unconfined` supports the inner Codex workspace sandbox; no privileged or
-full-access mode is used. A failed/timed-out start is uncertain: inspect that named
-container and its logs before retrying. Start never removes it or clears pending
-runs. The operator-authorized launcher uses Docker `unless-stopped`, so an
-unexpected exit or daemon restart can resume the existing container; a deliberate
-stop remains stopped. Stop-Coordinator removes it while preserving the volume.
-The launcher installs no OS login task. Docker and the trusted isolated-check
-runner must be available before checks can complete. Any separately installed
-operator login task must preserve deliberate stop, one coordinator and one runner.
-A restart does not clear pending work or authorize retry: reconcile an interrupted
-cycle and use the documented deliberate recovery. No merge, deployment or Done
-transition is authorized by restart support.
-
-## Host acceptance to relay to the coordinator
+## Historical host acceptance (blocked pending broker integration)
 
 1. Run the install/validation/dry-run commands above. `Test-Installation.ps1`
    invokes **the same launcher** with two temporary synthetic registrations and

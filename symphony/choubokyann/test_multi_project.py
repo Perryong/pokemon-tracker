@@ -131,7 +131,7 @@ class MultiProjectTests(unittest.TestCase):
             self.assertNotIn('@@', rendered)
             self.assertIn('max_concurrent_agents: 1', rendered)
             self.assertIn('max_turns: 1', rendered)
-            self.assertIn('queue_gate.py check', rendered)
+            self.assertIn('Live coordinator startup disabled', rendered)
             self.assertNotIn('after_run:', rendered)
 
 

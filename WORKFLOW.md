@@ -18,14 +18,15 @@ hooks:
     timeout 60 git clone --no-hardlinks /seed .
     git remote set-url origin https://github.com/Perryong/pokemon-tracker.git
   before_run: |
-    python3 /runtime/queue_gate.py check --workspace "$PWD"
+    echo 'Live coordinator startup disabled; see SECURITY-BROKER.md.' >&2
+    exit 78
   timeout_ms: 120000
 agent:
   max_concurrent_agents: 1
   max_turns: 1
   max_retry_backoff_ms: 300000
 codex:
-  command: codex app-server
+  command: echo 'Live coordinator startup disabled; see SECURITY-BROKER.md.' >&2; exit 78
   approval_policy: never
   thread_sandbox: workspace-write
   turn_sandbox_policy:
@@ -49,7 +50,7 @@ Project statuses. Do not turn Project statuses into tracker active_states.
 
 Accountable actor: ChouBokYann. Stable control session:
 `symphony-coordinator-27-20261030`. Control branch:
-`choubokyann/symphony-coordinator`. Read AGENTS.md, CONTRIBUTING.md, LEDGER.md,
+`feature/sales-agent`. Read AGENTS.md, CONTRIBUTING.md, LEDGER.md,
 and /runtime/README.md. The interactive chat is a logs/issues/intake
 gateway; this in-Symphony coordinator retains triage/review/handoff decisions.
 If repository policy or approval does not support this scope, stop and report. Read the mounted Superpowers skills

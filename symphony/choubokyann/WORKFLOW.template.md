@@ -18,14 +18,15 @@ hooks:
     timeout 60 git clone --no-hardlinks /seed .
     git remote set-url origin https://github.com/@@REPO@@.git
   before_run: |
-    python3 /runtime/queue_gate.py check --workspace "$PWD"
+    echo 'Live coordinator startup disabled; see SECURITY-BROKER.md.' >&2
+    exit 78
   timeout_ms: 120000
 agent:
   max_concurrent_agents: 1
   max_turns: 1
   max_retry_backoff_ms: 300000
 codex:
-  command: codex app-server
+  command: echo 'Live coordinator startup disabled; see SECURITY-BROKER.md.' >&2; exit 78
   approval_policy: never
   thread_sandbox: workspace-write
   turn_sandbox_policy:

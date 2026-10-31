@@ -254,3 +254,35 @@ test_queue_gate.py, test_configuration.py, Process.ps1, Start-Coordinator.ps1,
 Stop-Coordinator.ps1, entrypoint.sh, README.md, MACHINE.md and VERIFICATION.md.
 OPERATOR-INBOX.md was supplied externally and preserved unchanged. Personal
 workpad and Graphify output are ignored; no credentials were written to files.
+
+## 2026-10-31 — owner-authorized source-only merge remediation
+
+Perry authorized fixing the launcher and branch references, then merging PR28 into
+its existing `feature/sales-agent` base and deleting the PR head. The current Sales
+base was merged while retaining the newer coordinator policy. The exposed-token
+startup implementation is removed. PowerShell live start refuses before any tool
+or credential lookup; direct shell entrypoint, workflow before-run hook and model
+command also refuse. Offline install/render/dry-run remain available. The seed
+registration now uses `feature/sales-agent`; historical branch names above remain
+as evidence, not active registration instructions.
+
+Verification on the final source candidate:
+- Five new launcher/security tests failed against the old source, then passed.
+  Synthetic token sentinels and tool-call markers verified no tool/model execution
+  or secret output. PowerShell 7.6.9 was actually executed on macOS.
+- macOS coordinator suite: 203 tests, 188 passed and 15 Linux-only tests skipped.
+  Canonical TMPDIR avoids macOS `/var` symlink rejection by the broker's intended
+  path defense; no production validation was weakened.
+- Credential-free, network-disabled, read-only-source Linux Python 3.13 container:
+  203 tests, 201 passed and two PowerShell tests skipped (both passed on macOS).
+  All 15 real kernel privilege-boundary tests passed. No live model was started.
+- Shared claim suite: 13 passed. PowerShell synthetic two-project validation and
+  a fresh temporary install plus installed-runtime validation passed.
+- Shell syntax and `git diff --check` passed. Existing Sales files are unchanged
+  from merged PR23, whose 46 tests passed in the preceding merge verification.
+
+This is a source-only safety fix, not a working broker deployment. Live operation
+remains blocked pending broker integration and host acceptance. Existing host
+installations/containers were not updated or stopped; preserve their registries,
+volumes and pending evidence for deliberate operator reconciliation. Issue27 stays
+open, and historical security reports are not proof of live remediation.

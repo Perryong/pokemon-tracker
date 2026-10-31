@@ -2,9 +2,21 @@
 
 The operator authorized remediation of both security findings in
 [#27](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539577837).
-Source tests and a validation library do not constitute a deployed broker or
-resolve either finding. Keep PR28 blocked until exact-source checks, independent
-review and actual host/runtime verification are complete.
+Source tests and a validation library do not constitute a deployed broker.
+The repository owner authorized launcher/branch remediation before merging PR28
+on 2026-10-31. This revision is safe for source-only integration: the former
+credential-bearing launcher is removed, the shell entrypoint refuses execution,
+and both workflow model launch and before-run hooks refuse execution. No override
+is available; dry-run is offline only. The seed control branch is now the durable
+`feature/sales-agent` integration target.
+
+This removes the executable exposure from the shipped startup paths; it does not
+complete the broker or establish live isolation. Keep issue #27 open. Activation
+remains blocked until runtime integration, independent security review and actual
+host verification are complete. Existing installations and already-running
+containers are not patched by a merge; their operator must stop/reconcile them,
+preserve volumes/pending evidence and update the installed registry deliberately.
+Never clear pending state to bypass the changed registration fingerprint.
 
 The broker core accepts fixed structured operations, a trusted selected-project
 policy and a transport supplied by the trusted host. It does not accept URLs,

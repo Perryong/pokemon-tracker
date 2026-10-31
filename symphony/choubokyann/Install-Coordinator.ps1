@@ -14,8 +14,8 @@ $runtime = Join-Path $InstallRoot 'runtime'
 $files = @('projects.json', 'coordinator.toml', 'worker.toml', 'registry.py', 'machine.py', 'queue_gate.py',
     'WORKFLOW.template.md', 'entrypoint.sh', 'Process.ps1', 'Start-Coordinator.ps1',
     'Stop-Coordinator.ps1', 'Show-Logs.ps1', 'Install-Coordinator.ps1', 'Test-Installation.ps1',
-    'test_registry.py', 'test_configuration.py', 'test_multi_project.py', 'test_queue_gate.py',
-    'README.md', 'MACHINE.md', 'VERIFICATION.md', 'Invoke-IsolatedChecks.ps1',
+    'test_registry.py', 'test_configuration.py', 'test_launcher_security.py', 'test_multi_project.py', 'test_queue_gate.py',
+    'README.md', 'MACHINE.md', 'VERIFICATION.md', 'SECURITY-BROKER.md', 'Invoke-IsolatedChecks.ps1',
     'isolation_probe.py', 'test_isolated_checks.py', 'ISOLATION-PILOT.md',
     'isolated_tool.py', 'isolated_runner.py', 'test_isolated_tool.py', 'test_isolated_runner.py', 'ISOLATED-TOOL.md')
 foreach ($file in $files) {

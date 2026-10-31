@@ -24,9 +24,17 @@ This policy applies to ChouBokYann's development sessions only, not the applicat
 - Record each delegation's purpose, elapsed time, available token/cost usage (unknown if unavailable), check outcomes, whether the result was accepted and any main-agent rework. Compare representative tasks with a main-agent-only baseline using the same acceptance checks; count coordination and rework in total cost/time. Report observations without claiming improvement before comparative evidence exists.
 - These instructions define the experiment's policy, not a security boundary. Verify the active harness exposes a subagent tool and returns results to the parent before the first trial. If it cannot enforce a required tool/permission limit, report the gap and keep that trial in the main agent; do not invent a working tool or launch an independent background agent as a substitute.
 
+### Current startup restriction
+
+PR #28 is integrated as source only. Live PowerShell/container/workflow startup is
+disabled until credential-isolated broker integration and host verification are
+complete; the older runtime instructions below do not authorize bypassing this gate.
+Offline dry-run remains available. Existing installed registries and active containers
+require explicit reconciliation; do not delete their pending state. Keep #27 open.
+
 ### Sales integration target and scoped PR authority
 
-The operator update in [#27 comment 6539304288](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539304288) applies only to ChouBokYann's selected Sales/UI work and personal orchestration in public `Perryong/pokemon-tracker`. Its integration target is `feature/sales-agent`. New issue branches start from that target and scoped PRs target it; keep existing issue branches and the registered control branch `choubokyann/symphony-coordinator`. Registration does not grant this authority to another repository. This section overrides the default `main` target and human-merge requirement below only within this exact scope.
+The operator update in [#27 comment 6539304288](https://github.com/Perryong/pokemon-tracker/issues/27#issuecomment-6539304288) applies only to ChouBokYann's selected Sales/UI work and personal orchestration in public `Perryong/pokemon-tracker`. Its integration target is `feature/sales-agent`. New issue branches start from that target and scoped PRs target it; preserve existing work; the registered control branch is now `feature/sales-agent`, allowing the merged PR head to be deleted. Registration does not grant this authority to another repository. This section overrides the default `main` target and human-merge requirement below only within this exact scope.
 
 - An independent Astra/high reviewer may create or update a scoped PR when explicitly included in its bounded task, returning the URL, base, exact head and evidence. File access remains read-only unless separately assigned. It cannot merge, change issue ownership/status, approve itself, execute repository code or delegate. Sol implementation children retain their no-GitHub-write rule. Serialize any reviewer PR write through the coordinator.
 - The Astra coordinator may accept and merge an eligible reviewed PR only into `feature/sales-agent`, after rechecking live authority, exact repository/base/head, original ownership, full dependencies, acceptance criteria, actual diff, isolated checks and independent findings. Any unresolved blocking finding prevents merge. A moved head or base invalidates acceptance and requires scoped revalidation. A cached verdict alone never authorizes merge.
