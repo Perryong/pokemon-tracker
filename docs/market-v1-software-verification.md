@@ -57,3 +57,10 @@ No production Supabase migration, live marketplace discovery/contact, real Sales
 
 
 The existing GitHub/Vercel integration automatically built a public preview after the branch push; its checks succeeded. That preview has no private operations backend. No production or private-service deployment was performed. Ruflo tools were unavailable; execution used the repository workflow and Superpowers review.
+
+
+## Live reference research update
+
+The operator selected real card-price research as the next data source. Market now automatically loads the existing default card from the real TCGdex feed on entry, with dated SGD conversion, separate provider/fetch timestamps, cache limits and explicit opt-in synthetic controls. Search, manual refresh and failure behavior remain supported. Reference quotes do not become completed sales or mandate authority.
+
+Fresh frontend checks: **215 tests passed across 23 files**, build/focused ESLint/whitespace passed. Playwright verified automatic Alakazam display, refresh, Pikachu selection, real FX provenance and 390px layout. Cancellation, initial-response races, strict effect remount and collection persistence have regressions. The current browser tab shows the new research view; the fixture scheduler is paused. This frontend change did not require repeating the unchanged Python/database suite.

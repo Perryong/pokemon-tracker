@@ -31,9 +31,17 @@
 
 **Interfaces:** Consume existing `/api/market/health`, `/api/market/cards/{id}` and MarketCardSchema. Keep the public MarketView component signature and all private API contracts unchanged.
 
-- [ ] Write failing tests for automatic real-reference display and initial-load cancellation/races, with external HTTP mocked at the network boundary.
-- [ ] Run focused tests and observe the missing automatic display fail.
-- [ ] Reuse the bounded `load(selected: string)` path from the mount effect; identify live reference research and opt-in fixture controls truthfully. Update callers/tests for the new initial request.
-- [ ] Run all frontend tests, production build, focused ESLint and whitespace checks. Expect no failures; report existing full lint separately.
-- [ ] Use Playwright against the built server to verify automatic actual-provider prices, provenance/SGD, selection, refresh and 390px no overflow. Confirm fixture service remains paused.
+- [x] Write failing tests for automatic real-reference display and initial-load cancellation/races, with external HTTP mocked at the network boundary.
+- [x] Run focused tests and observe the missing automatic display fail.
+- [x] Reuse the bounded `load(selected: string)` path from the mount effect; identify live reference research and opt-in fixture controls truthfully. Update callers/tests for the new initial request.
+- [x] Run all frontend tests, production build, focused ESLint and whitespace checks. Expect no failures; report existing full lint separately.
+- [x] Use Playwright against the built server to verify automatic actual-provider prices, provenance/SGD, selection, refresh and 390px no overflow. Confirm fixture service remains paused.
 - [ ] Fresh review of the change and connected behavior; fix Important findings with regressions. Commit/push the feature branch and append exact issue/PR evidence.
+
+
+## Verification ledger
+
+- Initial-display and late-initial-response tests observed RED; GREEN after reusing the lookup path. Initial unmount and strict-effect-remount tests also failed with initial loading removed, then passed after restoration.
+- Full frontend suite: **215 passed across 23 files**. Build, focused ESLint and whitespace checks passed. The App collection persistence test needed a proper card-response HTTP fake for the new automatic request; its saved quantities still pass.
+- Actual-provider Playwright: default Alakazam loaded without form submission, dated SGD/provenance displayed, manual refresh and Pikachu selection worked, and 390px rendering had no horizontal overflow. The current in-app tab was refreshed to this view.
+- The fixture scheduler was found enabled during final inspection and explicitly paused for this read-only research handoff. Private contracts, business state and source adapters were not changed.

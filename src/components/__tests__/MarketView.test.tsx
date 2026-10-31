@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MarketView from '../MarketView';
@@ -8,12 +9,11 @@ const response = (data: unknown, status = 200) => new Response(JSON.stringify(da
 const submit = () => fireEvent.submit(screen.getByRole('form', { name: 'Price lookup' }));
 beforeEach(() => vi.stubGlobal('fetch', vi.fn(async url => response(String(url).endsWith('/health') ? health : card()))));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
-it('shows provenance, currency, separate timestamps and simulated harness status', async () => {
+it('shows real reference provenance, dated currency and separate timestamps on entry', async () => {
   render(<MarketView />);
   expect(await screen.findByText('Backend reachable')).toBeInTheDocument();
-  expect(screen.getByText(/Market Agent remains simulated/)).toBeInTheDocument();
-  expect(fetch).toHaveBeenCalledTimes(1);
-  submit();
+  expect(screen.getByText(/Live reference research/)).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledTimes(2);
   expect(await screen.findByRole('heading', { name: /Alakazam/ })).toBeInTheDocument();
   expect(screen.getByText('SGD 72.45')).toBeInTheDocument();
   expect(screen.getByText(/Provider updated/)).toBeInTheDocument();
@@ -24,7 +24,7 @@ it('rejects invalid IDs locally', async () => {
   render(<MarketView />); await screen.findByText('Backend reachable');
   fireEvent.change(screen.getByLabelText('TCGdex card ID'), { target: { value: '../secret' } }); submit();
   expect(await screen.findByRole('alert')).toHaveTextContent('Enter a card ID');
-  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledTimes(2);
 });
 it('shows unavailable backend for a static HTML response without sample fallback', async () => {
   vi.mocked(fetch).mockResolvedValue(new Response('<html>static</html>'));
@@ -72,7 +72,7 @@ it('aborts on unmount and does not restart requests', async () => {
   const signal = vi.mocked(fetch).mock.calls.at(-1)?.[1]?.signal;
   unmount(); expect(signal?.aborted).toBe(true);
   await act(async () => finish(response(card())));
-  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(fetch).toHaveBeenCalledTimes(3);
 });
 it('rejects mismatched identity instead of displaying another card', async () => {
   render(<MarketView />); await screen.findByText('Backend reachable');
@@ -119,4 +119,50 @@ it.each(['rate_limited', 'provider_rate_limited'])('shows retry seconds and sour
   expect(await screen.findByRole('alert')).toHaveTextContent(code === 'rate_limited' ? 'Mac request limit' : 'Price provider request limit');
   expect(screen.getByRole('alert')).toHaveTextContent('17 seconds');
   expect(screen.getByText('Backend reachable')).toBeInTheDocument();
+});
+
+it('opens directly on real reference research without requesting private operations', async () => {
+  render(<MarketView />);
+  expect(await screen.findByRole('heading', { name: 'Alakazam base1-1' })).toBeInTheDocument();
+  expect(screen.getByText('SGD 72.45')).toBeInTheDocument();
+  expect(screen.getByText(/Live reference research/)).toBeInTheDocument();
+  expect(screen.getByText(/up to one hour/)).toBeInTheDocument();
+  expect(screen.getByText(/fixture controls use synthetic data/i)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).startsWith('/api/operations/'))).toBe(false);
+});
+
+it('does not let an initial response overwrite a different card selected while it loads', async () => {
+  let finish!: (response: Response) => void;
+  vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/health')
+    ? response(health) : new Promise(resolve => { finish = resolve; }));
+  render(<MarketView />);
+  await screen.findByText('Backend reachable');
+  expect(finish).toBeTypeOf('function');
+  fireEvent.change(screen.getByLabelText('TCGdex card ID'), { target: { value: 'sv03-199' } });
+  vi.mocked(fetch).mockResolvedValueOnce(response(card('sv03-199', 'Ninetales'))); submit();
+  await screen.findByRole('heading', { name: 'Ninetales sv03-199' });
+  await act(async () => finish(response(card())));
+  expect(screen.queryByRole('heading', { name: /Alakazam/ })).not.toBeInTheDocument();
+});
+
+
+it('aborts the automatic provider lookup when Market unmounts', async () => {
+  let initialSignal: AbortSignal | null | undefined;
+  vi.mocked(fetch).mockImplementation(async (url, options) => {
+    if (String(url).endsWith('/health')) return response(health);
+    initialSignal = options?.signal;
+    return new Promise(() => {});
+  });
+  const { unmount } = render(<MarketView />);
+  await screen.findByText('Backend reachable');
+  expect(initialSignal?.aborted).toBe(false);
+  unmount();
+  expect(initialSignal?.aborted).toBe(true);
+});
+
+it('loads real reference research after a strict effect remount', async () => {
+  render(<StrictMode><MarketView /></StrictMode>);
+  expect(await screen.findByRole('heading', { name: 'Alakazam base1-1' })).toBeInTheDocument();
+  expect(screen.getByText('Backend reachable')).toBeInTheDocument();
+  expect(screen.getByText('SGD 72.45')).toBeInTheDocument();
 });

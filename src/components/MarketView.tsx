@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import PriceChart from './PriceChart';
 import MarketSearch from './MarketSearch';
@@ -28,25 +28,7 @@ export default function MarketView() {
   const backendSettled = useRef(false);
   const generation = useRef(0);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const timer = setTimeout(() => { controller.abort(); if (!backendSettled.current) setBackend('unavailable'); }, 12000);
-    controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
-    void (async () => {
-      try {
-        const response = await fetch('/api/market/health', { signal: controller.signal });
-        const valid = response.ok && MarketHealthSchema.safeParse(await response.json()).success;
-        if (!controller.signal.aborted && !backendSettled.current) setBackend(valid ? 'reachable' : 'unavailable');
-      } catch { if (!controller.signal.aborted && !backendSettled.current) setBackend('unavailable'); }
-      finally { clearTimeout(timer); }
-    })();
-    // Invalidate the latest request counter on unmount, not a captured DOM reference.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    return () => { clearTimeout(timer); controller.abort(); request.current?.abort(); generation.current++; };
-  }, []);
-
-  async function load(selected = id.trim()) {
+  const load = useCallback(async (selected: string) => {
     request.current?.abort();
     const version = ++generation.current;
     if (!MarketIdSchema.safeParse(selected).success) { setLoading(false); setError('Enter a card ID such as base1-1 or sv03-199.'); return; }
@@ -76,18 +58,38 @@ export default function MarketView() {
       clearTimeout(timer);
       if (version === generation.current) setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const timer = setTimeout(() => { controller.abort(); if (!backendSettled.current) setBackend('unavailable'); }, 12000);
+    controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+    void (async () => {
+      try {
+        const response = await fetch('/api/market/health', { signal: controller.signal });
+        const valid = response.ok && MarketHealthSchema.safeParse(await response.json()).success;
+        if (!controller.signal.aborted && !backendSettled.current) setBackend(valid ? 'reachable' : 'unavailable');
+      } catch { if (!controller.signal.aborted && !backendSettled.current) setBackend('unavailable'); }
+      finally { clearTimeout(timer); }
+    })();
+    void load('base1-1');
+    // Invalidate the latest request counter on unmount, not a captured DOM reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { clearTimeout(timer); controller.abort(); request.current?.abort(); generation.current++; };
+  }, [load]);
 
   const previous = Boolean(data && (loading || error || data.card.id !== id.trim()));
   return <section className="page market-view" aria-label="Market View">
-    <header className="page-heading"><div><h1>Market</h1><p className="page-description">Find a card by name, compare estimated SGD prices, and explore its average-price chart.</p></div></header>
+    <header className="page-heading"><div><h1>Market</h1><p className="page-description">Live card-price research from TCGdex. Find a card, compare estimated SGD prices, and explore its average-price chart.</p></div></header>
     <div className="market-status" role="status"><span className={`backend-dot ${backend}`} />{backend === 'checking' ? 'Checking backend…' : backend === 'reachable' ? 'Backend reachable' : 'Backend unavailable'}</div>
-    <p className="page-description market-limit">Market Agent remains simulated. These reference prices are not completed-sale evidence or a buy recommendation. Approved policy and exact sale evidence are required before any real qualification.</p>
+    <p className="page-description market-limit">Live reference research · Read-only. Prices can be cached for up to one hour; provider updates may lag. Reference prices are not completed-sale evidence or purchase authority.</p>
+    <p className="market-meta">The optional fixture controls use synthetic data. Live marketplace discovery and trading are not enabled.</p>
     <div className="operations-toggle"><Button type="button" variant="outline" aria-expanded={operationsOpen} aria-controls="market-private-operations" onClick={() => setOperationsOpen(open => !open)}>{operationsOpen ? 'Close private operations' : 'Open private operations'}</Button></div>
     {operationsOpen && <div id="market-private-operations"><MarketOperations /></div>}
     <MarketSearch rates={rates} onSelect={selected => { void load(selected); detailHeading.current?.focus(); }} />
     <h2 ref={detailHeading} tabIndex={-1} className="market-detail-heading">Card price details</h2>
-    <form className="filter-tray" aria-label="Price lookup" onSubmit={event => { event.preventDefault(); void load(); }}>
+    <form className="filter-tray" aria-label="Price lookup" onSubmit={event => { event.preventDefault(); void load(id.trim()); }}>
       <div className="filter-field grow"><label htmlFor="market-id">TCGdex card ID</label><input id="market-id" className="control" value={id} maxLength={80} autoCapitalize="none" spellCheck={false} aria-describedby="market-examples" onChange={event => { request.current?.abort(); generation.current++; setLoading(false); setError(''); setId(event.target.value); }} /><span id="market-examples" className="market-meta">Examples: base1-1 · sv03-199</span></div>
       <Button type="submit" disabled={loading}>{loading ? 'Loading…' : data?.card.id === id.trim() ? 'Refresh prices' : 'Load prices'}</Button>
     </form>
